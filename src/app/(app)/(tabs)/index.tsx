@@ -133,8 +133,8 @@ export default function HomeScreen() {
           {
             paddingBottom:
               Platform.OS === 'android'
-                ? Math.max(insets.bottom, 48) + 110
-                : Math.max(insets.bottom, 24) + 90,
+                ? Math.max(insets.bottom, 16) + 24
+                : Math.max(insets.bottom, 16) + 16,
           },
         ]}
         refreshControl={
@@ -477,6 +477,9 @@ export default function HomeScreen() {
         <View style={styles.endOfContentWrap}>
           <Image source={MASCOT_HAPPY} style={styles.endOfContentImg} resizeMode="contain" />
           <Text style={styles.endOfContentText}>Bạn đã đi hết nội dung ... !</Text>
+          <Text style={styles.endOfContentQuote}>
+            Đội ngũ HLV 3S Wellness{'\n'}Chuyên môn vững – Tận tâm đồng hành
+          </Text>
         </View>
       </ScrollView>
 
@@ -880,5 +883,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  endOfContentQuote: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingHorizontal: 20,
+    marginTop: 6,
   },
 });
