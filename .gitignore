@@ -42,3 +42,6 @@ yarn-error.*
 
 # local documentation/rules
 rule.md
+
+# local folders / extras
+3S-Gym-develop/
