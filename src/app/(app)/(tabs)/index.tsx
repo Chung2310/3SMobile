@@ -150,13 +150,7 @@ export default function HomeScreen() {
         <View style={styles.quickToolstrip}>
           {/* 1. Tiến độ */}
           <Pressable
-            onPress={() => {
-              if (scrollViewRef.current && progressSectionY > 0) {
-                scrollViewRef.current.scrollTo({ y: progressSectionY - 10, animated: true });
-              } else if (scrollViewRef.current) {
-                scrollViewRef.current.scrollTo({ y: 220, animated: true });
-              }
-            }}
+            onPress={() => router.push('/(app)/progress-workspace')}
             style={({ pressed }) => [
               styles.quickToolItem,
               pressed && styles.quickToolItemTienDoPressed,
