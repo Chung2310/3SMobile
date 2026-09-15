@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -33,6 +34,8 @@ function NavigationGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
+  if (!fontsLoaded && !fontError) return <View style={styles.splashContainer}><ActivityIndicator color={colors.primary} /></View>;
   return (
     <SafeAreaProvider>
       <AuthProvider>

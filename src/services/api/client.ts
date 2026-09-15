@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '@/services/config';
 import { getStoredSession } from '@/services/sessionStore';
 
+export interface ApiPage<T> { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } }
+
 interface ApiEnvelope<T> {
   success?: boolean;
   data?: T;
@@ -44,7 +46,7 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, unwrap = true): Promise<T> {
   const storedSession = await getStoredSession();
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
@@ -71,7 +73,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(getMessage(body, `Yêu cầu thất bại (${response.status}).`), response.status, details);
   }
 
-  if (body && typeof body === 'object' && 'data' in body) {
+  if (unwrap && body && typeof body === 'object' && 'data' in body) {
     return (body as ApiEnvelope<T>).data as T;
   }
   return body as T;
@@ -82,6 +84,12 @@ function encodeBody(body: unknown): BodyInit | undefined {
 }
 
 export const api = {
+  getPage<T>(path: string): Promise<ApiPage<T>> {
+    return request<ApiPage<T>>(path, { method: 'GET' }, false);
+  },
+  delete<T>(path: string): Promise<T> {
+    return request<T>(path, { method: 'DELETE' });
+  },
   get<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'GET' });
   },
@@ -90,8 +98,5 @@ export const api = {
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
-  },
-  delete<T>(path: string): Promise<T> {
-    return request<T>(path, { method: 'DELETE' });
   },
 };
