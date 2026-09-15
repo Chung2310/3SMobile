@@ -1,4 +1,6 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { PtCustomerSummary } from '@/types/domain';
 
@@ -15,6 +17,65 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .slice(0, 3);
 
+  const first = sorted[0];
+  const second = sorted[1];
+  const third = sorted[2];
+
+  // Animation values cho 3 cột bục vinh danh
+  const animSecond = useRef(new Animated.Value(0)).current;
+  const animFirst = useRef(new Animated.Value(0)).current;
+  const animThird = useRef(new Animated.Value(0)).current;
+
+  const runAnimation = useCallback(() => {
+    animSecond.stopAnimation();
+    animFirst.stopAnimation();
+    animThird.stopAnimation();
+
+    animSecond.setValue(0);
+    animFirst.setValue(0);
+    animThird.setValue(0);
+
+    // Hiệu ứng tăng cột lần lượt: Cột 2 và 3 dâng lên trước, sau đó Cột 1 (Top 1) vút lên cao nhất với độ nảy thể thao
+    Animated.stagger(140, [
+      Animated.timing(animSecond, {
+        toValue: 1,
+        duration: 750,
+        easing: Easing.out(Easing.back(1.15)),
+        useNativeDriver: false,
+      }),
+      Animated.timing(animThird, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.back(1.15)),
+        useNativeDriver: false,
+      }),
+      Animated.timing(animFirst, {
+        toValue: 1,
+        duration: 850,
+        easing: Easing.out(Easing.back(1.35)),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [animFirst, animSecond, animThird]);
+
+  useFocusEffect(
+    useCallback(() => {
+      runAnimation();
+    }, [runAnimation])
+  );
+
+  useEffect(() => {
+    runAnimation();
+  }, [customers.length, runAnimation]);
+
+  useEffect(() => {
+    return () => {
+      animSecond.stopAnimation();
+      animFirst.stopAnimation();
+      animThird.stopAnimation();
+    };
+  }, [animFirst, animSecond, animThird]);
+
   if (sorted.length === 0) {
     return (
       <View style={styles.card}>
@@ -30,9 +91,38 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
     );
   }
 
-  const first = sorted[0];
-  const second = sorted[1];
-  const third = sorted[2];
+  // Chiều cao cột tăng dần từ 0 đến kích thước chuẩn
+  const heightSecond = animSecond.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 65],
+  });
+  const heightFirst = animFirst.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 90],
+  });
+  const heightThird = animThird.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 48],
+  });
+
+  // Hiệu ứng mờ dần hiện rõ của điểm và vương miện
+  const opacitySecond = animSecond.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0.5, 1],
+  });
+  const opacityFirst = animFirst.interpolate({
+    inputRange: [0, 0.4, 1],
+    outputRange: [0, 0.6, 1],
+  });
+  const opacityThird = animThird.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0.5, 1],
+  });
+
+  const crownScale = animFirst.interpolate({
+    inputRange: [0, 0.6, 1],
+    outputRange: [0.5, 0.8, 1],
+  });
 
   // Helper lấy tên ngắn (1-2 từ) để không tràn cột
   function shortName(fullName: string) {
@@ -67,18 +157,22 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
         {/* Hạng 2 (Bên trái) */}
         {second ? (
           <View style={styles.columnWrapper}>
-            <Text style={styles.scoreText}>{second.score ?? 0}đ</Text>
-            <View style={[styles.bar, styles.barSecond]}>
+            <Animated.Text style={[styles.scoreText, { opacity: opacitySecond }]}>
+              {second.score ?? 0}đ
+            </Animated.Text>
+            <Animated.View style={[styles.bar, styles.barSecond, { height: heightSecond }]}>
               <View style={[styles.rankBadge, styles.rankBadgeSecond]}>
                 <Text style={styles.rankNum}>2</Text>
               </View>
-            </View>
-            <Text style={styles.customerName} numberOfLines={1}>
-              {shortName(second.fullName)}
-            </Text>
-            <Text style={styles.changeText} numberOfLines={1}>
-              {formatChange(second)}
-            </Text>
+            </Animated.View>
+            <Animated.View style={{ opacity: opacitySecond, alignItems: 'center' }}>
+              <Text style={styles.customerName} numberOfLines={1}>
+                {shortName(second.fullName)}
+              </Text>
+              <Text style={styles.changeText} numberOfLines={1}>
+                {formatChange(second)}
+              </Text>
+            </Animated.View>
           </View>
         ) : (
           <View style={styles.columnWrapper} />
@@ -87,39 +181,55 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
         {/* Hạng 1 (Ở giữa - Cao nhất & Nổi bật nhất) */}
         {first ? (
           <View style={styles.columnWrapper}>
-            <View style={styles.crownBadge}>
+            <Animated.View
+              style={[
+                styles.crownBadge,
+                {
+                  opacity: opacityFirst,
+                  transform: [{ scale: crownScale }],
+                },
+              ]}
+            >
               <Text style={styles.crownText}>TOP 1</Text>
-            </View>
-            <Text style={[styles.scoreText, styles.scoreFirst]}>{first.score ?? 0}đ</Text>
-            <View style={[styles.bar, styles.barFirst]}>
+            </Animated.View>
+            <Animated.Text style={[styles.scoreText, styles.scoreFirst, { opacity: opacityFirst }]}>
+              {first.score ?? 0}đ
+            </Animated.Text>
+            <Animated.View style={[styles.bar, styles.barFirst, { height: heightFirst }]}>
               <View style={[styles.rankBadge, styles.rankBadgeFirst]}>
                 <Text style={styles.rankNumFirst}>1</Text>
               </View>
-            </View>
-            <Text style={[styles.customerName, styles.customerNameFirst]} numberOfLines={1}>
-              {shortName(first.fullName)}
-            </Text>
-            <Text style={[styles.changeText, styles.changeTextFirst]} numberOfLines={1}>
-              {formatChange(first)}
-            </Text>
+            </Animated.View>
+            <Animated.View style={{ opacity: opacityFirst, alignItems: 'center' }}>
+              <Text style={[styles.customerName, styles.customerNameFirst]} numberOfLines={1}>
+                {shortName(first.fullName)}
+              </Text>
+              <Text style={[styles.changeText, styles.changeTextFirst]} numberOfLines={1}>
+                {formatChange(first)}
+              </Text>
+            </Animated.View>
           </View>
         ) : null}
 
         {/* Hạng 3 (Bên phải) */}
         {third ? (
           <View style={styles.columnWrapper}>
-            <Text style={styles.scoreText}>{third.score ?? 0}đ</Text>
-            <View style={[styles.bar, styles.barThird]}>
+            <Animated.Text style={[styles.scoreText, { opacity: opacityThird }]}>
+              {third.score ?? 0}đ
+            </Animated.Text>
+            <Animated.View style={[styles.bar, styles.barThird, { height: heightThird }]}>
               <View style={[styles.rankBadge, styles.rankBadgeThird]}>
                 <Text style={styles.rankNum}>3</Text>
               </View>
-            </View>
-            <Text style={styles.customerName} numberOfLines={1}>
-              {shortName(third.fullName)}
-            </Text>
-            <Text style={styles.changeText} numberOfLines={1}>
-              {formatChange(third)}
-            </Text>
+            </Animated.View>
+            <Animated.View style={{ opacity: opacityThird, alignItems: 'center' }}>
+              <Text style={styles.customerName} numberOfLines={1}>
+                {shortName(third.fullName)}
+              </Text>
+              <Text style={styles.changeText} numberOfLines={1}>
+                {formatChange(third)}
+              </Text>
+            </Animated.View>
           </View>
         ) : (
           <View style={styles.columnWrapper} />
@@ -215,17 +325,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 10,
     alignItems: 'center',
     paddingTop: 6,
+    overflow: 'hidden',
   },
   barFirst: {
-    height: 90,
     backgroundColor: '#22C55E',
   },
   barSecond: {
-    height: 65,
     backgroundColor: '#3B82F6',
   },
   barThird: {
-    height: 48,
     backgroundColor: '#94A3B8',
   },
   rankBadge: {

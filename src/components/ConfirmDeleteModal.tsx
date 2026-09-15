@@ -1,0 +1,153 @@
+import React from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { colors } from '@/theme/colors';
+
+interface ConfirmDeleteModalProps {
+  visible: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmDeleteModal({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Xóa vĩnh viễn',
+  cancelLabel = 'Hủy',
+  loading = false,
+  onConfirm,
+  onCancel,
+}: ConfirmDeleteModalProps) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Feather name="alert-triangle" size={28} color="#EF4444" />
+          </View>
+
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
+
+          <View style={styles.actionsRow}>
+            <Pressable
+              style={styles.cancelBtn}
+              onPress={onCancel}
+              disabled={loading}
+            >
+              <Text style={styles.cancelBtnText}>{cancelLabel}</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.confirmBtn, loading && { opacity: 0.7 }]}
+              onPress={onConfirm}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Feather name="trash-2" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  iconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelBtn: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: colors.cardSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  confirmBtn: {
+    flex: 1,
+    minHeight: 46,
+    flexDirection: 'row',
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});

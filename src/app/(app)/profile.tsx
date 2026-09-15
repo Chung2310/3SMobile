@@ -157,7 +157,7 @@ export default function ProfileScreen() {
               <View style={styles.statsStrip}>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{totalCustomers}</Text>
-                  <Text style={styles.statLabel}>Học viên</Text>
+                  <Text style={styles.statLabel}>Khách hàng</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
@@ -238,7 +238,7 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
 
-            <Text style={styles.appVersionText}>3S Mobile Trainer App · v1.0.0</Text>
+        
           </>
         )}
       </ScrollView>

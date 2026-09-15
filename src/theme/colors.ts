@@ -10,6 +10,8 @@ export const colors = {
   textMuted: '#6B7280',
   textOnPrimary: '#FFFFFF',
   border: '#E5E7EB',
+  card: '#FFFFFF',
+  cardSecondary: '#F8FAFC',
   success: '#22C55E',
   warning: '#F59E0B',
   danger: '#EF4444',

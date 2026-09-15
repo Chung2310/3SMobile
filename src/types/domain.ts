@@ -85,3 +85,55 @@ export interface PtDashboardData {
   customers: PtCustomerSummary[];
 }
 
+export interface CustomerProfile {
+  _id: string;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  height?: number | null;
+  initialWeight?: number | null;
+  medicalNotes?: string;
+  initialGoal?: string;
+  internalNotes?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'LEAD';
+  assignedPtId?: string | JsonRecord;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateCustomerPayload {
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  height?: number | null;
+  initialWeight?: number | null;
+  medicalNotes?: string;
+  initialGoal?: string;
+  internalNotes?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'LEAD';
+}
+
+export interface PtPackage {
+  _id: string;
+  name: string;
+  totalSessions: number;
+  remainingSessions: number;
+  startDate: string;
+  endDate: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'COMPLETED' | 'CANCELLED';
+  customerId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreatePackagePayload {
+  name: string;
+  totalSessions: number;
+  startDate: string;
+  endDate: string;
+  status?: 'ACTIVE' | 'EXPIRED' | 'COMPLETED' | 'CANCELLED';
+}

@@ -1,20 +1,13 @@
 import {
-  LayoutAnimation,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-
-// Kích hoạt LayoutAnimation trên Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 interface TabDef {
   name: string;
@@ -30,7 +23,7 @@ const TABS: TabDef[] = [
   { name: 'progress', label: 'Inbody', icon: 'maximize' },
 ];
 
-function CircularTabBar({ state, navigation }: any) {
+function FixedTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const bottomPadding =
     Platform.OS === 'android'
@@ -39,25 +32,8 @@ function CircularTabBar({ state, navigation }: any) {
 
   // Xác định tab đang active hiện tại
   const currentRouteName = state.routes[state.index]?.name || 'index';
-  let activeRingIndex = TABS.findIndex((t) => t.name === currentRouteName);
-  if (activeRingIndex === -1) activeRingIndex = 2; // Mặc định ở giữa là 'index' (Tổng quan)
-
-  // Vòng quay 5 vị trí (-2, -1, 0, 1, 2) sao cho vị trí 0 (chính giữa) luôn là tab active
-  const visibleTabs = [-2, -1, 0, 1, 2].map((offset) => {
-    const ringIdx = (activeRingIndex + offset + 5) % 5;
-    return {
-      ...TABS[ringIdx],
-      isCenter: offset === 0,
-    };
-  });
 
   const handleTabPress = (tabName: string) => {
-    try {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    } catch {
-      // Fallback nếu máy không hỗ trợ LayoutAnimation
-    }
-
     const targetRoute = state.routes.find((r: any) => r.name === tabName);
     if (targetRoute) {
       const event = navigation.emit({
@@ -84,23 +60,28 @@ function CircularTabBar({ state, navigation }: any) {
         },
       ]}
     >
-      {visibleTabs.map((tab) => {
-        const isFocused = tab.isCenter;
+      {TABS.map((tab) => {
+        const isCenter = tab.name === 'index';
+        const isFocused = currentRouteName === tab.name;
 
         return (
           <Pressable
             key={tab.name}
             onPress={() => handleTabPress(tab.name)}
-            style={[styles.tabItem, isFocused && styles.tabItemActive]}
+            style={[styles.tabItem, isCenter && styles.tabItemCenter]}
             hitSlop={8}
           >
-            {isFocused ? (
+            {isCenter ? (
               <View style={styles.activeCircle}>
-                <Feather name={tab.icon} size={22} color="#FFFFFF" />
+                <Feather name="home" size={22} color="#FFFFFF" />
               </View>
             ) : (
               <View style={styles.iconContainer}>
-                <Feather name={tab.icon} size={20} color="#9CA3AF" />
+                <Feather
+                  name={tab.icon}
+                  size={20}
+                  color={isFocused ? '#16A34A' : '#9CA3AF'}
+                />
               </View>
             )}
             <Text
@@ -123,7 +104,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       initialRouteName="index"
-      tabBar={(props) => <CircularTabBar {...props} />}
+      tabBar={(props) => <FixedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
       }}
@@ -211,6 +192,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabItemCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -14,
+    zIndex: 10,
   },
   tabItemActive: {
     flex: 1,

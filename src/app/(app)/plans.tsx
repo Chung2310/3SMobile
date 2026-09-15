@@ -140,7 +140,7 @@ export default function PlansScreen() {
               </View>
               <View style={styles.metaItem}>
                 <Feather name="users" size={14} color={colors.textMuted} />
-                <Text style={styles.metaText}>{item.assignedCustomers} học viên</Text>
+                <Text style={styles.metaText}>{item.assignedCustomers} khách hàng</Text>
               </View>
             </View>
           </Card>

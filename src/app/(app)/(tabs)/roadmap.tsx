@@ -81,7 +81,7 @@ export default function RoadmapScreen() {
   return (
     <Screen
       title="Roadmap"
-      subtitle="Lộ trình huấn luyện chuẩn hoá cho học viên"
+      subtitle="Lộ trình huấn luyện chuẩn hoá cho khách hàng"
     >
       <SectionHeader title="Lộ trình 12 tuần tiêu chuẩn" />
 

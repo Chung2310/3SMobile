@@ -25,16 +25,16 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'm-1',
     sender: 'ai',
-    text: 'Xin chào HLV! Tôi là Trợ lý AI của 3S Wellness. Tôi có thể giúp bạn phân tích chỉ số InBody của học viên, tính toán Macro dinh dưỡng hoặc đề xuất giáo án tập luyện chuyên sâu.',
+    text: 'Xin chào HLV! Tôi là Trợ lý AI của 3S Wellness. Tôi có thể giúp bạn phân tích chỉ số InBody của khách hàng, tính toán Macro dinh dưỡng hoặc đề xuất giáo án tập luyện chuyên sâu.',
     time: 'Vừa xong',
   },
 ];
 
 const SUGGESTIONS = [
-  'Phân tích chỉ số InBody học viên mới',
+  'Phân tích chỉ số InBody khách hàng mới',
   'Gợi ý giáo án siết mỡ cho nữ 53kg',
   'Tính Macro tăng cơ 2.400 kcal/ngày',
-  'Đánh giá nguy cơ học viên giảm cơ',
+  'Đánh giá nguy cơ khách hàng giảm cơ',
 ];
 
 export default function AssistantScreen() {
@@ -63,16 +63,16 @@ export default function AssistantScreen() {
       let reply = '';
       if (text.includes('InBody') || text.includes('chỉ số')) {
         reply =
-          'Theo dữ liệu InBody gần nhất: Học viên Trần Minh Hoàng có tỷ lệ mỡ giảm từ 24.5% xuống 20.0% (-4.5%), khối lượng cơ tăng +1.8kg. Phong độ đạt mức Xuất sắc. Khuyến nghị: Tiếp tục duy trì phác đồ tăng tạ Progressive Overload.';
+          'Theo dữ liệu InBody gần nhất: Khách hàng Trần Minh Hoàng có tỷ lệ mỡ giảm từ 24.5% xuống 20.0% (-4.5%), khối lượng cơ tăng +1.8kg. Phong độ đạt mức Xuất sắc. Khuyến nghị: Tiếp tục duy trì phác đồ tăng tạ Progressive Overload.';
       } else if (text.includes('giáo án') || text.includes('siết mỡ')) {
         reply =
           'Gợi ý giáo án siết mỡ 4 buổi/tuần: Buổi 1 (Chân - Mông Hypertrophy), Buổi 2 (Lưng - Tay trước + HIIT 15p), Buổi 3 (Ngực - Vai - Tay sau), Buổi 4 (Full body circuit + Abs). Giữ mức tạ RPE 7-8.';
       } else if (text.includes('Macro') || text.includes('kcal') || text.includes('dinh dưỡng')) {
         reply =
-          'Phân bổ Macro mục tiêu 2.400 kcal: Đạm 160g (27%), Tinh bột phức hợp 280g (47%), Chất béo tốt 70g (26%). Khuyên học viên uống tối thiểu 2.5 - 3 lít nước mỗi ngày.';
+          'Phân bổ Macro mục tiêu 2.400 kcal: Đạm 160g (27%), Tinh bột phức hợp 280g (47%), Chất béo tốt 70g (26%). Khuyên khách hàng uống tối thiểu 2.5 - 3 lít nước mỗi ngày.';
       } else {
         reply =
-          'Tôi đã ghi nhận yêu cầu của HLV. Đang đối soát với lịch tập và chỉ số của học viên phụ trách để đưa ra phương án tối ưu nhất!';
+          'Tôi đã ghi nhận yêu cầu của HLV. Đang đối soát với lịch tập và chỉ số của khách hàng phụ trách để đưa ra phương án tối ưu nhất!';
       }
 
       const aiMsg: ChatMessage = {

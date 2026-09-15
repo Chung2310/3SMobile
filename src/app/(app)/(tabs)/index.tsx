@@ -25,6 +25,8 @@ import type { ProgressCategory, PtCustomerSummary, PtDashboardData } from '@/typ
 
 type FilterType = 'ALL' | ProgressCategory;
 
+const MASCOT_HAPPY = require('../../../../assets/public/3s-happy.png');
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
@@ -50,7 +52,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setLoading(true);
       void fetchPtDashboard().then((data) => {
         if (active) {
           setDashboard(data);
@@ -73,12 +74,19 @@ export default function HomeScreen() {
   const good = dashboard?.goodProgressCount || 0;
   const slow = dashboard?.slowProgressCount || 0;
   const poor = dashboard?.poorProgressCount || 0;
+  const insufficientCount = (dashboard?.customers || []).filter(
+    (c) => c.progressCategory === 'INSUFFICIENT_DATA' || !c.progressCategory
+  ).length;
+  const insufficient = Math.max(insufficientCount, Math.max(0, total - (good + slow + poor)));
   const alerts = dashboard?.openAlerts || 0;
   const efficiency = total > 0 ? Math.round((good / total) * 100) : 0;
 
-  // Lọc danh sách học viên
+  // Lọc danh sách khách hàng
   const filteredCustomers = (dashboard?.customers || []).filter((c) => {
     if (filter === 'ALL') return true;
+    if (filter === 'INSUFFICIENT_DATA') {
+      return c.progressCategory === 'INSUFFICIENT_DATA' || !c.progressCategory;
+    }
     return c.progressCategory === filter;
   });
 
@@ -138,6 +146,7 @@ export default function HomeScreen() {
       >
         {/* 2. THANH LỐI TẮT NHANH (CÓ TEXT + ICON RÕ RÀNG, DẠNG THANH GỌN GÀNG) */}
         <View style={styles.quickToolstrip}>
+          {/* 1. Tiến độ */}
           <Pressable
             onPress={() => {
               if (scrollViewRef.current && progressSectionY > 0) {
@@ -146,36 +155,98 @@ export default function HomeScreen() {
                 scrollViewRef.current.scrollTo({ y: 220, animated: true });
               }
             }}
-            style={({ pressed }) => [styles.quickToolItem, pressed && styles.quickToolItemPressed]}
+            style={({ pressed }) => [
+              styles.quickToolItem,
+              pressed && styles.quickToolItemTienDoPressed,
+            ]}
           >
-            <View style={[styles.quickToolIconWrap, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="trending-up" size={15} color="#0284C7" />
-            </View>
-            <Text style={styles.quickToolText}>Tiến độ</Text>
+            {({ pressed }) => (
+              <>
+                <View
+                  style={[
+                    styles.quickToolIconWrap,
+                    { backgroundColor: pressed ? '#BAE6FD' : '#EFF6FF' },
+                    pressed && { transform: [{ scale: 1.12 }] },
+                  ]}
+                >
+                  <Ionicons name="trending-up" size={15} color="#0284C7" />
+                </View>
+                <Text
+                  style={[
+                    styles.quickToolText,
+                    pressed && { color: '#0284C7', fontWeight: '800' },
+                  ]}
+                >
+                  Tiến độ
+                </Text>
+              </>
+            )}
           </Pressable>
 
           <View style={styles.quickToolDivider} />
 
+          {/* 2. Giáo án */}
           <Pressable
             onPress={() => router.push('/(app)/plans')}
-            style={({ pressed }) => [styles.quickToolItem, pressed && styles.quickToolItemPressed]}
+            style={({ pressed }) => [
+              styles.quickToolItem,
+              pressed && styles.quickToolItemGiaoAnPressed,
+            ]}
           >
-            <View style={[styles.quickToolIconWrap, { backgroundColor: '#F5F3FF' }]}>
-              <Ionicons name="clipboard" size={15} color="#7C3AED" />
-            </View>
-            <Text style={styles.quickToolText}>Giáo án</Text>
+            {({ pressed }) => (
+              <>
+                <View
+                  style={[
+                    styles.quickToolIconWrap,
+                    { backgroundColor: pressed ? '#DDD6FE' : '#F5F3FF' },
+                    pressed && { transform: [{ scale: 1.12 }] },
+                  ]}
+                >
+                  <Ionicons name="clipboard" size={15} color="#7C3AED" />
+                </View>
+                <Text
+                  style={[
+                    styles.quickToolText,
+                    pressed && { color: '#7C3AED', fontWeight: '800' },
+                  ]}
+                >
+                  Giáo án
+                </Text>
+              </>
+            )}
           </Pressable>
 
           <View style={styles.quickToolDivider} />
 
+          {/* 3. Ví */}
           <Pressable
             onPress={() => setShowComingSoon(true)}
-            style={({ pressed }) => [styles.quickToolItem, pressed && styles.quickToolItemPressed]}
+            style={({ pressed }) => [
+              styles.quickToolItem,
+              pressed && styles.quickToolItemViPressed,
+            ]}
           >
-            <View style={[styles.quickToolIconWrap, { backgroundColor: '#F0FDF4' }]}>
-              <Ionicons name="wallet" size={15} color="#16A34A" />
-            </View>
-            <Text style={styles.quickToolText}>Ví</Text>
+            {({ pressed }) => (
+              <>
+                <View
+                  style={[
+                    styles.quickToolIconWrap,
+                    { backgroundColor: pressed ? '#BBF7D0' : '#F0FDF4' },
+                    pressed && { transform: [{ scale: 1.12 }] },
+                  ]}
+                >
+                  <Ionicons name="wallet" size={15} color="#16A34A" />
+                </View>
+                <Text
+                  style={[
+                    styles.quickToolText,
+                    pressed && { color: '#16A34A', fontWeight: '800' },
+                  ]}
+                >
+                  Ví
+                </Text>
+              </>
+            )}
           </Pressable>
         </View>
 
@@ -233,7 +304,13 @@ export default function HomeScreen() {
         </View>
 
         <Card>
-          <ProgressPieChart good={good} slow={slow} poor={poor} />
+          <ProgressPieChart
+            good={good}
+            slow={slow}
+            poor={poor}
+            insufficient={insufficient}
+            totalCustomers={total}
+          />
         </Card>
 
         {/* 4. KẾT QUẢ NỔI BẬT (BỤC 3 CỘT + MASCOT 3S CỔ VŨ) */}
@@ -282,13 +359,32 @@ export default function HomeScreen() {
               Kém ({poor})
             </Text>
           </Pressable>
+
+          {insufficient > 0 && (
+            <Pressable
+              onPress={() => setFilter('INSUFFICIENT_DATA')}
+              style={[
+                styles.filterPill,
+                filter === 'INSUFFICIENT_DATA' && styles.filterPillActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === 'INSUFFICIENT_DATA' && styles.filterTextActive,
+                ]}
+              >
+                Thiếu Inbody ({insufficient})
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Customer Items */}
         {filteredCustomers.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Feather name="check-circle" size={28} color="#22C55E" />
-            <Text style={styles.emptyText}>Không có học viên nào ở mục này</Text>
+            <Text style={styles.emptyText}>Không có khách hàng nào ở mục này</Text>
           </View>
         ) : (
           filteredCustomers.map((c) => {
@@ -296,16 +392,37 @@ export default function HomeScreen() {
             const isSlow = c.progressCategory === 'SLOW';
             const isPoor = c.progressCategory === 'POOR';
 
-            const tagColor = isGood ? '#22C55E' : isSlow ? '#F59E0B' : '#EF4444';
+            const tagColor = isGood
+              ? '#22C55E'
+              : isSlow
+              ? '#F59E0B'
+              : isPoor
+              ? '#EF4444'
+              : '#64748B';
             const tagBg = isGood
               ? 'rgba(34, 197, 94, 0.12)'
               : isSlow
               ? 'rgba(245, 158, 11, 0.12)'
-              : 'rgba(239, 68, 68, 0.12)';
-            const tagLabel = isGood ? 'Tốt' : isSlow ? 'Chậm' : 'Kém';
+              : isPoor
+              ? 'rgba(239, 68, 68, 0.12)'
+              : 'rgba(100, 116, 139, 0.12)';
+            const tagLabel = isGood
+              ? 'Tốt'
+              : isSlow
+              ? 'Chậm'
+              : isPoor
+              ? 'Kém'
+              : 'Thiếu Inbody';
 
             return (
-              <View key={c.customerId} style={styles.customerCard}>
+              <Pressable
+                key={c.customerId}
+                onPress={() => router.push('/(app)/customers')}
+                style={({ pressed }) => [
+                  styles.customerCard,
+                  pressed && styles.customerCardPressed,
+                ]}
+              >
                 <View style={styles.customerTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.customerName} numberOfLines={1}>
@@ -316,8 +433,11 @@ export default function HomeScreen() {
                     </Text>
                   </View>
 
-                  <View style={[styles.statusTag, { backgroundColor: tagBg }]}>
-                    <Text style={[styles.statusTagText, { color: tagColor }]}>{tagLabel}</Text>
+                  <View style={styles.statusTagWrap}>
+                    <View style={[styles.statusTag, { backgroundColor: tagBg }]}>
+                      <Text style={[styles.statusTagText, { color: tagColor }]}>{tagLabel}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
                   </View>
                 </View>
 
@@ -346,10 +466,16 @@ export default function HomeScreen() {
                     ) : null}
                   </View>
                 ) : null}
-              </View>
+              </Pressable>
             );
           })
         )}
+
+        {/* Hết nội dung - Mascot 3S & thông báo */}
+        <View style={styles.endOfContentWrap}>
+          <Image source={MASCOT_HAPPY} style={styles.endOfContentImg} resizeMode="contain" />
+          <Text style={styles.endOfContentText}>Bạn đã đi hết nội dung ... !</Text>
+        </View>
       </ScrollView>
 
       {/* Modal bo góc - Tính năng sắp ra mắt */}
@@ -523,6 +649,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     transform: [{ scale: 0.98 }],
   },
+  quickToolItemTienDoPressed: {
+    backgroundColor: '#F0F9FF',
+    transform: [{ scale: 0.96 }],
+  },
+  quickToolItemGiaoAnPressed: {
+    backgroundColor: '#FAF5FF',
+    transform: [{ scale: 0.96 }],
+  },
+  quickToolItemViPressed: {
+    backgroundColor: '#F0FDF4',
+    transform: [{ scale: 0.96 }],
+  },
   quickToolIconWrap: {
     width: 26,
     height: 26,
@@ -591,6 +729,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  customerCardPressed: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#94A3B8',
+    transform: [{ scale: 0.985 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statusTagWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   customerTop: {
     flexDirection: 'row',
@@ -709,5 +861,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  endOfContentWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    marginTop: 8,
+    gap: 8,
+  },
+  endOfContentImg: {
+    width: 132,
+    height: 132,
+  },
+  endOfContentText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textMuted,
+    textAlign: 'center',
   },
 });
