@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { JourneyProvider } from '@/context/JourneyContext';
@@ -33,11 +34,13 @@ function NavigationGate() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <JourneyProvider>
-        <NavigationGate />
-      </JourneyProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <JourneyProvider>
+          <NavigationGate />
+        </JourneyProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

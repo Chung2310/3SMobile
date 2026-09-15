@@ -155,8 +155,18 @@ export default function LoginScreen() {
         <Text style={styles.brandSub}>GYM - YOGA - ZUMBA - KICKFIT</Text>
       </View>
 
-      {/* 3. KHU VỰC ĐÁY: 2 CHẤM SLIDE VÀ NÚT ĐĂNG NHẬP (MÀU XANH DƯƠNG NHƯ MẪU JEFIT) */}
-      <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
+      {/* 3. KHU VỰC ĐÁY: 2 CHẤM SLIDE, NÚT ĐĂNG NHẬP VÀ DÒNG CHỮ TRỢ LÝ PT AI */}
+      <View
+        style={[
+          styles.bottomArea,
+          {
+            paddingBottom:
+              Platform.OS === 'android'
+                ? Math.max(insets.bottom, 48) + 16
+                : Math.max(insets.bottom, 20) + 16,
+          },
+        ]}
+      >
         {/* 2 Slide dots */}
         <View style={styles.dotsRow}>
           {BANNER_SLIDES.map((slide, idx) => (
@@ -180,6 +190,9 @@ export default function LoginScreen() {
         >
           <Text style={styles.loginButtonText}>Đăng nhập</Text>
         </Pressable>
+
+        {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
+        <Text style={styles.assistantFooterText}>Trợ lý PT AI của 3S WELLNESS</Text>
       </View>
 
       {/* 4. MÀN HÌNH GIỚI THIỆU INTRO (NỀN ĐEN + LOGO TRẮNG Ở GIỮA) */}
@@ -404,6 +417,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
+  },
+  assistantFooterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.85)',
+    letterSpacing: 0.4,
+    marginTop: 14,
+    textAlign: 'center',
   },
 
   // Màn hình giới thiệu ban đầu (nền đen + logo brand ở giữa)

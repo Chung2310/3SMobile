@@ -51,3 +51,36 @@ export interface AppNotification extends JsonRecord {
   resourceType?: string | null;
   resourceId?: string | null;
 }
+
+export type ProgressCategory = 'GOOD' | 'SLOW' | 'POOR' | 'INSUFFICIENT_DATA';
+
+export interface PtCustomerSummary {
+  customerId: string;
+  fullName: string;
+  phone?: string;
+  initialGoal?: string;
+  initialWeight?: number | null;
+  dataStatus: 'READY' | 'INSUFFICIENT_DATA';
+  score?: number | null;
+  progressCategory: ProgressCategory;
+  measurementCount: number;
+  changes?: {
+    bodyFatChange: number;
+    muscleChange: number;
+    weightChange: number;
+    daysBetween: number;
+  } | null;
+  openAlerts: number;
+  riskFactors?: string[];
+  improvementTips?: string[];
+}
+
+export interface PtDashboardData {
+  totalCustomers: number;
+  openAlerts: number;
+  goodProgressCount: number;
+  slowProgressCount: number;
+  poorProgressCount: number;
+  customers: PtCustomerSummary[];
+}
+
