@@ -258,8 +258,8 @@ export default function ProfileScreen() {
             <View style={styles.modalIconWrap}>
               <Feather name="log-out" size={28} color="#EF4444" />
             </View>
-            <Text style={styles.modalTitle}>Dang xuat</Text>
-            <Text style={styles.modalMessage}>Ban co chac chan muon dang xuat khoi tai khoan?</Text>
+            <Text style={styles.modalTitle}>Đăng xuất</Text>
+            <Text style={styles.modalMessage}>Bạn có chắc muốn đăng xuất khỏi tài khoản?</Text>
             <View style={styles.modalBtnRow}>
               <Pressable
                 onPress={() => setShowSignOutModal(false)}
@@ -268,7 +268,7 @@ export default function ProfileScreen() {
                   pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <Text style={styles.modalBtnCancelText}>Huy</Text>
+                <Text style={styles.modalBtnCancelText}>Hủy</Text>
               </Pressable>
               <Pressable
                 onPress={() => void confirmSignOut()}
@@ -277,7 +277,7 @@ export default function ProfileScreen() {
                   pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <Text style={styles.modalBtnConfirmText}>Dang xuat</Text>
+                <Text style={styles.modalBtnConfirmText}>Đăng xuất</Text>
               </Pressable>
             </View>
           </View>
