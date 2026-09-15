@@ -12,13 +12,18 @@
     "lint": "expo lint"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.2",
+    "@expo/vector-icons": "^15.1.1",
     "expo": "~57.0.22",
+    "expo-constants": "^57.0.18",
+    "expo-linking": "^57.0.10",
     "expo-router": "~57.0.21",
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "^5.9.1",
+    "react-native-screens": "^4.28.0",
+    "react-native-svg": "^15.15.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
