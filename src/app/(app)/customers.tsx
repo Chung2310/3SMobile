@@ -503,19 +503,20 @@ export default function CustomersScreen() {
                 </View>
               </Pressable>
 
-              {/* BOTTOM ROW: 4 ICON THAO TÁC (GÓI PT -> HỒ SƠ -> SỬA -> XÓA) */}
+              {/* BOTTOM ROW: 4 NÚT THAO TÁC (GÓI PT -> HỒ SƠ -> SỬA -> XÓA) */}
               <View style={styles.cardActionsCompact}>
-                {/* 1. Gói PT */}
+                {/* 1. Gói PT - có text, chiếm nhiều không gian hơn */}
                 <Pressable
                   style={({ pressed }) => [
-                    styles.compactActionBtn,
-                    pressed && styles.actionBtnPressed,
+                    styles.ptPackageBtn,
+                    pressed && styles.ptPackageBtnPressed,
                   ]}
                   onPress={() => setPackageCustomer({ id: item.id, fullName: item.fullName })}
-                  hitSlop={8}
+                  hitSlop={4}
                   accessibilityLabel="Quản lý gói PT"
                 >
-                  <Feather name="package" size={16} color="#7C3AED" />
+                  <Feather name="package" size={13} color="#7C3AED" />
+                  <Text style={styles.ptPackageBtnText}>Gói PT</Text>
                 </Pressable>
 
                 <View style={styles.actionDivider} />
@@ -572,7 +573,7 @@ export default function CustomersScreen() {
               style={styles.emptySearchImg}
               resizeMode="contain"
             />
-            <Text style={styles.emptySearchText}>Không có khách hàng</Text>
+            <Text style={styles.emptySearchText}>Không tìm thấy khách hàng mà bạn cần tìm</Text>
           </View>
         )}
       </ScrollView>
@@ -1264,6 +1265,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 7,
   },
+  ptPackageBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    gap: 4,
+  },
+  ptPackageBtnPressed: {
+    opacity: 0.55,
+  },
+  ptPackageBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7C3AED',
+  },
   actionDivider: {
     width: 1,
     height: 14,
@@ -1504,9 +1521,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptySearchText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '400',
     color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 24,
   },
 
   // Bottom Sheet Modal

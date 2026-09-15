@@ -126,6 +126,8 @@ export default function HomeScreen() {
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={[
           styles.scrollContent,
           {
@@ -875,7 +877,7 @@ const styles = StyleSheet.create({
   },
   endOfContentText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '400',
     color: colors.textMuted,
     textAlign: 'center',
   },
