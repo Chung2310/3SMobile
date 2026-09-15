@@ -1,0 +1,82 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const Module = require('node:module');
+const ts = require('typescript');
+function loadTs(filename, mocks = {}) {
+  const target = path.resolve(__dirname, '..', filename);
+  const mod = new Module(target, module);
+  mod.filename = target;
+  mod.paths = module.paths;
+  mod.require = (id) => id in mocks ? mocks[id] : id.startsWith('.') ? loadTs(path.relative(path.resolve(__dirname, '..'), path.resolve(path.dirname(target), `${id}.ts`)), mocks) : require(id);
+  mod._compile(ts.transpileModule(fs.readFileSync(target, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, target);
+  return mod.exports;
+}
+
+const { dateIso, dayKey, journeyPath, initialResult, cleanResult, sessionPayload, measurementPayload, reportPayload, metricSeries, sessionTitle } = loadTs('src/services/progress.ts');
+const exercise = { exerciseId: 'e1', name: 'Squat', trackingType: 'STRENGTH', prescription: { sets: 2, reps: 10, weight: 50 } };
+const plan = { _id: 'p1', version: 3, lifecycleStatus: 'ACTIVE', sessions: [{ name: 'First', exercises: [exercise] }, { name: 'Second', exercises: [{ exerciseId: 'e2', trackingType: 'CARDIO' }] }], scheduledSessions: [{ name: 'Different order' }] };
+const draft = { date: '2026-09-15', time: '09:30', sessionIndex: '0', attendance: 'PRESENT', results: [{ sets: [{ reps: '8', weight: '40', completed: true }] }] };
+test('local dates roundtrip and reject invalid calendar dates, times and reversed ranges', () => {
+  assert.equal(dayKey(dateIso('2026-09-15', '00:00')), '2026-09-15');
+  for (const [day,time] of [['2026-02-29','00:00'],['2026-04-31','00:00'],['2026-09-15','24:00'],['2026-09-15','10:60'],['15/09/2026','10:00']]) assert.throws(() => dateIso(day,time));
+  assert.equal(dayKey(dateIso('2024-02-29')), '2024-02-29');
+  assert.throws(() => journeyPath('c1','2026-09-16','2026-09-15'));
+  const url = new URL(journeyPath('c1','2026-09-15','2026-09-15'), 'https://test.invalid');
+  assert.equal(url.pathname, '/api/customers/c1/journey');
+  assert.equal(new Date(url.searchParams.get('to')).getMilliseconds(), 999);
+  assert.equal(journeyPath(), '/api/me/journey');
+});
+test('actual results never copy prescribed performance', () => {
+  assert.deepEqual(initialResult(exercise), { sets: [{ completed: false }, { completed: false }] });
+  assert.deepEqual(initialResult({ trackingType: 'CARDIO', prescription: { distanceKm: 5 } }), {});
+});
+test('session payload binds exact stored session index, version, exercise identity and retry key', () => {
+  const result = sessionPayload('c1', plan, draft, 'retry-key');
+  assert.equal(result.workoutPlanVersion, 3);
+  assert.equal(result.sessionIndex, 0);
+  assert.equal(result.idempotencyKey, 'retry-key');
+  assert.deepEqual(result.exerciseResults, [{ exerciseIndex: 0, exerciseId: 'e1', result: { sets: [{ reps: 8, weight: 40, completed: true }] } }]);
+  const cardio = sessionPayload('c1', plan, { ...draft, sessionIndex: '1', results: [{ distanceKm: '2' }] }, 'key');
+  assert.equal(cardio.exerciseResults[0].exerciseId, 'e2');
+  assert.throws(() => sessionPayload('c1', { ...plan, version: 1.5 }, draft, 'key'));
+  assert.throws(() => sessionPayload('c1', { ...plan, lifecycleStatus: 'ARCHIVED' }, draft, 'key'));
+  assert.throws(() => sessionPayload('c1', plan, { ...draft, sessionIndex: '-1' }, 'key'));
+  assert.throws(() => sessionPayload('c1', plan, { ...draft, results: [] }, 'key'));
+  assert.throws(() => sessionPayload('c1', plan, draft, ''));
+});
+test('absent sessions discard stale results and optional attendance-only artifacts', () => {
+  const payload = sessionPayload('c1', plan, { ...draft, attendance: 'ABSENT', results: [], absenceReason: 'Sick', bodyMeasurement: { weight: 70 }, progressPhotos: [{ photoUrl: 'x' }] }, 'key');
+  assert.deepEqual(payload.exerciseResults, []);
+  assert.equal(payload.absenceReason, 'Sick');
+  assert.equal('bodyMeasurement' in payload, false);
+  assert.equal('progressPhotos' in payload, false);
+});
+test('tracking results validate all types and retain real zero values', () => {
+  assert.deepEqual(cleanResult('BODYWEIGHT', { sets: [{ reps: '0', addedWeight: '0', completed: true, calories: 20 }] }), { sets: [{ reps: 0, addedWeight: 0, completed: true }] });
+  assert.deepEqual(cleanResult('CARDIO', { distanceKm: '0', weight: 20 }), { distanceKm: 0 });
+  assert.deepEqual(cleanResult('INTERVAL', { rounds: '3', workSeconds: '30' }), { rounds: 3, workSeconds: 30 });
+  assert.deepEqual(cleanResult('MOBILITY', { discomfort: '0', side: 'BOTH' }), { discomfort: 0, side: 'BOTH' });
+  for (const [type,value] of [['STRENGTH',{ sets:[{completed:true}] }],['CARDIO',{rpe:11}],['CARDIO',{}],['INTERVAL',{rounds:1.5}],['MOBILITY',{discomfort:-1}],['UNCLASSIFIED',{}]]) assert.throws(() => cleanResult(type,value));
+});
+test('measurements validate ranges and separate circumference fields from body composition', () => {
+  const result = measurementPayload({ date: '2026-09-15', weight:'70', bodyFatPercentage:'0', waist:'80', muscleMass:'   ', notes:'ignored' });
+  assert.equal(result.weight, 70);
+  assert.equal(result.bodyFatPercentage, 0);
+  assert.deepEqual(result.measurements, { waist:80 });
+  assert.equal('muscleMass' in result, false);
+  for (const value of [{}, {weight:'0'}, {bodyFatPercentage:'101'}, {waist:'-1'}]) assert.throws(() => measurementPayload({date:'2026-09-15',...value}));
+});
+test('metric series skips missing and invalid dates while preserving zero and chronological order', () => {
+  assert.deepEqual(metricSeries([{ measuredAt:'2026-09-16',bodyFatPercentage:12 },{ measuredAt:'2026-09-15',bodyFatPercentage:0 },{ measuredAt:'2026-09-14',weight:70 },{ measuredAt:'bad',bodyFatPercentage:4 }],'bodyFatPercentage'),[{date:'2026-09-15',value:0},{date:'2026-09-16',value:12}]);
+  assert.deepEqual(metricSeries([{measuredAt:'2026-09-15',measurements:{waist:80}}],'waist'),[{date:'2026-09-15',value:80}]);
+});
+test('reports accept same-day periods and reject empty or reversed reports', () => {
+  assert.equal(reportPayload({from:'2026-09-15',to:'2026-09-15',summary:' Good progress '}).summary,'Good progress');
+  assert.throws(() => reportPayload({from:'2026-09-16',to:'2026-09-15',summary:'x'}));
+  assert.throws(() => reportPayload({from:'2026-09-15',to:'2026-09-15',summary:' '}));
+});
+test('historical session title uses the stored snapshot', () => {
+  assert.equal(sessionTitle({planSnapshot:{title:'Old plan',session:{name:'Old session'}},name:'New session'}),'Old session');
+});
