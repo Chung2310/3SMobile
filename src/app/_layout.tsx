@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { JourneyProvider } from '@/context/JourneyContext';
 import { colors } from '@/theme';
+
+const LOGO_WHITE = require('../../assets/public/logo-white.png');
 
 function NavigationGate() {
   const { session, loading } = useAuth();
@@ -19,7 +21,11 @@ function NavigationGate() {
   }, [loading, router, segments, session]);
 
   if (loading) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color={colors.secondary} /></View>;
+    return (
+      <View style={styles.splashContainer}>
+        <Image source={LOGO_WHITE} style={styles.splashLogo} resizeMode="contain" />
+      </View>
+    );
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;
@@ -40,5 +46,15 @@ export function IndexRedirect() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  splashContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+  },
+  splashLogo: {
+    width: 240,
+    height: 85,
+  },
 });
+
