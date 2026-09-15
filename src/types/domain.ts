@@ -81,6 +81,7 @@ export interface PtDashboardData {
   goodProgressCount: number;
   slowProgressCount: number;
   poorProgressCount: number;
+  ptAvatarUrl?: string;
   customers: PtCustomerSummary[];
 }
 

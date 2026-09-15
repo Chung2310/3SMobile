@@ -23,11 +23,11 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { name: 'customers', label: 'Khách hàng', icon: 'users' },
+  { name: 'assistant', label: 'Trợ lý AI', icon: 'cpu' },
   { name: 'nutrition', label: 'Dinh dưỡng', icon: 'coffee' },
   { name: 'index', label: 'Tổng quan', icon: 'home' },
   { name: 'roadmap', label: 'Roadmap', icon: 'map' },
-  { name: 'progress', label: 'Tiến độ', icon: 'trending-up' },
+  { name: 'progress', label: 'Inbody', icon: 'maximize' },
 ];
 
 function CircularTabBar({ state, navigation }: any) {
@@ -128,11 +128,11 @@ export default function TabsLayout() {
         headerShown: false,
       }}
     >
-      {/* 1. Khách hàng */}
+      {/* 1. Trợ lý AI */}
       <Tabs.Screen
-        name="customers"
+        name="assistant"
         options={{
-          title: 'Khách hàng',
+          title: 'Trợ lý AI',
         }}
       />
 
@@ -160,15 +160,21 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 5. Tiến độ */}
+      {/* 5. Inbody */}
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Tiến độ',
+          title: 'Inbody',
         }}
       />
 
       {/* Các tab cũ ẩn khỏi navigation */}
+      <Tabs.Screen
+        name="customers"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="workouts"
         options={{

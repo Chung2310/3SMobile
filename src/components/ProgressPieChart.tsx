@@ -112,7 +112,7 @@ export function ProgressPieChart({
         {/* Text ở tâm biểu đồ */}
         <View style={styles.centerLabelWrap}>
           <Text style={styles.centerValue}>{total}</Text>
-          <Text style={styles.centerTitle}>Hội viên</Text>
+          <Text style={styles.centerTitle}>Khách hàng</Text>
         </View>
       </View>
 

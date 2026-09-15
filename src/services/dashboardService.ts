@@ -1,4 +1,5 @@
 import { api } from '@/services/api/client';
+import { getStoredSession, saveSession } from '@/services/sessionStore';
 import type { PtCustomerSummary, PtDashboardData } from '@/types/domain';
 
 // Dữ liệu mẫu dự phòng khi chưa kết nối mạng hoặc tài khoản thử nghiệm
@@ -76,6 +77,29 @@ export async function fetchPtDashboard(): Promise<PtDashboardData> {
   try {
     const data = await api.get<PtDashboardData>('/api/dashboard/pt');
     if (data && typeof data === 'object' && 'goodProgressCount' in data) {
+      if (data.customers && data.customers.length > 0) {
+        try {
+          const firstCustId = data.customers[0].customerId;
+          const journey = await api.get<{
+            customer?: {
+              assignedPt?: {
+                avatarUrl?: string;
+              };
+            };
+          }>(`/api/customers/${firstCustId}/journey`);
+          const url = journey?.customer?.assignedPt?.avatarUrl;
+          if (url) {
+            data.ptAvatarUrl = url;
+            const stored = await getStoredSession();
+            if (stored && stored.user && stored.user.avatarUrl !== url) {
+              stored.user.avatarUrl = url;
+              await saveSession(stored);
+            }
+          }
+        } catch {
+          // bỏ qua nếu không gọi được journey
+        }
+      }
       return data;
     }
     return DEMO_PT_DASHBOARD;

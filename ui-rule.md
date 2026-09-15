@@ -6,8 +6,8 @@
 
 ## 0. DESIGN TOKENS / APP CONFIG (Chuẩn hóa phong cách Thể thao 3S Gym)
 
-- **Primary Brand Color**: `#22C55E` *(Xanh lá thể thao / Neon Sport Green — năng động, cơ bắp, bứt phá)*
-- **Primary Dark / Pressed**: `#16A34A` *(Màu xanh lá đậm khi bấm / viền active)*
+- **Primary Brand Color**: `#0284C7` *(Xanh da trời thể thao / Athletic Sky Blue — hiện đại, sang trọng, thanh lịch)*
+- **Primary Dark / Pressed**: `#0369A1` *(Màu xanh da trời đậm khi bấm / viền active)*
 - **Dark Accent / Action**: `#111827` *(Đen tuyền sâu cho các nút hành động tròn, tiêu đề mạnh mẽ)*
 - **Backgrounds**:
   - `Background`: `#F8FAFC` *(Xám trắng sáng dịu mắt)*

@@ -8,8 +8,8 @@ import { colors, spacing, typography } from '@/theme';
 
 export default function ProgressScreen() {
   const { journey, loading, refreshing, error, refresh } = useJourney();
-  if (loading && !journey) return <Screen title="Tiến độ"><LoadingState /></Screen>;
-  if (error && !journey) return <Screen title="Tiến độ"><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
+  if (loading && !journey) return <Screen title="Inbody"><LoadingState /></Screen>;
+  if (error && !journey) return <Screen title="Inbody"><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
 
   const measurements = asRecords(journey?.measurements);
   const inbodyRecords = asRecords(journey?.inbodyRecords);
@@ -21,7 +21,7 @@ export default function ProgressScreen() {
   const muscle = readNumber(latest, ['muscleMass', 'muscleMassKg', 'skeletalMuscle']);
 
   return (
-    <Screen title="Tiến độ" subtitle="Nhìn lại dữ liệu để thấy bạn đã đi xa thế nào." refreshing={refreshing} onRefresh={refresh}>
+    <Screen title="Inbody" subtitle="Nhìn lại dữ liệu chỉ số cơ thể để thấy bạn đã đi xa thế nào." refreshing={refreshing} onRefresh={refresh}>
       <SectionHeader title="Chỉ số gần nhất" />
       {latest ? (
         <Card>

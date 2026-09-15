@@ -22,7 +22,7 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
           <View style={styles.headerTextWrap}>
             <Text style={styles.subTagText}>XUẤT SẮC TUẦN</Text>
             <Text style={styles.title}>KẾT QUẢ NỔI BẬT</Text>
-            <Text style={styles.subtitle}>Bắt đầu ghi nhận buổi tập để vinh danh 3 học viên bứt phá nhất</Text>
+            <Text style={styles.subtitle}>Bắt đầu ghi nhận buổi tập để vinh danh 3 khách hàng bứt phá nhất</Text>
           </View>
           <Image source={MASCOT_HELLO} style={styles.mascot} resizeMode="contain" />
         </View>
@@ -55,7 +55,7 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
         <View style={styles.headerTextWrap}>
           <Text style={styles.subTagText}>XUẤT SẮC TUẦN</Text>
           <Text style={styles.title}>KẾT QUẢ NỔI BẬT</Text>
-          <Text style={styles.subtitle}>3 học viên bứt phá phong độ nhất</Text>
+          <Text style={styles.subtitle}>3 khách hàng bứt phá phong độ nhất</Text>
         </View>
 
         {/* Mascot 3S Thumbs up */}
