@@ -389,63 +389,85 @@ export default function CustomersScreen() {
           ) : null}
         </View>
 
-        {/* 3. BỘ LỌC TRẠNG THÁI */}
-        <View style={styles.statusFilterRow}>
-          <Pressable
-            onPress={() => setStatusFilter('ALL')}
-            style={[styles.statusPill, statusFilter === 'ALL' && styles.statusPillActive]}
+        {/* 3. BỘ LỌC TRẠNG THÁI (CUỘN NGANG) */}
+        <View style={styles.statusFilterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusFilterScroll}
           >
-            <Text
-              style={[
-                styles.statusPillText,
-                statusFilter === 'ALL' && styles.statusPillTextActive,
+            <Pressable
+              onPress={() => setStatusFilter('ALL')}
+              style={({ pressed }) => [
+                styles.statusPill,
+                statusFilter === 'ALL' && styles.statusPillActive,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
               ]}
             >
-              Tất cả ({allList.length})
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.statusPillText,
+                  statusFilter === 'ALL' && styles.statusPillTextActive,
+                ]}
+              >
+                Tất cả ({allList.length})
+              </Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => setStatusFilter('ACTIVE')}
-            style={[styles.statusPill, statusFilter === 'ACTIVE' && styles.statusPillActive]}
-          >
-            <Text
-              style={[
-                styles.statusPillText,
-                statusFilter === 'ACTIVE' && styles.statusPillTextActive,
+            <Pressable
+              onPress={() => setStatusFilter('ACTIVE')}
+              style={({ pressed }) => [
+                styles.statusPill,
+                statusFilter === 'ACTIVE' && styles.statusPillActive,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
               ]}
             >
-              Đang hoạt động
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.statusPillText,
+                  statusFilter === 'ACTIVE' && styles.statusPillTextActive,
+                ]}
+              >
+                Đang hoạt động
+              </Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => setStatusFilter('LEAD')}
-            style={[styles.statusPill, statusFilter === 'LEAD' && styles.statusPillActive]}
-          >
-            <Text
-              style={[
-                styles.statusPillText,
-                statusFilter === 'LEAD' && styles.statusPillTextActive,
+            <Pressable
+              onPress={() => setStatusFilter('LEAD')}
+              style={({ pressed }) => [
+                styles.statusPill,
+                statusFilter === 'LEAD' && styles.statusPillActive,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
               ]}
             >
-              Tiềm năng
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.statusPillText,
+                  statusFilter === 'LEAD' && styles.statusPillTextActive,
+                ]}
+              >
+                Tiềm năng
+              </Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => setStatusFilter('INACTIVE')}
-            style={[styles.statusPill, statusFilter === 'INACTIVE' && styles.statusPillActive]}
-          >
-            <Text
-              style={[
-                styles.statusPillText,
-                statusFilter === 'INACTIVE' && styles.statusPillTextActive,
+            <Pressable
+              onPress={() => setStatusFilter('INACTIVE')}
+              style={({ pressed }) => [
+                styles.statusPill,
+                statusFilter === 'INACTIVE' && styles.statusPillActive,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
               ]}
             >
-              Ngừng hoạt động
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.statusPillText,
+                  statusFilter === 'INACTIVE' && styles.statusPillTextActive,
+                ]}
+              >
+                Ngừng hoạt động
+              </Text>
+            </Pressable>
+          </ScrollView>
         </View>
 
         <SectionHeader title={`Danh sách (${filtered.length})`} />
@@ -1012,10 +1034,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-  statusFilterRow: {
-    flexDirection: 'row',
-    gap: 6,
+  statusFilterContainer: {
+    marginHorizontal: -spacing.lg,
     marginBottom: spacing.md,
+  },
+  statusFilterScroll: {
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   statusPill: {
     paddingHorizontal: 10,
