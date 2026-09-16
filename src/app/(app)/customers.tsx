@@ -21,6 +21,7 @@ const MASCOT_SEARCH = require('../../../assets/public/3s-search.png');
 import { Card, EmptyState, Row, SectionHeader } from '@/components/UI';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerDetailModal } from '@/components/CustomerDetailModal';
+import { CustomerGoalsModal } from '@/components/CustomerGoalsModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { PtPackageModal } from '@/components/PtPackageModal';
 import {
@@ -30,6 +31,7 @@ import {
   updateCustomer,
 } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
+import { fetchAllGoals, fetchCustomerGoals, type GoalItem } from '@/services/goalService';
 import { colors, radius, spacing, typography } from '@/theme';
 import type {
   CreateCustomerPayload,
@@ -131,21 +133,60 @@ export default function CustomersScreen() {
   // Modal quản lý gói PT
   const [packageCustomer, setPackageCustomer] = useState<{ id: string; fullName: string } | null>(null);
 
+  // Modal quản lý mục tiêu khách hàng
+  const [goalCustomer, setGoalCustomer] = useState<{ id: string; fullName: string; phone?: string } | null>(null);
+
   // Modal xác nhận xóa khách hàng
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerListItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Bản đồ mục tiêu mới nhất theo từng khách hàng
+  const [customerGoalsMap, setCustomerGoalsMap] = useState<Record<string, GoalItem>>({});
+
   const loadData = useCallback(async () => {
     try {
-      const [dashData, listData] = await Promise.all([
+      const [dashData, listData, goalsData] = await Promise.all([
         fetchPtDashboard().catch(() => null),
         fetchCustomersList().catch(() => []),
+        fetchAllGoals(100).catch(() => []),
       ]);
 
       if (dashData?.customers?.length) {
-        setCustomers(dashData.customers);
+        // Chỉ lấy thông tin dashboard của khách hàng thật, không lấy mock data id bắt đầu bằng cust-
+        setCustomers(dashData.customers.filter((c) => !c.customerId.startsWith('cust-')));
+      } else {
+        setCustomers([]);
       }
       setProfileCustomers(listData || []);
+
+      // 1. Lập bản đồ mục tiêu từ fetchAllGoals
+      const gMap: Record<string, GoalItem> = {};
+      if (Array.isArray(goalsData)) {
+        for (const g of goalsData) {
+          const cId =
+            typeof g.customerId === 'object' && g.customerId !== null
+              ? (g.customerId as any)._id || (g.customerId as any).id
+              : String(g.customerId);
+          if (cId && !gMap[cId]) {
+            gMap[cId] = g;
+          }
+        }
+      }
+
+      // 2. Để đảm bảo 100% không sót bất kỳ mục tiêu thật nào, gọi trực tiếp fetchCustomerGoals cho từng khách hàng
+      if (listData && listData.length > 0) {
+        const goalFetches = listData.map(async (p) => {
+          if (!gMap[p._id]) {
+            const customerGoals = await fetchCustomerGoals(p._id).catch(() => []);
+            if (customerGoals && customerGoals.length > 0) {
+              gMap[p._id] = customerGoals[0];
+            }
+          }
+        });
+        await Promise.all(goalFetches);
+      }
+
+      setCustomerGoalsMap({ ...gMap });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -161,36 +202,34 @@ export default function CustomersScreen() {
     await loadData();
   }, [loadData]);
 
-  // Kết hợp danh sách hiển thị
-  // Ưu tiên hiển thị danh sách profile kết hợp thông tin dashboard
-  const allList: CustomerListItem[] = profileCustomers.length
-    ? profileCustomers.map((p) => {
-        const dash = customers.find((c) => c.customerId === p._id);
-        return {
-          id: p._id,
-          fullName: p.fullName,
-          phone: p.phone || dash?.phone || '',
-          email: p.email || '',
-          initialGoal: p.initialGoal || dash?.initialGoal || '',
-          score: dash?.score ?? null,
-          measurementCount: dash?.measurementCount ?? 0,
-          progressCategory: dash?.progressCategory ?? 'GOOD',
-          status: (p.status || 'ACTIVE') as any,
-          rawProfile: p,
-        };
-      })
-    : customers.map((c) => ({
-        id: c.customerId,
-        fullName: c.fullName,
-        phone: c.phone || '',
-        email: '',
-        initialGoal: c.initialGoal || '',
-        score: c.score ?? null,
-        measurementCount: c.measurementCount,
-        progressCategory: c.progressCategory,
-        status: 'ACTIVE' as const,
-        rawProfile: null,
-      }));
+  // Hiển thị danh sách khách hàng thực tế, tuyệt đối không dùng mock data
+  const allList: CustomerListItem[] = profileCustomers.map((p) => {
+    const dash = customers.find((c) => c.customerId === p._id);
+    const latestGoal = customerGoalsMap[p._id];
+
+    // CHỈ HIỂN THỊ MỤC TIÊU THẬT TỪ /api/goals, XÓA BỎ HOÀN TOÀN MOCK DATA
+    let displayGoal = '';
+    if (latestGoal?.title) {
+      if (latestGoal.targetValue != null) {
+        displayGoal = `${latestGoal.title} (${latestGoal.targetValue} ${latestGoal.targetUnit || ''})`.trim();
+      } else {
+        displayGoal = latestGoal.title;
+      }
+    }
+
+    return {
+      id: p._id,
+      fullName: p.fullName,
+      phone: p.phone || dash?.phone || '',
+      email: p.email || '',
+      initialGoal: displayGoal,
+      score: dash?.score ?? null,
+      measurementCount: dash?.measurementCount ?? 0,
+      progressCategory: dash?.progressCategory ?? 'GOOD',
+      status: (p.status || 'ACTIVE') as any,
+      rawProfile: p,
+    };
+  });
 
   const filtered = allList.filter((c) => {
     // Filter trạng thái
@@ -522,7 +561,28 @@ export default function CustomersScreen() {
 
                 <View style={styles.actionDivider} />
 
-                {/* 2. Hồ sơ (Con mắt) */}
+                {/* 2. Mục tiêu (Icon target) */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.compactActionBtn,
+                    pressed && styles.actionBtnPressed,
+                  ]}
+                  onPress={() =>
+                    setGoalCustomer({
+                      id: item.id,
+                      fullName: item.fullName,
+                      phone: item.phone,
+                    })
+                  }
+                  hitSlop={8}
+                  accessibilityLabel="Mục tiêu của khách hàng"
+                >
+                  <Feather name="target" size={16} color="#0284C7" />
+                </Pressable>
+
+                <View style={styles.actionDivider} />
+
+                {/* 3. Hồ sơ (Con mắt) */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.compactActionBtn,
@@ -886,6 +946,16 @@ export default function CustomersScreen() {
         onClose={() => setPackageCustomer(null)}
       />
 
+      {/* 8B. MODAL QUẢN LÝ MỤC TIÊU HUẤN LUYỆN */}
+      <CustomerGoalsModal
+        visible={Boolean(goalCustomer)}
+        customer={goalCustomer}
+        onClose={() => {
+          setGoalCustomer(null);
+          void loadData();
+        }}
+      />
+
       {/* 9. MODAL XÁC NHẬN XÓA KHÁCH HÀNG */}
       <ConfirmDeleteModal
         visible={Boolean(deletingCustomer)}
@@ -937,7 +1007,7 @@ export default function CustomersScreen() {
                 }}
               >
                 <View style={styles.sheetOptionLeft}>
-                  <View style={[styles.sheetDot, { backgroundColor: '#00C2FF' }]} />
+                  <View style={[styles.sheetDot, { backgroundColor: '#0284C7' }]} />
                   <Text
                     style={[
                       styles.sheetOptionText,
@@ -948,7 +1018,7 @@ export default function CustomersScreen() {
                   </Text>
                 </View>
                 {statusFilter === 'ALL' ? (
-                  <Feather name="check" size={18} color="#00C2FF" />
+                  <Feather name="check" size={18} color="#0284C7" />
                 ) : null}
               </Pressable>
 
@@ -1299,8 +1369,8 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     overflow: 'hidden',
     display: 'flex',
   },
@@ -1336,7 +1406,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 10,
     marginBottom: 16,
     gap: 8,
@@ -1350,7 +1420,7 @@ const styles = StyleSheet.create({
   formSectionHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0088CC',
+    color: '#0284C7',
     marginTop: 16,
     marginBottom: 10,
     textTransform: 'uppercase',
@@ -1401,7 +1471,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   pillOptionActive: {
-    backgroundColor: '#00C2FF',
+    backgroundColor: '#0284C7',
   },
   pillOptionText: {
     fontSize: 12,
@@ -1427,8 +1497,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   statusOptionActive: {
-    backgroundColor: '#E6F8FF',
-    borderColor: '#00C2FF',
+    backgroundColor: '#E0F2FE',
+    borderColor: '#0284C7',
   },
   statusOptionText: {
     fontSize: 11,
@@ -1437,7 +1507,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statusOptionTextActive: {
-    color: '#0088CC',
+    color: '#0284C7',
     fontWeight: '800',
   },
   modalFooter: {
@@ -1537,8 +1607,8 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
     paddingTop: 12,
     paddingBottom: 28,
@@ -1585,7 +1655,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sheetOptionItemActive: {
-    backgroundColor: '#F0FBFF',
+    backgroundColor: '#E0F2FE',
   },
   sheetOptionLeft: {
     flexDirection: 'row',
@@ -1603,7 +1673,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   sheetOptionTextActive: {
-    color: '#0088CC',
+    color: '#0284C7',
     fontWeight: '800',
   },
 });

@@ -32,6 +32,51 @@ export class ApiError extends Error {
 function getMessage(body: unknown, fallback: string): string {
   if (!body || typeof body !== 'object') return fallback;
   const record = body as ApiEnvelope<unknown>;
+
+  // 1. Nếu backend trả về danh sách chi tiết lỗi kiểm tra dữ liệu (Joi / validation issues)
+  if (Array.isArray(record.errors) && record.errors.length > 0) {
+    const errorDetails = record.errors
+      .map((err: any) => {
+        if (typeof err === 'string') return err;
+        if (err && typeof err === 'object') {
+          if (err.message && typeof err.message === 'string') return err.message;
+          if (err.field) return `Trường "${err.field}" không hợp lệ.`;
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (errorDetails.length > 0) {
+      return errorDetails.join('\n');
+    }
+  }
+
+  // 2. Nếu errors là một đối tượng { [field]: string | object }
+  if (record.errors && typeof record.errors === 'object' && !Array.isArray(record.errors)) {
+    const errorDetails = Object.entries(record.errors as Record<string, unknown>)
+      .map(([field, val]) => {
+        if (typeof val === 'string') return val;
+        if (val && typeof val === 'object' && (val as any).message) {
+          return (val as any).message;
+        }
+        return `Trường "${field}" không hợp lệ.`;
+      })
+      .filter(Boolean);
+
+    if (errorDetails.length > 0) {
+      return errorDetails.join('\n');
+    }
+  }
+
+  // 3. Nếu message từ server cụ thể và không phải câu thông báo chung chung
+  if (
+    record.message &&
+    record.message !== 'Dữ liệu gửi lên không hợp lệ.' &&
+    record.message !== 'Validation Error'
+  ) {
+    return record.message;
+  }
+
   return record.message || record.error || fallback;
 }
 
@@ -67,7 +112,6 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
   } else if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-
   if (storedSession?.token) {
     headers.set('Authorization', `Bearer ${storedSession.token}`);
   }

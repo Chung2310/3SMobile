@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Text, View, Pressable, ScrollView, StyleSheet } from 'react-native';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import { useState, useEffect } from 'react';
+import { Text, View, Pressable, ScrollView, StyleSheet, Animated, Easing } from 'react-native';
+import Svg, { Circle, Line, Polyline, Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors, typography } from '@/theme';
 import { dayKey, metricSeries } from '@/services/progress';
 import { readText, formatDate } from '@/services/journey';
@@ -9,6 +9,26 @@ import { Button, Notice } from '../workouts/Controls';
 
 export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; metric: string; unit: string }) {
   const points = metricSeries(records, metric);
+  const [animVal] = useState(() => new Animated.Value(0));
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    animVal.setValue(0);
+    const id = animVal.addListener(({ value }) => {
+      setProgress(value);
+    });
+    Animated.timing(animVal, {
+      toValue: 1,
+      duration: 850,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      animVal.removeListener(id);
+    };
+  }, [metric, records, animVal]);
+
   if (!points.length) return <Notice text="Chưa có số đo cho chỉ số này." />;
 
   const values = points.map((p) => p.value);
@@ -28,6 +48,27 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
     const y = points.length === 1 ? 80 : 130 - ((p.value - min) / valueRange) * 90;
     return { x, y, val: p.value, date: p.date, index };
   });
+
+  const animatedPlot = plot.map((p, i) => {
+    const staggerDelay = plot.length > 1 ? (i / (plot.length - 1)) * 0.35 : 0;
+    const pointProgress = Math.min(1, Math.max(0, (progress - staggerDelay) / 0.65));
+    const currentY = 140 - (140 - p.y) * pointProgress;
+    return {
+      ...p,
+      x: p.x,
+      y: currentY,
+      progress: pointProgress,
+    };
+  });
+
+  const areaPoints =
+    animatedPlot.length > 1
+      ? [
+          ...animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`),
+          `${animatedPlot[animatedPlot.length - 1].x.toFixed(1)},140`,
+          `${animatedPlot[0].x.toFixed(1)},140`,
+        ].join(' ')
+      : '';
 
   return (
     <View style={styles.chartCard}>
@@ -59,15 +100,26 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
         style={styles.svgContainer}
       >
         <Svg width="100%" height={150} viewBox="0 0 320 150">
+          <Defs>
+            <LinearGradient id="metricChartGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.22} />
+              <Stop offset="100%" stopColor={colors.primary} stopOpacity={0.01} />
+            </LinearGradient>
+          </Defs>
           {/* Background guide lines */}
           <Line x1={20} y1={40} x2={300} y2={40} stroke={colors.borderSoft} strokeDasharray="4 4" strokeWidth={1} />
           <Line x1={20} y1={85} x2={300} y2={85} stroke={colors.borderSoft} strokeDasharray="4 4" strokeWidth={1} />
           <Line x1={20} y1={130} x2={300} y2={130} stroke={colors.border} strokeWidth={1} />
 
+          {/* Area gradient under line */}
+          {animatedPlot.length > 1 && (
+            <Polygon points={areaPoints} fill="url(#metricChartGrad)" />
+          )}
+
           {/* Polyline line chart */}
           {points.length > 1 && (
             <Polyline
-              points={plot.map((p) => `${p.x},${p.y}`).join(' ')}
+              points={animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
               fill="none"
               stroke={colors.primary}
               strokeWidth={3}
@@ -77,7 +129,7 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
           )}
 
           {/* Points */}
-          {plot.map((p, i) => (
+          {animatedPlot.map((p, i) => (
             <Circle
               key={i}
               cx={p.x}
