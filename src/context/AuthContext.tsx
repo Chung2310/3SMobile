@@ -1,4 +1,4 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
 import { api } from '@/services/api/client';
 import { clearStoredSession, getStoredSession, saveSession } from '@/services/sessionStore';
@@ -24,9 +24,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!stored?.token) return;
       const me = await api.get<User>('/api/auth/me');
       if (me && me.id) {
+        const resolvedAvatar = (typeof me.avatarUrl === 'string' && me.avatarUrl.trim())
+          ? me.avatarUrl.trim()
+          : (stored.user.avatarUrl || '');
         const updatedSession: Session = {
           token: stored.token,
-          user: { ...stored.user, ...me },
+          user: {
+            ...stored.user,
+            ...me,
+            avatarUrl: resolvedAvatar,
+          },
         };
         await saveSession(updatedSession);
         setSession(updatedSession);
@@ -48,9 +55,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           const me = await api.get<User>('/api/auth/me');
           if (active && me && me.id) {
+            const resolvedAvatar = (typeof me.avatarUrl === 'string' && me.avatarUrl.trim())
+              ? me.avatarUrl.trim()
+              : (stored.user.avatarUrl || '');
             const updatedSession: Session = {
               token: stored.token,
-              user: { ...stored.user, ...me },
+              user: {
+                ...stored.user,
+                ...me,
+                avatarUrl: resolvedAvatar,
+              },
             };
             await saveSession(updatedSession);
             setSession(updatedSession);
