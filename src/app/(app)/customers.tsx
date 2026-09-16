@@ -21,6 +21,7 @@ const MASCOT_SEARCH = require('../../../assets/public/3s-search.png');
 import { Card, EmptyState, Row, SectionHeader } from '@/components/UI';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerDetailModal } from '@/components/CustomerDetailModal';
+import { CustomerGoalsModal } from '@/components/CustomerGoalsModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { PtPackageModal } from '@/components/PtPackageModal';
 import {
@@ -130,6 +131,9 @@ export default function CustomersScreen() {
 
   // Modal quản lý gói PT
   const [packageCustomer, setPackageCustomer] = useState<{ id: string; fullName: string } | null>(null);
+
+  // Modal quản lý mục tiêu khách hàng
+  const [goalCustomer, setGoalCustomer] = useState<{ id: string; fullName: string; phone?: string } | null>(null);
 
   // Modal xác nhận xóa khách hàng
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerListItem | null>(null);
@@ -522,7 +526,28 @@ export default function CustomersScreen() {
 
                 <View style={styles.actionDivider} />
 
-                {/* 2. Hồ sơ (Con mắt) */}
+                {/* 2. Mục tiêu (Icon target) */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.compactActionBtn,
+                    pressed && styles.actionBtnPressed,
+                  ]}
+                  onPress={() =>
+                    setGoalCustomer({
+                      id: item.id,
+                      fullName: item.fullName,
+                      phone: item.phone,
+                    })
+                  }
+                  hitSlop={8}
+                  accessibilityLabel="Mục tiêu của khách hàng"
+                >
+                  <Feather name="target" size={16} color="#0284C7" />
+                </Pressable>
+
+                <View style={styles.actionDivider} />
+
+                {/* 3. Hồ sơ (Con mắt) */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.compactActionBtn,
@@ -884,6 +909,13 @@ export default function CustomersScreen() {
         visible={Boolean(packageCustomer)}
         customer={packageCustomer}
         onClose={() => setPackageCustomer(null)}
+      />
+
+      {/* 8B. MODAL QUẢN LÝ MỤC TIÊU HUẤN LUYỆN */}
+      <CustomerGoalsModal
+        visible={Boolean(goalCustomer)}
+        customer={goalCustomer}
+        onClose={() => setGoalCustomer(null)}
       />
 
       {/* 9. MODAL XÁC NHẬN XÓA KHÁCH HÀNG */}
