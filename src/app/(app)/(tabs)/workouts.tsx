@@ -37,11 +37,12 @@ function useResource<T>(loader: () => Promise<T>) {
   return { data, loading, error, refresh };
 }
 export default function WorkoutsScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   if (!session) return null;
   if (session.user.role === 'CUSTOMER') return <CustomerWorkouts key={session.user.id} />;
   if (session.user.role === 'PT' || session.user.role === 'ADMIN') return <StaffWorkouts key={session.user.id} isPt={session.user.role === 'PT'} />;
-  return <Screen title="GIÁO ÁN"><Notice text="Tài khoản này không có quyền truy cập giáo án." /></Screen>;
+  return <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="Giáo án"><Notice text="Tài khoản này không có quyền truy cập giáo án." /></Screen>;
 }
 function CustomerWorkouts() {
   const router = useRouter();
@@ -50,7 +51,7 @@ function CustomerWorkouts() {
   const [selected, setSelected] = useState('');
   const plans = customerPlans(data?.plans);
   const plan = plans.find((item) => recordId(item) === selected) || plans[0];
-  return <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="GIÁO ÁN" subtitle="Kế hoạch tập luyện được PT công bố cho bạn." refreshing={loading} onRefresh={refresh}>
+  return <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="Giáo án" subtitle="Kế hoạch tập luyện được PT công bố cho bạn." refreshing={loading} onRefresh={refresh}>
     {!!error && <><Notice error text={error} /><Button secondary label="Thử lại" onPress={() => void refresh()} /></>}
     {loading && !data ? <Busy /> : plan ? <>
       <Picker label="Chọn giáo án" value={recordId(plan)} options={Object.fromEntries(plans.map((item) => [recordId(item), `${readText(item, ['title'])}${item.lifecycleStatus === 'ARCHIVED' ? ' · Lịch sử' : ''}`]))} onChange={setSelected} />
@@ -86,7 +87,7 @@ function StaffWorkouts({ isPt }: { isPt: boolean }) {
     catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Không thực hiện được thao tác.'); }
     finally { actionLock.current = false; setBusy(false); }
   }
-  return <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="GIÁO ÁN" subtitle="Quản lý giáo án và kế hoạch tập của khách hàng." refreshing={loading} onRefresh={refresh}>
+  return <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="Giáo án" subtitle="Quản lý giáo án và kế hoạch tập của khách hàng." refreshing={loading} onRefresh={refresh}>
     <View style={{ marginBottom: 16 }}><Button secondary icon="book-open" label="Thư viện bài tập" onPress={() => router.push('/(app)/exercises')} /></View>
     <Segments value={mode} options={isPt ? { templates: 'Giáo án của tôi', customers: 'Khách hàng' } : { customers: 'Khách hàng' }} onChange={(value) => { setMode(value); setSearch(''); }} />
     {!!message && <Notice tone="success" text={message} />}
