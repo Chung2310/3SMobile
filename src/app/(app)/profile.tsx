@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { fetchPtProfile, type PtProfileInfo } from '@/services/ptProfileService';
+import { resolveImageUrl } from '@/services/imageUtils';
 import { colors, radius, spacing } from '@/theme';
 
 export default function ProfileScreen() {
@@ -128,7 +129,7 @@ export default function ProfileScreen() {
                 {/* Ảnh đại diện thực tế từ API (hoặc fallback ký tự tên nếu backend chưa lưu URL ảnh) */}
                 <View style={styles.avatarContainer}>
                   {avatarUrl ? (
-                    <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                    <Image source={{ uri: resolveImageUrl(avatarUrl) || '' }} style={styles.avatarImage} />
                   ) : (
                     <View style={styles.avatarFallback}>
                       <Text style={styles.avatarInitial}>

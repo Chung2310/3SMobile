@@ -1,4 +1,5 @@
-﻿const test = require('node:test');
+/* global __dirname */
+const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -15,6 +16,17 @@ function loadTs(filename) {
   return mod.exports;
 }
 const { workoutDays, customerPlans, exerciseMetrics, planPayload, prepareDraft } = loadTs('src/services/workouts.ts');
+
+test('AI draft retains generated exercise definitions and schedule when saved', () => {
+  const generatedExercises = [{ name: 'AI squat', muscleGroup: 'Legs', level: 'BEGINNER', defaultTrackingType: 'STRENGTH' }];
+  const scheduledExercises = [{ name: 'AI squat', trackingType: 'STRENGTH', prescription: { sets: 3, reps: '10' }, weekNumber: 2, dayNumber: 1, startMinute: 480, durationMinutes: 30 }];
+  const draft = prepareDraft({ title: 'AI plan', goal: 'Strength', level: 'BEGINNER', durationDays: 14, generatedExercises, scheduledExercises });
+  const payload = planPayload(draft);
+  assert.deepEqual(payload.generatedExercises, generatedExercises);
+  assert.equal(payload.scheduledExercises[0].weekNumber, 2);
+  assert.equal(payload.scheduledExercises[0].startMinute, 480);
+  assert.equal(payload.scheduledExercises[0].prescription.sets, 3);
+});
 const exercise = { name: 'Squat', trackingType: 'STRENGTH', prescription: { sets: 3, reps: '8–10', targetWeight: 0, restSeconds: 60 } };
 const plan = { title: 'Cơ bản', goal: 'Thể lực', level: 'BEGINNER', durationDays: 28, sessions: [{ name: 'Buổi 1', exercises: [exercise] }] };
 test('Studio groups weeks separately and orders exercises by start time', () => {
@@ -69,4 +81,14 @@ test('accepts the five tracking schemas including interval and mobility', () => 
     const result = planPayload({ ...plan, sessions: [{ name: 'Buổi', exercises: [{ name: 'Bài', trackingType, prescription }] }] });
     assert.equal(result.sessions[0].exercises[0].trackingType, trackingType);
   }
+});
+
+
+test('Studio schedule rejects overlaps, invalid slots and out-of-day times', () => {
+  const slot = { ...exercise, weekNumber: 1, dayNumber: 1, startMinute: 480, durationMinutes: 60 };
+  const build = (items) => planPayload({ ...plan, durationDays: 14, scheduledExercises: items });
+  assert.throws(() => build([slot, { ...slot, startMinute: 510 }]), /trùng/);
+  for (const patch of [{ startMinute: NaN }, { startMinute: 481 }, { durationMinutes: 0 }, { durationMinutes: 16 }, { startMinute: 1425 }, { dayNumber: 8 }, { weekNumber: 0 }]) assert.throws(() => build([{ ...slot, ...patch }]));
+  assert.equal(build([slot, { ...slot, startMinute: 540 }]).scheduledExercises.length, 2);
+  assert.equal(build([slot, { ...slot, weekNumber: 2 }]).scheduledExercises.length, 2);
 });

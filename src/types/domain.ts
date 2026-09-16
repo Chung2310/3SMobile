@@ -7,6 +7,7 @@ export interface User {
   fullName?: string;
   name?: string;
   email?: string;
+  phone?: string;
   avatarUrl?: string;
   customer?: JsonRecord;
   [key: string]: unknown;
