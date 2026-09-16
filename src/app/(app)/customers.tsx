@@ -31,6 +31,7 @@ import {
   updateCustomer,
 } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
+import { fetchAllGoals, type GoalItem } from '@/services/goalService';
 import { colors, radius, spacing, typography } from '@/theme';
 import type {
   CreateCustomerPayload,
@@ -139,17 +140,39 @@ export default function CustomersScreen() {
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerListItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Bản đồ mục tiêu mới nhất theo từng khách hàng
+  const [customerGoalsMap, setCustomerGoalsMap] = useState<Record<string, GoalItem>>({});
+
   const loadData = useCallback(async () => {
     try {
-      const [dashData, listData] = await Promise.all([
+      const [dashData, listData, goalsData] = await Promise.all([
         fetchPtDashboard().catch(() => null),
         fetchCustomersList().catch(() => []),
+        fetchAllGoals(200).catch(() => []),
       ]);
 
       if (dashData?.customers?.length) {
-        setCustomers(dashData.customers);
+        // Chỉ lấy thông tin dashboard của khách hàng thật, không lấy mock data id bắt đầu bằng cust-
+        setCustomers(dashData.customers.filter((c) => !c.customerId.startsWith('cust-')));
+      } else {
+        setCustomers([]);
       }
       setProfileCustomers(listData || []);
+
+      // Lập bản đồ mục tiêu mới nhất của từng khách hàng từ API (danh sách đã sort createdAt: -1)
+      const gMap: Record<string, GoalItem> = {};
+      if (Array.isArray(goalsData)) {
+        for (const g of goalsData) {
+          const cId =
+            typeof g.customerId === 'object' && g.customerId !== null
+              ? (g.customerId as any)._id || (g.customerId as any).id
+              : String(g.customerId);
+          if (cId && !gMap[cId]) {
+            gMap[cId] = g;
+          }
+        }
+      }
+      setCustomerGoalsMap(gMap);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -165,36 +188,36 @@ export default function CustomersScreen() {
     await loadData();
   }, [loadData]);
 
-  // Kết hợp danh sách hiển thị
-  // Ưu tiên hiển thị danh sách profile kết hợp thông tin dashboard
-  const allList: CustomerListItem[] = profileCustomers.length
-    ? profileCustomers.map((p) => {
-        const dash = customers.find((c) => c.customerId === p._id);
-        return {
-          id: p._id,
-          fullName: p.fullName,
-          phone: p.phone || dash?.phone || '',
-          email: p.email || '',
-          initialGoal: p.initialGoal || dash?.initialGoal || '',
-          score: dash?.score ?? null,
-          measurementCount: dash?.measurementCount ?? 0,
-          progressCategory: dash?.progressCategory ?? 'GOOD',
-          status: (p.status || 'ACTIVE') as any,
-          rawProfile: p,
-        };
-      })
-    : customers.map((c) => ({
-        id: c.customerId,
-        fullName: c.fullName,
-        phone: c.phone || '',
-        email: '',
-        initialGoal: c.initialGoal || '',
-        score: c.score ?? null,
-        measurementCount: c.measurementCount,
-        progressCategory: c.progressCategory,
-        status: 'ACTIVE' as const,
-        rawProfile: null,
-      }));
+  // Hiển thị danh sách khách hàng thực tế, tuyệt đối không dùng mock data
+  const allList: CustomerListItem[] = profileCustomers.map((p) => {
+    const dash = customers.find((c) => c.customerId === p._id);
+    const latestGoal = customerGoalsMap[p._id];
+
+    // Hiển thị mục tiêu mới nhất từ API /api/goals, hoặc initialGoal nếu người dùng đã nhập
+    let displayGoal = '';
+    if (latestGoal?.title) {
+      if (latestGoal.targetValue != null) {
+        displayGoal = `${latestGoal.title} (${latestGoal.targetValue} ${latestGoal.targetUnit || ''})`.trim();
+      } else {
+        displayGoal = latestGoal.title;
+      }
+    } else if (p.initialGoal) {
+      displayGoal = p.initialGoal;
+    }
+
+    return {
+      id: p._id,
+      fullName: p.fullName,
+      phone: p.phone || dash?.phone || '',
+      email: p.email || '',
+      initialGoal: displayGoal,
+      score: dash?.score ?? null,
+      measurementCount: dash?.measurementCount ?? 0,
+      progressCategory: dash?.progressCategory ?? 'GOOD',
+      status: (p.status || 'ACTIVE') as any,
+      rawProfile: p,
+    };
+  });
 
   const filtered = allList.filter((c) => {
     // Filter trạng thái
@@ -915,7 +938,10 @@ export default function CustomersScreen() {
       <CustomerGoalsModal
         visible={Boolean(goalCustomer)}
         customer={goalCustomer}
-        onClose={() => setGoalCustomer(null)}
+        onClose={() => {
+          setGoalCustomer(null);
+          void loadData();
+        }}
       />
 
       {/* 9. MODAL XÁC NHẬN XÓA KHÁCH HÀNG */}

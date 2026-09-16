@@ -1,5 +1,5 @@
-﻿import { api } from '@/services/api/client';
-import type { PtCustomerSummary, PtDashboardData } from '@/types/domain';
+import { api } from '@/services/api/client';
+import type { PtDashboardData } from '@/types/domain';
 
 // Dữ liệu mẫu dự phòng khi chưa kết nối mạng hoặc tài khoản thử nghiệm
 export const DEMO_PT_DASHBOARD: PtDashboardData = {
@@ -72,15 +72,23 @@ export const DEMO_PT_DASHBOARD: PtDashboardData = {
   ],
 };
 
+export const EMPTY_PT_DASHBOARD: PtDashboardData = {
+  totalCustomers: 0,
+  openAlerts: 0,
+  goodProgressCount: 0,
+  slowProgressCount: 0,
+  poorProgressCount: 0,
+  customers: [],
+};
+
 export async function fetchPtDashboard(): Promise<PtDashboardData> {
   try {
     const data = await api.get<PtDashboardData>('/api/dashboard/pt');
     if (data && typeof data === 'object' && 'goodProgressCount' in data) {
       return data;
     }
-    return DEMO_PT_DASHBOARD;
+    return EMPTY_PT_DASHBOARD;
   } catch {
-    // Trả về dữ liệu demo khi không gọi được API
-    return DEMO_PT_DASHBOARD;
+    return EMPTY_PT_DASHBOARD;
   }
 }

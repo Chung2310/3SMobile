@@ -71,6 +71,18 @@ export async function fetchCustomerGoals(customerId: string): Promise<GoalItem[]
   }
 }
 
+export async function fetchAllGoals(limit = 200): Promise<GoalItem[]> {
+  try {
+    const res = await api.get<any>(`/api/goals?limit=${limit}`);
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.items)) return res.items;
+    if (res && Array.isArray(res.data)) return res.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function createGoal(payload: CreateGoalPayload): Promise<GoalItem> {
   const cleanPayload: Record<string, unknown> = {
     customerId: payload.customerId,
