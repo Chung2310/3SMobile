@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -317,7 +317,6 @@ export default function AssistantScreen() {
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
           </Pressable>
-
           <View style={styles.botIconWrapper}>
             <Feather name="cpu" size={18} color={colors.primary} />
           </View>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { InBodyListScreen } from '@/components/inbody/InBodyListScreen';
 
 import { Screen } from '@/components/Screen';
 import { LoadingState, ErrorState } from '@/components/UI';
@@ -46,19 +48,16 @@ const TAB_OPTIONS: { key: ProgressTab; label: string; icon: keyof typeof Feather
 
 export default function ProgressScreen() {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN';
 
-  // If user is staff (PT/ADMIN), display the PT Progress Workspace directly
+  // If user is staff (PT/ADMIN), display the PT InBody Management Screen
   if (staff && session) {
     return (
-      <Screen
-        title="Tiến độ học viên"
-        subtitle="Quản lý chỉ số InBody và buổi tập của học viên"
-        onBack={() => router.navigate('/(app)/(tabs)')}
-      >
-        <ProgressWorkspace staff={staff} userId={session.user.id} />
-      </Screen>
+      <View style={[styles.inbodyContainer, { paddingTop: insets.top }]}>
+        <InBodyListScreen />
+      </View>
     );
   }
 
@@ -519,6 +518,10 @@ function CustomerProgressView() {
 }
 
 const styles = StyleSheet.create({
+  inbodyContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     gap: 16,
     paddingBottom: 24,
