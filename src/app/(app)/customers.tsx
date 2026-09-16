@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +15,8 @@ import {
 import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const MASCOT_SEARCH = require('../../../assets/public/3s-search.png');
 
 import { Card, EmptyState, Row, SectionHeader } from '@/components/UI';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -111,6 +114,7 @@ export default function CustomersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [showStatusSheet, setShowStatusSheet] = useState(false);
 
   // Modal thêm / sửa khách hàng & chọn ngày sinh
   const [showAddModal, setShowAddModal] = useState(false);
@@ -201,6 +205,23 @@ export default function CustomersScreen() {
       (c.initialGoal && c.initialGoal.toLowerCase().includes(q))
     );
   });
+
+  const activeCount = allList.filter((c) => c.status === 'ACTIVE').length;
+  const leadCount = allList.filter((c) => c.status === 'LEAD').length;
+  const inactiveCount = allList.filter((c) => c.status === 'INACTIVE').length;
+
+  function getStatusFilterLabel(status: StatusFilter) {
+    switch (status) {
+      case 'ACTIVE':
+        return 'Đang hoạt động';
+      case 'LEAD':
+        return 'Tiềm năng';
+      case 'INACTIVE':
+        return 'Ngừng hoạt động';
+      default:
+        return 'Tất cả';
+    }
+  }
 
   const handleOpenAddModal = () => {
     setEditingCustomer(null);
@@ -329,9 +350,10 @@ export default function CustomersScreen() {
       {/* 1. TOP BAR */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.navigate('/(app)/(tabs)')}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+          accessibilityLabel="Quay lại"
         >
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>
@@ -343,14 +365,13 @@ export default function CustomersScreen() {
           </Text>
         </View>
 
-        {/* Nút thêm mới */}
+        {/* Nút thêm mới - Bo tròn hoàn hảo */}
         <Pressable
           onPress={handleOpenAddModal}
           style={({ pressed }) => [styles.addHeaderBtn, pressed && styles.addHeaderBtnPressed]}
           hitSlop={8}
         >
-          <Feather name="plus" size={16} color="#FFFFFF" />
-          
+          <Feather name="plus" size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -389,85 +410,36 @@ export default function CustomersScreen() {
           ) : null}
         </View>
 
-        {/* 3. BỘ LỌC TRẠNG THÁI (CUỘN NGANG) */}
-        <View style={styles.statusFilterContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statusFilterScroll}
+        {/* 3. BỘ LỌC TRẠNG THÁI (NÚT FILTER MỞ BOTTOM SHEET) */}
+        <View style={styles.filterTriggerRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterTriggerBtn,
+              statusFilter !== 'ALL' && styles.filterTriggerBtnActive,
+              pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+            ]}
+            onPress={() => setShowStatusSheet(true)}
+            hitSlop={6}
           >
-            <Pressable
-              onPress={() => setStatusFilter('ALL')}
-              style={({ pressed }) => [
-                styles.statusPill,
-                statusFilter === 'ALL' && styles.statusPillActive,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+            <Feather
+              name="filter"
+              size={14}
+              color={statusFilter !== 'ALL' ? '#0098CC' : '#4B5563'}
+            />
+            <Text
+              style={[
+                styles.filterTriggerText,
+                statusFilter !== 'ALL' && styles.filterTriggerTextActive,
               ]}
             >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  statusFilter === 'ALL' && styles.statusPillTextActive,
-                ]}
-              >
-                Tất cả ({allList.length})
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setStatusFilter('ACTIVE')}
-              style={({ pressed }) => [
-                styles.statusPill,
-                statusFilter === 'ACTIVE' && styles.statusPillActive,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  statusFilter === 'ACTIVE' && styles.statusPillTextActive,
-                ]}
-              >
-                Đang hoạt động
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setStatusFilter('LEAD')}
-              style={({ pressed }) => [
-                styles.statusPill,
-                statusFilter === 'LEAD' && styles.statusPillActive,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  statusFilter === 'LEAD' && styles.statusPillTextActive,
-                ]}
-              >
-                Tiềm năng
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setStatusFilter('INACTIVE')}
-              style={({ pressed }) => [
-                styles.statusPill,
-                statusFilter === 'INACTIVE' && styles.statusPillActive,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  statusFilter === 'INACTIVE' && styles.statusPillTextActive,
-                ]}
-              >
-                Ngừng hoạt động
-              </Text>
-            </Pressable>
-          </ScrollView>
+              {getStatusFilterLabel(statusFilter)} ({filtered.length})
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={14}
+              color={statusFilter !== 'ALL' ? '#0098CC' : '#9CA3AF'}
+            />
+          </Pressable>
         </View>
 
         <SectionHeader title={`Danh sách (${filtered.length})`} />
@@ -532,36 +504,35 @@ export default function CustomersScreen() {
                 </View>
               </Pressable>
 
-              {/* BOTTOM ROW: 4 ICON THAO TÁC TINH GỌN (HỒ SƠ, GÓI PT, SỬA, XÓA) */}
+              {/* BOTTOM ROW: 4 NÚT THAO TÁC (GÓI PT -> HỒ SƠ -> SỬA -> XÓA) */}
               <View style={styles.cardActionsCompact}>
-                {/* 1. Chi tiết / Hồ sơ */}
+                {/* 1. Gói PT - có text, chiếm nhiều không gian hơn */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.ptPackageBtn,
+                    pressed && styles.ptPackageBtnPressed,
+                  ]}
+                  onPress={() => setPackageCustomer({ id: item.id, fullName: item.fullName })}
+                  hitSlop={4}
+                  accessibilityLabel="Quản lý gói PT"
+                >
+                  <Feather name="package" size={13} color="#7C3AED" />
+                  <Text style={styles.ptPackageBtnText}>Gói PT</Text>
+                </Pressable>
+
+                <View style={styles.actionDivider} />
+
+                {/* 2. Hồ sơ (Con mắt) */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.compactActionBtn,
                     pressed && styles.actionBtnPressed,
                   ]}
                   onPress={() => setDetailCustomer(item)}
-                  hitSlop={6}
+                  hitSlop={8}
                   accessibilityLabel="Xem chi tiết hồ sơ"
                 >
-                  <Feather name="eye" size={14} color="#00C2FF" />
-                  <Text style={[styles.compactActionText, { color: '#0098CC' }]}>Hồ sơ</Text>
-                </Pressable>
-
-                <View style={styles.actionDivider} />
-
-                {/* 2. Gói PT (gói mà KH đăng kí) */}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.compactActionBtn,
-                    pressed && styles.actionBtnPressed,
-                  ]}
-                  onPress={() => setPackageCustomer({ id: item.id, fullName: item.fullName })}
-                  hitSlop={6}
-                  accessibilityLabel="Quản lý gói PT"
-                >
-                  <Feather name="package" size={14} color="#7C3AED" />
-                  <Text style={[styles.compactActionText, { color: '#7C3AED' }]}>Gói PT</Text>
+                  <Feather name="eye" size={16} color="#00C2FF" />
                 </Pressable>
 
                 <View style={styles.actionDivider} />
@@ -573,11 +544,10 @@ export default function CustomersScreen() {
                     pressed && styles.actionBtnPressed,
                   ]}
                   onPress={() => handleEditCustomer(item)}
-                  hitSlop={6}
+                  hitSlop={8}
                   accessibilityLabel="Chỉnh sửa thông tin"
                 >
-                  <Feather name="edit-2" size={13} color="#475569" />
-                  <Text style={[styles.compactActionText, { color: '#475569' }]}>Sửa</Text>
+                  <Feather name="edit-2" size={15} color="#475569" />
                 </Pressable>
 
                 <View style={styles.actionDivider} />
@@ -589,26 +559,23 @@ export default function CustomersScreen() {
                     pressed && styles.actionBtnPressed,
                   ]}
                   onPress={() => setDeletingCustomer(item)}
-                  hitSlop={6}
+                  hitSlop={8}
                   accessibilityLabel="Xóa khách hàng"
                 >
-                  <Feather name="trash-2" size={13} color="#EF4444" />
-                  <Text style={[styles.compactActionText, { color: '#EF4444' }]}>Xóa</Text>
+                  <Feather name="trash-2" size={15} color="#EF4444" />
                 </Pressable>
               </View>
             </View>
           ))
         ) : (
-          <Card>
-            <EmptyState
-              title="Không có khách hàng"
-              message={
-                search
-                  ? 'Không tìm thấy khách hàng phù hợp với từ khóa.'
-                  : 'Chưa có dữ liệu khách hàng được phân công.'
-              }
+          <View style={styles.emptySearchWrap}>
+            <Image
+              source={MASCOT_SEARCH}
+              style={styles.emptySearchImg}
+              resizeMode="contain"
             />
-          </Card>
+            <Text style={styles.emptySearchText}>Không tìm thấy khách hàng mà bạn cần tìm</Text>
+          </View>
         )}
       </ScrollView>
 
@@ -930,6 +897,148 @@ export default function CustomersScreen() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeletingCustomer(null)}
       />
+
+      {/* 10. BOTTOM SHEET LỌC THEO TRẠNG THÁI KHÁCH HÀNG */}
+      <Modal
+        visible={showStatusSheet}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStatusSheet(false)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowStatusSheet(false)}
+          />
+          <View style={styles.sheetContent}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Trạng thái khách hàng</Text>
+              <Pressable
+                onPress={() => setShowStatusSheet(false)}
+                hitSlop={10}
+                style={({ pressed }) => [styles.sheetCloseBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Feather name="x" size={18} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            <View style={styles.sheetOptionsList}>
+              {/* Tất cả */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sheetOptionItem,
+                  statusFilter === 'ALL' && styles.sheetOptionItemActive,
+                  pressed && { opacity: 0.75 },
+                ]}
+                onPress={() => {
+                  setStatusFilter('ALL');
+                  setShowStatusSheet(false);
+                }}
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <View style={[styles.sheetDot, { backgroundColor: '#00C2FF' }]} />
+                  <Text
+                    style={[
+                      styles.sheetOptionText,
+                      statusFilter === 'ALL' && styles.sheetOptionTextActive,
+                    ]}
+                  >
+                    Tất cả ({allList.length})
+                  </Text>
+                </View>
+                {statusFilter === 'ALL' ? (
+                  <Feather name="check" size={18} color="#00C2FF" />
+                ) : null}
+              </Pressable>
+
+              {/* Đang hoạt động */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sheetOptionItem,
+                  statusFilter === 'ACTIVE' && styles.sheetOptionItemActive,
+                  pressed && { opacity: 0.75 },
+                ]}
+                onPress={() => {
+                  setStatusFilter('ACTIVE');
+                  setShowStatusSheet(false);
+                }}
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <View style={[styles.sheetDot, { backgroundColor: '#22C55E' }]} />
+                  <Text
+                    style={[
+                      styles.sheetOptionText,
+                      statusFilter === 'ACTIVE' && styles.sheetOptionTextActive,
+                    ]}
+                  >
+                    Đang hoạt động ({activeCount})
+                  </Text>
+                </View>
+                {statusFilter === 'ACTIVE' ? (
+                  <Feather name="check" size={18} color="#00C2FF" />
+                ) : null}
+              </Pressable>
+
+              {/* Tiềm năng */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sheetOptionItem,
+                  statusFilter === 'LEAD' && styles.sheetOptionItemActive,
+                  pressed && { opacity: 0.75 },
+                ]}
+                onPress={() => {
+                  setStatusFilter('LEAD');
+                  setShowStatusSheet(false);
+                }}
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <View style={[styles.sheetDot, { backgroundColor: '#F59E0B' }]} />
+                  <Text
+                    style={[
+                      styles.sheetOptionText,
+                      statusFilter === 'LEAD' && styles.sheetOptionTextActive,
+                    ]}
+                  >
+                    Tiềm năng ({leadCount})
+                  </Text>
+                </View>
+                {statusFilter === 'LEAD' ? (
+                  <Feather name="check" size={18} color="#00C2FF" />
+                ) : null}
+              </Pressable>
+
+              {/* Ngừng hoạt động */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sheetOptionItem,
+                  statusFilter === 'INACTIVE' && styles.sheetOptionItemActive,
+                  pressed && { opacity: 0.75 },
+                ]}
+                onPress={() => {
+                  setStatusFilter('INACTIVE');
+                  setShowStatusSheet(false);
+                }}
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <View style={[styles.sheetDot, { backgroundColor: '#6B7280' }]} />
+                  <Text
+                    style={[
+                      styles.sheetOptionText,
+                      statusFilter === 'INACTIVE' && styles.sheetOptionTextActive,
+                    ]}
+                  >
+                    Ngừng hoạt động ({inactiveCount})
+                  </Text>
+                </View>
+                {statusFilter === 'INACTIVE' ? (
+                  <Feather name="check" size={18} color="#00C2FF" />
+                ) : null}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -974,28 +1083,21 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   addHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#00C2FF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#00C2FF',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.45,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
   },
   addHeaderBtnPressed: {
     backgroundColor: '#0098CC',
-    transform: [{ scale: 0.98 }],
-  },
-  addHeaderBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    transform: [{ scale: 0.92 }],
   },
   toastWrap: {
     flexDirection: 'row',
@@ -1034,34 +1136,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-  statusFilterContainer: {
-    marginHorizontal: -spacing.lg,
-    marginBottom: spacing.md,
-  },
-  statusFilterScroll: {
-    paddingHorizontal: spacing.lg,
+  filterTriggerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: spacing.md,
   },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+  filterTriggerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E5E7EB',
   },
-  statusPillActive: {
+  filterTriggerBtnActive: {
     backgroundColor: '#E6F8FF',
     borderColor: '#00C2FF',
   },
-  statusPillText: {
-    fontSize: 12,
+  filterTriggerText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.text,
   },
-  statusPillTextActive: {
+  filterTriggerTextActive: {
     color: '#0088CC',
     fontWeight: '700',
   },
@@ -1162,15 +1262,25 @@ const styles = StyleSheet.create({
   },
   compactActionBtn: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+  },
+  ptPackageBtn: {
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 5,
+    paddingVertical: 7,
     gap: 4,
   },
-  compactActionText: {
+  ptPackageBtnPressed: {
+    opacity: 0.55,
+  },
+  ptPackageBtnText: {
     fontSize: 12,
     fontWeight: '700',
+    color: '#7C3AED',
   },
   actionDivider: {
     width: 1,
@@ -1398,5 +1508,102 @@ const styles = StyleSheet.create({
   datePickerBtnTextPlaceholder: {
     color: colors.textMuted,
     fontWeight: '400',
+  },
+
+  // Empty Search Mascot
+  emptySearchWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptySearchImg: {
+    width: 140,
+    height: 140,
+    marginBottom: 12,
+  },
+  emptySearchText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+
+  // Bottom Sheet Modal
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  sheetOptionsList: {
+    gap: 4,
+  },
+  sheetOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  sheetOptionItemActive: {
+    backgroundColor: '#F0FBFF',
+  },
+  sheetOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sheetDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sheetOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  sheetOptionTextActive: {
+    color: '#0088CC',
+    fontWeight: '800',
   },
 });

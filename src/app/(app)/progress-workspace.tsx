@@ -23,7 +23,7 @@ function ProgressPhoto({ photo }: { photo: JsonRecord }) {
 }
 export default function ProgressScreen() {
   const { session } = useAuth(); const role = session?.user.role; const staff = role === 'PT' || role === 'ADMIN';
-  return <Screen title="Tiến độ" onBack={() => router.back()}>{session && (staff || role === 'CUSTOMER') ? <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} /> : <Notice error text="Tài khoản không có quyền xem tiến độ." />}</Screen>;
+  return <Screen title="Ghi nhận tiến độ" subtitle="Cập nhật chỉ số và theo dõi học viên" onBack={() => router.navigate('/(app)/(tabs)')}>{session && (staff || role === 'CUSTOMER') ? <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} /> : <Notice error text="Tài khoản không có quyền xem tiến độ." />}</Screen>;
 }
 function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: string }) {
   const [customers, setCustomers] = useState<JsonRecord[]>([]); const [customerId, setCustomerId] = useState('');

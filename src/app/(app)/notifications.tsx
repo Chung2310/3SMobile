@@ -65,7 +65,13 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <Screen title="Thông báo" subtitle="Cập nhật mới nhất từ phòng gym." refreshing={refreshing} onRefresh={() => load(true)}>
+    <Screen
+      title="Thông báo"
+      subtitle="Cập nhật mới nhất từ phòng gym."
+      refreshing={refreshing}
+      onRefresh={() => load(true)}
+      onBack={() => router.navigate('/(app)/(tabs)')}
+    >
       {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void load()} /> : items.length ? items.map((item, index) => {
         const unread = !item.readAt;
         return (

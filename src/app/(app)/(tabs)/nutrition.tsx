@@ -6,16 +6,26 @@ import { useJourney } from '@/context/JourneyContext';
 import { asRecords, formatDate, readDate, readNumber, readText } from '@/services/journey';
 import { colors, spacing, typography } from '@/theme';
 
+import { router } from 'expo-router';
+
 export default function NutritionScreen() {
   const { journey, loading, refreshing, error, refresh } = useJourney();
-  if (loading && !journey) return <Screen title="Dinh dưỡng"><LoadingState /></Screen>;
-  if (error && !journey) return <Screen title="Dinh dưỡng"><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
+  const handleBack = () => router.navigate('/(app)/(tabs)');
+
+  if (loading && !journey) return <Screen title="Dinh dưỡng" onBack={handleBack}><LoadingState /></Screen>;
+  if (error && !journey) return <Screen title="Dinh dưỡng" onBack={handleBack}><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
 
   const nutritionPlans = asRecords(journey?.nutritionPlans);
   const nutritionLogs = asRecords(journey?.nutritionLogs);
 
   return (
-    <Screen title="Dinh dưỡng" subtitle="Ăn đúng để phục hồi và tiến bộ tốt hơn." refreshing={refreshing} onRefresh={refresh}>
+    <Screen
+      title="Dinh dưỡng"
+      subtitle="Ăn đúng để phục hồi và tiến bộ tốt hơn."
+      refreshing={refreshing}
+      onRefresh={refresh}
+      onBack={handleBack}
+    >
       <SectionHeader title="Kế hoạch dinh dưỡng" />
       {nutritionPlans.length ? nutritionPlans.map((plan, index) => (
         <Card key={readText(plan, ['id', 'uuid'], `nutrition-${index}`)}>

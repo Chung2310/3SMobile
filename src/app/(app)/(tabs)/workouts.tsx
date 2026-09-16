@@ -66,12 +66,13 @@ export default function WorkoutsScreen() {
 }
 
 function WorkoutsScreenContent() {
+  const router = useRouter();
   const { session } = useAuth();
   if (!session) return null;
   if (session.user.role === 'CUSTOMER') return <CustomerWorkouts key={session.user.id} />;
-  if (session.user.role === 'PT') return <StaffWorkouts key={session.user.id} />;
+  if (session.user.role === 'PT' || session.user.role === 'ADMIN') return <StaffWorkouts key={session.user.id} />;
   return (
-    <Screen title="GIÁO ÁN">
+    <Screen onBack={() => router.navigate('/(app)/(tabs)')} title="Giáo án">
       <Notice text="Tài khoản này không có quyền truy cập giáo án." />
     </Screen>
   );
@@ -84,6 +85,7 @@ function CustomerWorkouts() {
   const [selected, setSelected] = useState('');
   const plans = customerPlans(data?.plans);
   const plan = plans.find((item) => recordId(item) === selected) || plans[0];
+
 
   return (
     <Screen
@@ -162,6 +164,7 @@ function CustomerWorkouts() {
       ) : null}
     </Screen>
   );
+
 }
 
 function StaffWorkouts() {

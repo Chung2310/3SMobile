@@ -28,6 +28,64 @@ type FilterType = 'ALL' | ProgressCategory;
 
 const MASCOT_HAPPY = require('../../../../assets/public/3s-happy.png');
 
+interface QuickFeature {
+  id: string;
+  title: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+  route: string;
+}
+
+const QUICK_FEATURES: QuickFeature[] = [
+  {
+    id: 'customers',
+    title: 'Khách hàng',
+    iconName: 'people-outline',
+    route: '/(app)/customers',
+  },
+  {
+    id: 'schedule',
+    title: 'Lịch tập',
+    iconName: 'calendar-outline',
+    route: '/(app)/(tabs)/schedule',
+  },
+  {
+    id: 'workouts',
+    title: 'Giáo án',
+    iconName: 'fitness-outline',
+    route: '/(app)/(tabs)/workouts',
+  },
+  {
+    id: 'progress',
+    title: 'Ghi tiến độ',
+    iconName: 'stats-chart-outline',
+    route: '/(app)/progress-workspace',
+  },
+  {
+    id: 'exercises',
+    title: 'Bài tập',
+    iconName: 'barbell-outline',
+    route: '/(app)/exercises',
+  },
+  {
+    id: 'nutrition',
+    title: 'Dinh dưỡng',
+    iconName: 'restaurant-outline',
+    route: '/(app)/(tabs)/nutrition',
+  },
+  {
+    id: 'assistant',
+    title: 'Trợ lý AI',
+    iconName: 'sparkles-outline',
+    route: '/(app)/(tabs)/assistant',
+  },
+  {
+    id: 'wallet',
+    title: 'Ví thu nhập',
+    iconName: 'wallet-outline',
+    route: '/(app)/wallet',
+  },
+];
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
@@ -95,45 +153,61 @@ export default function HomeScreen() {
     <View style={[styles.screen, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* 1. TOP HEADER */}
       <View style={styles.topHeader}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerLeft}>
           <Text style={styles.greeting}>Xin chào,</Text>
           <Text style={styles.userName} numberOfLines={1}>
             {userName}
           </Text>
         </View>
 
-        {/* Ảnh đại diện PT (Bấm để xem hồ sơ) */}
-        <Pressable
-          onPress={() => router.push('/(app)/profile')}
-          style={({ pressed }) => [styles.avatarWrap, pressed && styles.avatarPressed]}
-          hitSlop={8}
-        >
-          {session?.user?.avatarUrl ? (
-            <Image
-              source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
-              style={styles.avatarImg}
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>
-                {(userName || 'PT').slice(0, 1).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View style={styles.onlineBadge} />
-        </Pressable>
+<View style={styles.headerRightActions}>
+          {/* Nút thông báo */}
+          <Pressable
+            onPress={() => router.push('/(app)/notifications')}
+            style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
+            hitSlop={8}
+            accessibilityLabel="Thông báo"
+          >
+            <Feather name="bell" size={17} color="#334155" />
+            <View style={styles.bellDot} />
+          </Pressable>
+
+          {/* Ảnh đại diện PT (Bấm để xem hồ sơ) */}
+          <Pressable
+            onPress={() => router.push('/(app)/profile')}
+            style={({ pressed }) => [styles.avatarWrap, pressed && styles.avatarPressed]}
+            hitSlop={8}
+            accessibilityLabel="Hồ sơ cá nhân"
+          >
+            {session?.user?.avatarUrl ? (
+              <Image
+                source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
+                style={styles.avatarImg}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>
+                  {(userName || 'PT').slice(0, 1).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.onlineBadge} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={[
           styles.scrollContent,
           {
             paddingBottom:
               Platform.OS === 'android'
-                ? Math.max(insets.bottom, 48) + 110
-                : Math.max(insets.bottom, 24) + 90,
+                ? Math.max(insets.bottom, 16) + 24
+                : Math.max(insets.bottom, 16) + 16,
           },
         ]}
         refreshControl={
@@ -145,128 +219,26 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* 2. THANH LỐI TẮT NHANH (CÓ TEXT + ICON RÕ RÀNG, DẠNG THANH GỌN GÀNG) */}
-        <View style={styles.quickToolstrip}>
-          {/* 1. Tiến độ */}
-          <Pressable
-            onPress={() => {
-              if (scrollViewRef.current && progressSectionY > 0) {
-                scrollViewRef.current.scrollTo({ y: progressSectionY - 10, animated: true });
-              } else if (scrollViewRef.current) {
-                scrollViewRef.current.scrollTo({ y: 220, animated: true });
-              }
-            }}
-            style={({ pressed }) => [
-              styles.quickToolItem,
-              pressed && styles.quickToolItemTienDoPressed,
-            ]}
-          >
-            {({ pressed }) => (
-              <>
-                <View
-                  style={[
-                    styles.quickToolIconWrap,
-                    { backgroundColor: pressed ? '#BAE6FD' : '#EFF6FF' },
-                    pressed && { transform: [{ scale: 1.12 }] },
-                  ]}
-                >
-                  <Ionicons name="trending-up" size={15} color="#0284C7" />
-                </View>
-                <Text
-                  style={[
-                    styles.quickToolText,
-                    pressed && { color: '#0284C7', fontWeight: '800' },
-                  ]}
-                >
-                  Tiến độ
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          <View style={styles.quickToolDivider} />
-
-          {/* 2. Giáo án */}
-          <Pressable
-            onPress={() => router.push('/(app)/plans')}
-            style={({ pressed }) => [
-              styles.quickToolItem,
-              pressed && styles.quickToolItemGiaoAnPressed,
-            ]}
-          >
-            {({ pressed }) => (
-              <>
-                <View
-                  style={[
-                    styles.quickToolIconWrap,
-                    { backgroundColor: pressed ? '#DDD6FE' : '#F5F3FF' },
-                    pressed && { transform: [{ scale: 1.12 }] },
-                  ]}
-                >
-                  <Ionicons name="clipboard" size={15} color="#7C3AED" />
-                </View>
-                <Text
-                  style={[
-                    styles.quickToolText,
-                    pressed && { color: '#7C3AED', fontWeight: '800' },
-                  ]}
-                >
-                  Giáo án
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          <View style={styles.quickToolDivider} />
-
-          {/* 3. Ví */}
-          <Pressable
-            onPress={() => setShowComingSoon(true)}
-            style={({ pressed }) => [
-              styles.quickToolItem,
-              pressed && styles.quickToolItemViPressed,
-            ]}
-          >
-            {({ pressed }) => (
-              <>
-                <View
-                  style={[
-                    styles.quickToolIconWrap,
-                    { backgroundColor: pressed ? '#BBF7D0' : '#F0FDF4' },
-                    pressed && { transform: [{ scale: 1.12 }] },
-                  ]}
-                >
-                  <Ionicons name="wallet" size={15} color="#16A34A" />
-                </View>
-                <Text
-                  style={[
-                    styles.quickToolText,
-                    pressed && { color: '#16A34A', fontWeight: '800' },
-                  ]}
-                >
-                  Ví
-                </Text>
-              </>
-            )}
-          </Pressable>
-        </View>
-
-        {/* 3. THẺ CHỈ SỐ NHANH */}
-        <View style={styles.metricsRow}>
-          {/* Hội viên */}
+        {/* 2. THẺ CHỈ SỐ TỔNG HỢP */}
+        <View style={styles.quickStatsCard}>
+          {/* Khách hàng */}
           <Pressable
             onPress={() => router.push('/(app)/customers')}
             style={({ pressed }) => [
-              styles.metricCard,
-              pressed && styles.metricCardPressed,
+              styles.quickStatCol,
+              pressed && styles.quickStatColPressed,
             ]}
           >
-            <View style={styles.metricCardTop}>
-              <Text style={styles.metricNum}>{total}</Text>
-              <Feather name="chevron-right" size={14} color={colors.textMuted} />
+            <View style={[styles.statIconWrap, { backgroundColor: '#F0F9FF' }]}>
+              <Feather name="users" size={15} color={colors.primary} />
             </View>
-            <Text style={styles.metricLabel}>Khách hàng</Text>
+            <View style={styles.statInfo}>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{total}</Text>
+              <Text style={styles.statLabel}>Khách hàng</Text>
+            </View>
           </Pressable>
+
+          <View style={styles.statDivider} />
 
           {/* Cảnh báo */}
           <Pressable
@@ -274,24 +246,74 @@ export default function HomeScreen() {
               if (alerts > 0) setFilter('POOR');
             }}
             style={({ pressed }) => [
-              styles.metricCard,
-              alerts > 0 && styles.metricCardAlert,
-              pressed && styles.metricCardPressed,
+              styles.quickStatCol,
+              pressed && styles.quickStatColPressed,
             ]}
           >
-            <View style={styles.metricCardTop}>
-              <Text style={[styles.metricNum, alerts > 0 && { color: '#EF4444' }]}>{alerts}</Text>
-              {alerts > 0 ? (
-                <Feather name="alert-triangle" size={13} color="#EF4444" />
-              ) : null}
+            <View
+              style={[
+                styles.statIconWrap,
+                { backgroundColor: alerts > 0 ? '#FEF2F2' : '#F4F8FB' },
+              ]}
+            >
+              <Feather
+                name={alerts > 0 ? 'alert-triangle' : 'shield'}
+                size={15}
+                color={alerts > 0 ? colors.danger : colors.textMuted}
+              />
             </View>
-            <Text style={styles.metricLabel}>Cảnh báo</Text>
+            <View style={styles.statInfo}>
+              <Text
+                style={[
+                  styles.statValue,
+                  alerts > 0 && { color: colors.danger },
+                ]}
+              >
+                {alerts}
+              </Text>
+              <Text style={styles.statLabel}>Cảnh báo</Text>
+            </View>
           </Pressable>
 
+          <View style={styles.statDivider} />
+
           {/* Hiệu quả */}
-          <View style={styles.metricCard}>
-            <Text style={[styles.metricNum, { color: '#22C55E' }]}>{efficiency}%</Text>
-            <Text style={styles.metricLabel}>Tiến bộ tốt</Text>
+          <View style={styles.quickStatCol}>
+            <View style={[styles.statIconWrap, { backgroundColor: '#F0FDF4' }]}>
+              <Feather name="trending-up" size={15} color={colors.success} />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={[styles.statValue, { color: colors.success }]}>{efficiency}%</Text>
+              <Text style={styles.statLabel}>Tiến bộ tốt</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 3. LƯỚI TÍNH NĂNG CHUYÊN SÂU */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>TÍNH NĂNG CHUYÊN SÂU</Text>
+          <Text style={styles.sectionMeta}>8 phân hệ</Text>
+        </View>
+
+        <View style={styles.featuresCard}>
+          <View style={styles.featuresGrid}>
+            {QUICK_FEATURES.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => router.push(item.route as any)}
+                style={({ pressed }) => [
+                  styles.featureItem,
+                  pressed && styles.featureItemPressed,
+                ]}
+              >
+                <View style={styles.featureIconWrap}>
+                  <Ionicons name={item.iconName} size={20} color={colors.primary} />
+                </View>
+                <Text style={styles.featureTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
@@ -476,6 +498,9 @@ export default function HomeScreen() {
         <View style={styles.endOfContentWrap}>
           <Image source={MASCOT_HAPPY} style={styles.endOfContentImg} resizeMode="contain" />
           <Text style={styles.endOfContentText}>Bạn đã đi hết nội dung ... !</Text>
+          <Text style={styles.endOfContentQuote}>
+            Đội ngũ HLV 3S Wellness{'\n'}Chuyên môn vững – Tận tâm đồng hành
+          </Text>
         </View>
       </ScrollView>
 
@@ -515,27 +540,63 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background,
   },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
+  },
+  headerLeft: {
+    flex: 1,
+    paddingRight: 8,
   },
   greeting: {
-    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '500',
     color: colors.textMuted,
-    fontSize: 12,
+    marginBottom: 2,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerIconBtnPressed: {
+    backgroundColor: '#E0F2FE',
+    transform: [{ scale: 0.94 }],
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.accent,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   avatarWrap: {
     position: 'relative',
@@ -545,139 +606,142 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.95 }],
   },
   avatarImg: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: colors.secondary,
   },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#111827',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: colors.secondary,
   },
   avatarInitial: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
   },
   onlineBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#22C55E',
-    borderWidth: 2,
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.success,
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: spacing.lg,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    minHeight: 74,
-  },
-  metricCardAlert: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
-  },
-  metricNum: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.text,
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  metricCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metricCardPressed: {
-    backgroundColor: '#F9FAFB',
-    transform: [{ scale: 0.98 }],
-  },
-  quickToolstrip: {
+  quickStatsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    marginBottom: spacing.sm,
+    borderColor: '#E2E8F0',
+    marginBottom: spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
     elevation: 1,
   },
-  quickToolItem: {
+  quickStatCol: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    borderRadius: 10,
+    gap: 8,
+    paddingVertical: 2,
   },
-  quickToolItemPressed: {
-    backgroundColor: '#F3F4F6',
-    transform: [{ scale: 0.98 }],
+  quickStatColPressed: {
+    opacity: 0.7,
   },
-  quickToolItemTienDoPressed: {
+  statIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#F0F9FF',
-    transform: [{ scale: 0.96 }],
-  },
-  quickToolItemGiaoAnPressed: {
-    backgroundColor: '#FAF5FF',
-    transform: [{ scale: 0.96 }],
-  },
-  quickToolItemViPressed: {
-    backgroundColor: '#F0FDF4',
-    transform: [{ scale: 0.96 }],
-  },
-  quickToolIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickToolText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1F2937',
+  statInfo: {
+    justifyContent: 'center',
   },
-  quickToolDivider: {
+  statValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    lineHeight: 12,
+  },
+  statDivider: {
     width: 1,
-    height: 20,
-    backgroundColor: '#E5E7EB',
+    height: 24,
+    backgroundColor: colors.border,
+  },
+  featuresCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  featureItem: {
+    width: '25%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  featureItemPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.94 }],
+  },
+  featureIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceIce,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  featureTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+    maxWidth: '92%',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -687,10 +751,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.text,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   sectionMeta: {
     fontSize: 12,
@@ -708,11 +772,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   filterPillActive: {
-    backgroundColor: '#111827',
-    borderColor: '#111827',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterText: {
     fontSize: 12,
@@ -729,7 +793,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   customerCardPressed: {
     backgroundColor: '#F8FAFC',
@@ -876,8 +940,18 @@ const styles = StyleSheet.create({
   },
   endOfContentText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '400',
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  endOfContentQuote: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingHorizontal: 20,
+    marginTop: 6,
   },
 });

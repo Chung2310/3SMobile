@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { Card, EmptyState, SectionHeader } from '@/components/UI';
 import { Screen } from '@/components/Screen';
@@ -80,8 +81,9 @@ export default function RoadmapScreen() {
 
   return (
     <Screen
-      title="Roadmap"
-      subtitle="Lộ trình huấn luyện chuẩn hoá cho khách hàng"
+      title="Lộ trình huấn luyện"
+      subtitle="Kế hoạch mục tiêu 12 tuần chuẩn hóa"
+      onBack={() => router.navigate('/(app)/(tabs)')}
     >
       <SectionHeader title="Lộ trình 12 tuần tiêu chuẩn" />
 

@@ -6,15 +6,25 @@ import { useJourney } from '@/context/JourneyContext';
 import { asRecords, formatDate, readDate, readText } from '@/services/journey';
 import { colors, radius, spacing, typography } from '@/theme';
 
+import { router } from 'expo-router';
+
 export default function ScheduleScreen() {
   const { journey, loading, refreshing, error, refresh } = useJourney();
-  if (loading && !journey) return <Screen title="Lịch"><LoadingState /></Screen>;
-  if (error && !journey) return <Screen title="Lịch"><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
+  const handleBack = () => router.navigate('/(app)/(tabs)');
+
+  if (loading && !journey) return <Screen title="Lịch tập" onBack={handleBack}><LoadingState /></Screen>;
+  if (error && !journey) return <Screen title="Lịch tập" onBack={handleBack}><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
 
   const events = [...asRecords(journey?.calendar)].sort((a, b) => readDate(a).localeCompare(readDate(b)));
 
   return (
-    <Screen title="Lịch" subtitle="Các buổi tập và mốc quan trọng của bạn." refreshing={refreshing} onRefresh={refresh}>
+    <Screen
+      title="Lịch tập"
+      subtitle="Theo dõi lịch tập và sự kiện sắp tới"
+      refreshing={refreshing}
+      onRefresh={refresh}
+      onBack={handleBack}
+    >
       <SectionHeader title="Lịch sắp tới" />
       {events.length ? events.map((event, index) => (
         <Pressable key={readText(event, ['id', 'uuid'], `event-${index}`)}>
