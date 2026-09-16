@@ -177,40 +177,63 @@ export function CustomerGoalsModal({
     if (!customer?.id) return;
     const trimmedTitle = form.title.trim();
     if (!trimmedTitle) {
-      setFormError('Vui lòng nhập tên mục tiêu.');
+      setFormError('Vui lòng nhập Tên mục tiêu (bắt buộc).');
+      return;
+    }
+    if (!form.type) {
+      setFormError('Vui lòng chọn Loại mục tiêu (bắt buộc).');
       return;
     }
     if (!form.deadlineIso) {
-      setFormError('Vui lòng chọn thời hạn hoàn thành.');
+      setFormError('Vui lòng chọn Thời hạn hoàn thành (bắt buộc).');
+      return;
+    }
+    if (!form.sessionsPerWeek.trim()) {
+      setFormError('Vui lòng nhập Số buổi mỗi tuần (bắt buộc).');
       return;
     }
     const sessions = parseInt(form.sessionsPerWeek, 10);
     if (isNaN(sessions) || sessions < 1 || sessions > 14) {
-      setFormError('Số buổi mỗi tuần phải từ 1 đến 14.');
+      setFormError('Số buổi mỗi tuần phải là số nguyên từ 1 đến 14.');
       return;
+    }
+
+    let targetVal: number | null = null;
+    if (form.targetValue.trim()) {
+      targetVal = parseFloat(form.targetValue.trim());
+      if (isNaN(targetVal)) {
+        setFormError('Giá trị mục tiêu phải là số hợp lệ (ví dụ: 5.5).');
+        return;
+      }
     }
 
     setSubmitting(true);
     setFormError('');
     try {
-      const targetVal = form.targetValue.trim() ? parseFloat(form.targetValue.trim()) : null;
-      await createGoal({
+      const createdGoal = await createGoal({
         customerId: customer.id,
         title: trimmedTitle,
         type: form.type,
-        targetValue: isNaN(targetVal as number) ? null : targetVal,
+        targetValue: targetVal,
         targetUnit: form.targetUnit.trim(),
         deadline: new Date(form.deadlineIso).toISOString(),
         sessionsPerWeek: sessions,
         cardioNotes: form.cardioNotes.trim(),
         evaluationNotes: form.evaluationNotes.trim(),
-        status,
       });
+
+      // Nếu bấm "Lưu & Công bố", gọi API công bố mục tiêu
+      if (status === 'PUBLISHED') {
+        const createdId = createdGoal?._id || createdGoal?.id;
+        if (createdId) {
+          await publishGoal(createdId);
+        }
+      }
 
       setAlertConfig({
         visible: true,
         title: 'Thành công',
-        message: status === 'PUBLISHED' ? 'Đã tạo và công bố mục tiêu.' : 'Đã lưu bản nháp mục tiêu.',
+        message: status === 'PUBLISHED' ? 'Đã tạo và công bố mục tiêu thành công.' : 'Đã lưu bản nháp mục tiêu thành công.',
         type: 'success',
         confirmLabel: 'Đóng',
         onConfirm: () => {
@@ -220,7 +243,7 @@ export function CustomerGoalsModal({
         },
       });
     } catch (err: any) {
-      setFormError(err?.message || 'Không thể tạo mục tiêu. Vui lòng thử lại.');
+      setFormError(err?.message || 'Không thể tạo mục tiêu. Vui lòng kiểm tra lại các trường thông tin.');
     } finally {
       setSubmitting(false);
     }

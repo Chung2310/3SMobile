@@ -39,7 +39,6 @@ export interface CreateGoalPayload {
   sessionsPerWeek?: number;
   cardioNotes?: string;
   evaluationNotes?: string;
-  status?: GoalStatus;
 }
 
 export const GOAL_TYPE_OPTIONS: { value: GoalType; label: string }[] = [
@@ -73,7 +72,25 @@ export async function fetchCustomerGoals(customerId: string): Promise<GoalItem[]
 }
 
 export async function createGoal(payload: CreateGoalPayload): Promise<GoalItem> {
-  const res = await api.post<any>('/api/goals', payload);
+  const cleanPayload: Record<string, unknown> = {
+    customerId: payload.customerId,
+    type: payload.type,
+    title: payload.title.trim(),
+    deadline: payload.deadline,
+    targetValue: payload.targetValue ?? null,
+    sessionsPerWeek: payload.sessionsPerWeek ?? 3,
+  };
+  if (payload.targetUnit?.trim()) {
+    cleanPayload.targetUnit = payload.targetUnit.trim();
+  }
+  if (payload.cardioNotes?.trim()) {
+    cleanPayload.cardioNotes = payload.cardioNotes.trim();
+  }
+  if (payload.evaluationNotes?.trim()) {
+    cleanPayload.evaluationNotes = payload.evaluationNotes.trim();
+  }
+
+  const res = await api.post<any>('/api/goals', cleanPayload);
   return (res && res.data) ? res.data : res;
 }
 

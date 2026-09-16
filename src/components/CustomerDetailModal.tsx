@@ -495,8 +495,24 @@ export function CustomerDetailModal({
     if (!consultTopic.trim()) {
       showAlert({
         type: 'warning',
-        title: 'Thiếu chủ đề',
-        message: 'Vui lòng nhập chủ đề tư vấn.',
+        title: 'Thiếu thông tin bắt buộc',
+        message: 'Vui lòng nhập Chủ đề tư vấn (bắt buộc).',
+      });
+      return;
+    }
+    if (!consultCondition.trim()) {
+      showAlert({
+        type: 'warning',
+        title: 'Thiếu thông tin bắt buộc',
+        message: 'Vui lòng nhập Tình trạng hiện tại / Thể trạng của học viên (bắt buộc).',
+      });
+      return;
+    }
+    if (!consultAdvice.trim()) {
+      showAlert({
+        type: 'warning',
+        title: 'Thiếu thông tin bắt buộc',
+        message: 'Vui lòng nhập Lời khuyên & Chỉ định của PT (bắt buộc).',
       });
       return;
     }
@@ -1655,7 +1671,9 @@ export function CustomerDetailModal({
                     </Pressable>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>Chủ đề tư vấn:</Text>
+                    <Text style={styles.inputLabel}>
+                      Chủ đề tư vấn <Text style={{ color: '#EF4444' }}>*</Text>:
+                    </Text>
                     <TextInput
                       style={styles.textInput}
                       value={consultTopic}
@@ -1666,7 +1684,9 @@ export function CustomerDetailModal({
                 </View>
 
                 <View>
-                  <Text style={styles.inputLabel}>Tình trạng hiện tại / Thể trạng:</Text>
+                  <Text style={styles.inputLabel}>
+                    Tình trạng hiện tại / Thể trạng <Text style={{ color: '#EF4444' }}>*</Text>:
+                  </Text>
                   <TextInput
                     style={[styles.textInput, { height: 68 }]}
                     value={consultCondition}
@@ -1677,7 +1697,9 @@ export function CustomerDetailModal({
                 </View>
 
                 <View>
-                  <Text style={styles.inputLabel}>Lời khuyên & Chỉ định của PT:</Text>
+                  <Text style={styles.inputLabel}>
+                    Lời khuyên & Chỉ định của PT <Text style={{ color: '#EF4444' }}>*</Text>:
+                  </Text>
                   <TextInput
                     style={[styles.textInput, { height: 68 }]}
                     value={consultAdvice}
