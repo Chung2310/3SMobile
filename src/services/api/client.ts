@@ -49,9 +49,14 @@ async function parseBody(response: Response): Promise<unknown> {
 async function request<T>(path: string, init: RequestInit = {}, unwrap = true): Promise<T> {
   const storedSession = await getStoredSession();
   const headers = new Headers(init.headers);
-  headers.set('Accept', 'application/json');
-  if (init.body && !headers.has('Content-Type')) {
+  const isFormData =
+    init.body instanceof FormData ||
+    (typeof init.body === 'object' && init.body !== null && '_parts' in (init.body as unknown as Record<string, unknown>));
+  if (init.body && !headers.has('Content-Type') && !isFormData) {
     headers.set('Content-Type', 'application/json');
+  }
+  if (isFormData) {
+    headers.delete('Content-Type');
   }
   if (storedSession?.token) {
     headers.set('Authorization', `Bearer ${storedSession.token}`);
@@ -98,5 +103,8 @@ export const api = {
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
+  },
+  upload<T>(path: string, formData: FormData): Promise<T> {
+    return request<T>(path, { method: 'POST', body: formData });
   },
 };

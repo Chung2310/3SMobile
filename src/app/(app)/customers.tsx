@@ -936,7 +936,7 @@ export default function CustomersScreen() {
                 }}
               >
                 <View style={styles.sheetOptionLeft}>
-                  <View style={[styles.sheetDot, { backgroundColor: '#00C2FF' }]} />
+                  <View style={[styles.sheetDot, { backgroundColor: '#0284C7' }]} />
                   <Text
                     style={[
                       styles.sheetOptionText,
@@ -947,7 +947,7 @@ export default function CustomersScreen() {
                   </Text>
                 </View>
                 {statusFilter === 'ALL' ? (
-                  <Feather name="check" size={18} color="#00C2FF" />
+                  <Feather name="check" size={18} color="#0284C7" />
                 ) : null}
               </Pressable>
 
@@ -1298,8 +1298,8 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     overflow: 'hidden',
     display: 'flex',
   },
@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 10,
     marginBottom: 16,
     gap: 8,
@@ -1349,7 +1349,7 @@ const styles = StyleSheet.create({
   formSectionHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0088CC',
+    color: '#0284C7',
     marginTop: 16,
     marginBottom: 10,
     textTransform: 'uppercase',
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   pillOptionActive: {
-    backgroundColor: '#00C2FF',
+    backgroundColor: '#0284C7',
   },
   pillOptionText: {
     fontSize: 12,
@@ -1426,8 +1426,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   statusOptionActive: {
-    backgroundColor: '#E6F8FF',
-    borderColor: '#00C2FF',
+    backgroundColor: '#E0F2FE',
+    borderColor: '#0284C7',
   },
   statusOptionText: {
     fontSize: 11,
@@ -1436,7 +1436,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statusOptionTextActive: {
-    color: '#0088CC',
+    color: '#0284C7',
     fontWeight: '800',
   },
   modalFooter: {
@@ -1536,8 +1536,8 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: spacing.lg,
     paddingTop: 12,
     paddingBottom: 28,
@@ -1584,7 +1584,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sheetOptionItemActive: {
-    backgroundColor: '#F0FBFF',
+    backgroundColor: '#E0F2FE',
   },
   sheetOptionLeft: {
     flexDirection: 'row',
@@ -1602,7 +1602,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   sheetOptionTextActive: {
-    color: '#0088CC',
+    color: '#0284C7',
     fontWeight: '800',
   },
 });

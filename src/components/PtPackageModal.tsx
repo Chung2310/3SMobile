@@ -76,19 +76,22 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   };
 
   useEffect(() => {
-    if (visible && customer?.id) {
-      setShowAddForm(false);
-      setName('');
-      setTotalSessions('24');
-      const today = getTodayIso();
-      setStartDate(today);
-      setEndDate(calculateEndDate(today, 24));
-      setFormError(null);
-      void loadPackages();
-    } else {
-      setPackages([]);
-    }
-  }, [visible, customer?.id]);
+    const timer = setTimeout(() => {
+      if (visible && customer?.id) {
+        setShowAddForm(false);
+        setName('');
+        setTotalSessions('24');
+        const today = getTodayIso();
+        setStartDate(today);
+        setEndDate(calculateEndDate(today, 24));
+        setFormError(null);
+        void loadPackages();
+      } else {
+        setPackages([]);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [visible, customer?.id, loadPackages]);
 
   const handleApplyTemplate = (templateName: string, sessions: number) => {
     setName(templateName);
@@ -100,13 +103,6 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     const num = parseInt(val, 10) || 0;
     setTotalSessions(val);
     setEndDate(calculateEndDate(startDate, num));
-  };
-
-  const handleSelectStartDate = (selectedDate: Date) => {
-    const iso = selectedDate.toISOString().slice(0, 10);
-    setStartDate(iso);
-    const num = parseInt(totalSessions, 10) || 0;
-    setEndDate(calculateEndDate(iso, num));
   };
 
   const handleCreatePackage = async () => {
@@ -185,7 +181,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.iconCircle}>
-                <Feather name="package" size={20} color="#00C2FF" />
+                <Feather name="package" size={20} color="#0284C7" />
               </View>
               <View>
                 <Text style={styles.title}>Gói PT đăng ký</Text>
@@ -220,12 +216,12 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                 <Feather
                   name={showAddForm ? 'minus-circle' : 'plus-circle'}
                   size={16}
-                  color={showAddForm ? '#64748B' : '#00C2FF'}
+                  color={showAddForm ? '#64748B' : '#0284C7'}
                 />
                 <Text
                   style={[
                     styles.toggleBtnText,
-                    { color: showAddForm ? '#64748B' : '#00C2FF' },
+                    { color: showAddForm ? '#64748B' : '#0284C7' },
                   ]}
                 >
                   {showAddForm ? 'Đóng tạo gói' : 'Đăng ký gói mới'}
@@ -308,7 +304,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                       style={styles.datePickerTrigger}
                       onPress={() => setShowStartDatePicker(true)}
                     >
-                      <Feather name="calendar" size={16} color="#00C2FF" />
+                      <Feather name="calendar" size={16} color="#0284C7" />
                       <Text style={styles.datePickerText}>
                         {formatDateDisplay(startDate)}
                       </Text>
@@ -350,7 +346,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
 
             {loading ? (
               <View style={styles.centerLoading}>
-                <ActivityIndicator size="small" color="#00C2FF" />
+                <ActivityIndicator size="small" color="#0284C7" />
                 <Text style={styles.loadingText}>Đang tải danh sách gói...</Text>
               </View>
             ) : packages.length === 0 ? (
@@ -393,7 +389,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
 
                     <View style={styles.packageCardFooter}>
                       <View style={styles.sessionsInfo}>
-                        <Feather name="check-circle" size={14} color="#00C2FF" />
+                        <Feather name="check-circle" size={14} color="#0284C7" />
                         <Text style={styles.sessionsText}>
                           Còn <Text style={styles.sessionsHighlight}>{remaining}</Text> / {pkg.totalSessions} buổi
                         </Text>
@@ -445,8 +441,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '88%',
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
   },
@@ -470,7 +466,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E6F8FF',
+    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -513,8 +509,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   toggleBtnInactive: {
-    backgroundColor: '#E6F8FF',
-    borderColor: '#00C2FF',
+    backgroundColor: '#E0F2FE',
+    borderColor: '#0284C7',
   },
   toggleBtnText: {
     fontSize: 14,
@@ -540,7 +536,7 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: '#FEE2E2',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 14,
     marginBottom: 10,
   },
   errorText: {
@@ -557,7 +553,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#00C2FF',
+    borderColor: '#0284C7',
     paddingVertical: 7,
     borderRadius: 8,
     alignItems: 'center',
@@ -565,7 +561,7 @@ const styles = StyleSheet.create({
   templatePillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0098CC',
+    color: '#0284C7',
   },
   fieldWrap: {
     marginBottom: 12,
@@ -586,7 +582,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -607,7 +603,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -620,7 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00C2FF',
+    backgroundColor: '#0284C7',
     paddingVertical: 12,
     borderRadius: 12,
     marginTop: 4,
