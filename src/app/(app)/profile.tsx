@@ -1036,7 +1036,7 @@ export default function ProfileScreen() {
 
                   {/* Bằng cấp & Chứng chỉ */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Bằng cấp & Chứng chỉ (Mỗi dòng 1 chứng chỉ)</Text>
+                    <Text style={styles.inputLabel}>Bằng cấp & Chứng chỉ </Text>
                     <TextInput
                       style={[styles.textInput, styles.textArea]}
                       value={form.certificates}
@@ -1051,7 +1051,7 @@ export default function ProfileScreen() {
 
                   {/* Giới thiệu bản thân */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Giới thiệu bản thân & Triết lý huấn luyện (Bio)</Text>
+                    <Text style={styles.inputLabel}>Giới thiệu bản thân & Triết lý huấn luyện </Text>
                     <TextInput
                       style={[styles.textInput, styles.textArea, { minHeight: 90 }]}
                       value={form.bio}
@@ -1092,7 +1092,7 @@ export default function ProfileScreen() {
                       <Text style={styles.passwordRuleTitle}>Quy tắc mật khẩu</Text>
                     </View>
                     <Text style={styles.passwordRuleDesc}>
-                      Mật khẩu hệ thống gồm đúng 6 chữ số (ví dụ: 123456). Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
+                      Mật khẩu tối thiểu 6 kí tự. Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
                     </Text>
                   </View>
 
@@ -1129,7 +1129,7 @@ export default function ProfileScreen() {
                   {/* Mật khẩu mới */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
-                      Mật khẩu mới (6 chữ số) <Text style={styles.requiredStar}>*</Text>
+                      Mật khẩu mới (tối thiểu 6 kí tự) <Text style={styles.requiredStar}>*</Text>
                     </Text>
                     <View style={styles.passwordInputWrap}>
                       <TextInput
