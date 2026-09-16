@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import { Platform } from 'react-native';
 
 import { api } from '@/services/api/client';
 import { clearStoredSession, getStoredSession, saveSession } from '@/services/sessionStore';
@@ -37,20 +38,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const response = await api.post<LoginResponse>('/api/auth/login', {
       username: normalizedUsername,
       password,
+      clientType: 'MOBILE',
+      deviceInfo: {
+        platform: Platform.OS,
+        deviceName: `${Platform.OS === 'ios' ? 'iPhone' : 'Android'} Device`,
+        osVersion: String(Platform.Version),
+      },
     });
+
     const token = response?.token || response?.accessToken;
+    const refreshToken = response?.refreshToken;
     const user = response?.user || response?.account;
     if (!token || !user?.id) throw new Error('Phản hồi đăng nhập không hợp lệ.');
 
-    const nextSession: Session = { token, user };
+    const nextSession: Session = { token, refreshToken, user };
     await saveSession(nextSession);
     setSession(nextSession);
   }, []);
 
   const signOut = useCallback(async () => {
+    if (session?.refreshToken) {
+      try {
+        await api.post('/api/auth/logout', { refreshToken: session.refreshToken }).catch(() => {});
+      } catch {
+        // Ignore
+      }
+    }
     await clearStoredSession();
     setSession(null);
-  }, []);
+  }, [session]);
 
   const value = useMemo(() => ({ session, loading, signIn, signOut }), [loading, session, signIn, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
