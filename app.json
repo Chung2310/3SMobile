@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "3sgym",
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": ["expo-router", "expo-secure-store", ["expo-image-picker", { "photosPermission": "Cho phép chọn ảnh để ghi nhận tiến độ tập luyện.", "cameraPermission": "Cho phép chụp ảnh tiến độ tập luyện.", "microphonePermission": false }]],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "vn.3sgym.mobile"
