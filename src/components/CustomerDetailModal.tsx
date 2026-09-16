@@ -41,6 +41,9 @@ import type {
   CustomerProfile,
 } from '@/types/domain';
 
+const MASCOT_COACH = require('../../assets/public/3s-coach.png');
+const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
+
 type DetailTabKey =
   | 'overview'
   | 'inbody'
@@ -147,6 +150,7 @@ export function CustomerDetailModal({
   const [consultActionPlan, setConsultActionPlan] = useState('');
   const [consultNotes, setConsultNotes] = useState('');
   const [submittingConsult, setSubmittingConsult] = useState(false);
+  const [editingConsultId, setEditingConsultId] = useState<string | null>(null);
 
   const loadingJourney = Boolean(
     visible && customer?.id && loadedCustomerId !== customer.id
@@ -435,7 +439,57 @@ export function CustomerDetailModal({
     });
   };
 
-  // Submit consultation
+  // Open create consultation modal
+  const handleOpenCreateConsultation = () => {
+    setEditingConsultId(null);
+    setConsultDate(new Date().toISOString().slice(0, 10));
+    setConsultTopic('');
+    setConsultCondition('');
+    setConsultAdvice('');
+    setConsultActionPlan('');
+    setConsultNotes('');
+    setShowConsultationModal(true);
+  };
+
+  // Open edit consultation modal
+  const handleEditConsultation = (c: Record<string, unknown>) => {
+    const cId = recordId(c);
+    if (!cId) return;
+    setEditingConsultId(cId);
+    const rawDate = readText(c, ['consultationDate', 'consultedAt', 'createdAt']);
+    setConsultDate(rawDate ? rawDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setConsultTopic(readText(c, ['topic']));
+    setConsultCondition(readText(c, ['currentCondition']));
+    setConsultAdvice(readText(c, ['advice']));
+    setConsultActionPlan(readText(c, ['actionPlan']));
+    setConsultNotes(readText(c, ['notes']));
+    setShowConsultationModal(true);
+  };
+
+  // Delete consultation
+  const handleDeleteConsultation = (c: Record<string, unknown>) => {
+    const cId = recordId(c);
+    if (!customer?.id || !cId) return;
+    const topic = readText(c, ['topic'], 'buổi tư vấn');
+    showAlert({
+      type: 'error',
+      title: 'Xóa buổi tư vấn',
+      message: `Bạn có chắc muốn xóa "${topic}"?`,
+      confirmLabel: 'Xóa',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/api/customers/${customer.id}/consultations/${cId}`);
+          loadData(customer.id);
+          showAlert({ type: 'success', title: 'Thành công', message: 'Đã xóa buổi tư vấn.' });
+        } catch (e) {
+          showAlert({ type: 'error', title: 'Lỗi', message: (e as Error).message });
+        }
+      },
+    });
+  };
+
+  // Submit consultation (create or update)
   const handleSaveConsultation = async () => {
     if (!customer?.id) return;
     if (!consultTopic.trim()) {
@@ -448,22 +502,32 @@ export function CustomerDetailModal({
     }
     setSubmittingConsult(true);
     try {
-      await api.post(`/api/customers/${customer.id}/consultations`, {
+      const payload = {
         consultationDate: consultDate,
         topic: consultTopic.trim(),
         currentCondition: consultCondition.trim(),
         advice: consultAdvice.trim(),
         actionPlan: consultActionPlan.trim(),
         notes: consultNotes.trim(),
-      });
+      };
+      if (editingConsultId) {
+        await api.patch(`/api/customers/${customer.id}/consultations/${editingConsultId}`, payload);
+      } else {
+        await api.post(`/api/customers/${customer.id}/consultations`, payload);
+      }
       setShowConsultationModal(false);
+      setEditingConsultId(null);
       setConsultTopic('');
       setConsultCondition('');
       setConsultAdvice('');
       setConsultActionPlan('');
       setConsultNotes('');
       loadData(customer.id);
-      showAlert({ type: 'success', title: 'Đã lưu', message: 'Đã lưu buổi tư vấn.' });
+      showAlert({
+        type: 'success',
+        title: 'Thành công',
+        message: editingConsultId ? 'Đã cập nhật buổi tư vấn.' : 'Đã lưu buổi tư vấn.',
+      });
     } catch (e) {
       showAlert({ type: 'error', title: 'Lỗi', message: (e as Error).message });
     } finally {
@@ -909,9 +973,11 @@ export function CustomerDetailModal({
                   </>
                 ) : (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="activity" size={28} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_COACH}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có số đo</Text>
                     <Text style={styles.emptyDesc}>Chỉ số sẽ hiển thị sau khi đo InBody.</Text>
                   </View>
@@ -999,9 +1065,11 @@ export function CustomerDetailModal({
                   </>
                 ) : (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="calendar" size={28} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_COACH}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có buổi tập</Text>
                     <Text style={styles.emptyDesc}>Lịch sử tập với PT sẽ hiển thị tại đây.</Text>
                   </View>
@@ -1199,9 +1267,11 @@ export function CustomerDetailModal({
                       </View>
                     ) : (
                       <View style={styles.emptyCard}>
-                        <View style={styles.emptyIconCircle}>
-                          <Feather name="image" size={28} color="#94A3B8" />
-                        </View>
+                        <Image
+                          source={MASCOT_COACH}
+                          style={styles.emptyMascotImg}
+                          resizeMode="contain"
+                        />
                         <Text style={styles.emptyTitle}>Chưa có ảnh</Text>
                         <Text style={styles.emptyDesc}>Chụp hoặc tải ảnh để theo dõi tiến độ.</Text>
                         <View style={styles.emptyActionRow}>
@@ -1240,9 +1310,11 @@ export function CustomerDetailModal({
                   <View style={styles.compareContainer}>
                     {photos.length < 2 ? (
                       <View style={styles.emptyCard}>
-                        <View style={styles.emptyIconCircle}>
-                          <Feather name="sliders" size={28} color="#94A3B8" />
-                        </View>
+                        <Image
+                          source={MASCOT_COACH}
+                          style={styles.emptyMascotImg}
+                          resizeMode="contain"
+                        />
                         <Text style={styles.emptyTitle}>Cần ít nhất 2 ảnh</Text>
                         <Text style={styles.emptyDesc}>Thêm ảnh Before và After để so sánh.</Text>
                       </View>
@@ -1363,9 +1435,11 @@ export function CustomerDetailModal({
                   </View>
                 ) : (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="award" size={28} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_COACH}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có giáo án</Text>
                     <Text style={styles.emptyDesc}>Gán giáo án mẫu để bắt đầu lộ trình.</Text>
                     <Pressable
@@ -1406,9 +1480,11 @@ export function CustomerDetailModal({
                   ))
                 ) : (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="coffee" size={28} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_CHEF}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có thực đơn</Text>
                     <Text style={styles.emptyDesc}>Thực đơn dinh dưỡng sẽ hiển thị tại đây.</Text>
                     <Pressable
@@ -1435,15 +1511,7 @@ export function CustomerDetailModal({
                   </Text>
                   <Pressable
                     style={styles.createConsultBtn}
-                    onPress={() => {
-                      setConsultDate(new Date().toISOString().slice(0, 10));
-                      setConsultTopic('');
-                      setConsultCondition('');
-                      setConsultAdvice('');
-                      setConsultActionPlan('');
-                      setConsultNotes('');
-                      setShowConsultationModal(true);
-                    }}
+                    onPress={handleOpenCreateConsultation}
                   >
                     <Feather name="plus" size={14} color="#FFFFFF" />
                     <Text style={styles.createConsultBtnText}>Thêm buổi tư vấn</Text>
@@ -1461,6 +1529,24 @@ export function CustomerDetailModal({
                         <Text style={styles.consultDateBadge}>
                           {formatDate(readText(c, ['consultationDate', 'consultedAt', 'createdAt']))}
                         </Text>
+                        <View style={styles.consultHeaderActions}>
+                          <Pressable
+                            style={styles.consultActionBtn}
+                            onPress={() => handleEditConsultation(c)}
+                            hitSlop={8}
+                            accessibilityLabel="Sửa buổi tư vấn"
+                          >
+                            <Feather name="edit-2" size={14} color="#475569" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.consultActionBtnDanger}
+                            onPress={() => handleDeleteConsultation(c)}
+                            hitSlop={8}
+                            accessibilityLabel="Xóa buổi tư vấn"
+                          >
+                            <Feather name="trash-2" size={14} color="#EF4444" />
+                          </Pressable>
+                        </View>
                       </View>
 
                       {readText(c, ['currentCondition']) ? (
@@ -1500,17 +1586,16 @@ export function CustomerDetailModal({
                   ))
                 ) : (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="message-square" size={28} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_COACH}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có tư vấn</Text>
                     <Text style={styles.emptyDesc}>Ghi lại lịch sử tư vấn tại đây.</Text>
                     <Pressable
                       style={styles.primaryActionBtn}
-                      onPress={() => {
-                        setConsultDate(new Date().toISOString().slice(0, 10));
-                        setShowConsultationModal(true);
-                      }}
+                      onPress={handleOpenCreateConsultation}
                     >
                       <Feather name="plus" size={15} color="#FFFFFF" />
                       <Text style={styles.primaryActionBtnText}>Thêm buổi tư vấn</Text>
@@ -1535,9 +1620,14 @@ export function CustomerDetailModal({
           >
             <View style={[styles.modalSheetCard, { maxHeight: '90%' }]}>
               <View style={styles.modalSheetHeader}>
-                <Text style={styles.modalSheetTitle}>Thêm buổi tư vấn mới</Text>
+                <Text style={styles.modalSheetTitle}>
+                  {editingConsultId ? 'Sửa buổi tư vấn' : 'Thêm buổi tư vấn mới'}
+                </Text>
                 <Pressable
-                  onPress={() => setShowConsultationModal(false)}
+                  onPress={() => {
+                    setShowConsultationModal(false);
+                    setEditingConsultId(null);
+                  }}
                   hitSlop={10}
                   style={styles.closeBtn}
                 >
@@ -1623,7 +1713,10 @@ export function CustomerDetailModal({
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
                   <Pressable
                     style={styles.modalCancelBtn}
-                    onPress={() => setShowConsultationModal(false)}
+                    onPress={() => {
+                      setShowConsultationModal(false);
+                      setEditingConsultId(null);
+                    }}
                     disabled={submittingConsult}
                   >
                     <Text style={styles.modalCancelBtnText}>Hủy</Text>
@@ -1639,7 +1732,9 @@ export function CustomerDetailModal({
                     ) : (
                       <>
                         <Feather name="check" size={16} color="#FFFFFF" />
-                        <Text style={styles.modalSubmitBtnText}>Tạo buổi tư vấn</Text>
+                        <Text style={styles.modalSubmitBtnText}>
+                          {editingConsultId ? 'Lưu thay đổi' : 'Tạo buổi tư vấn'}
+                        </Text>
                       </>
                     )}
                   </Pressable>
@@ -2501,9 +2596,31 @@ const styles = StyleSheet.create({
   },
   consultDateBadge: {
     marginLeft: 'auto',
+    marginRight: 8,
     fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
+  },
+  consultHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  consultActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consultActionBtnDanger: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   consultFieldBlock: {
     marginTop: 6,
@@ -2526,6 +2643,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: '#CBD5E1',
     marginVertical: 8,
+  },
+  emptyMascotImg: {
+    width: 120,
+    height: 120,
+    marginBottom: 12,
   },
   emptyIconCircle: {
     width: 60,

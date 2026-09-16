@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -26,6 +27,8 @@ import {
 } from '@/services/goalService';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal } from '@/components/AppAlertModal';
+
+const MASCOT_COACH = require('../../assets/public/3s-coach.png');
 
 interface CustomerGoalsModalProps {
   visible: boolean;
@@ -341,9 +344,11 @@ export function CustomerGoalsModal({
                   </View>
                 ) : goals.length === 0 ? (
                   <View style={styles.emptyCard}>
-                    <View style={styles.emptyIconCircle}>
-                      <Feather name="target" size={32} color="#94A3B8" />
-                    </View>
+                    <Image
+                      source={MASCOT_COACH}
+                      style={styles.emptyMascotImg}
+                      resizeMode="contain"
+                    />
                     <Text style={styles.emptyTitle}>Chưa có mục tiêu</Text>
                     <Text style={styles.emptyDesc}>
                       Học viên này chưa có mục tiêu huấn luyện nào. Hãy tạo mục tiêu để theo dõi lộ trình thể lực!
@@ -843,14 +848,10 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     marginVertical: 20,
   },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+  emptyMascotImg: {
+    width: 130,
+    height: 130,
+    marginBottom: 14,
   },
   emptyTitle: {
     fontSize: 16,
