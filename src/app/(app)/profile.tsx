@@ -21,7 +21,7 @@ import { colors, radius, spacing } from '@/theme';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { session, signOut } = useAuth();
+  const { session, signOut, refreshProfile } = useAuth();
 
   const [profile, setProfile] = useState<PtProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);

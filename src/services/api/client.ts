@@ -94,14 +94,23 @@ async function parseBody(response: Response): Promise<unknown> {
 async function request<T>(path: string, init: RequestInit = {}, unwrap = true): Promise<T> {
   const storedSession = await getStoredSession();
   const headers = new Headers(init.headers);
+  headers.set('Accept', 'application/json');
+
   const isFormData =
-    init.body instanceof FormData ||
-    (typeof init.body === 'object' && init.body !== null && '_parts' in (init.body as unknown as Record<string, unknown>));
-  if (init.body && !headers.has('Content-Type') && !isFormData) {
-    headers.set('Content-Type', 'application/json');
-  }
+    Boolean(init.body) &&
+    (
+      (typeof FormData !== 'undefined' && init.body instanceof FormData) ||
+      (typeof init.body === 'object' && init.body !== null && '_parts' in (init.body as unknown as Record<string, unknown>)) ||
+      (init.body?.constructor && (init.body.constructor as { name?: string }).name === 'FormData')
+    );
+
   if (isFormData) {
+    // For multipart FormData in React Native and Web, fetch automatically attaches the boundary.
+    // Explicit Content-Type headers corrupt multipart uploads.
     headers.delete('Content-Type');
+    headers.delete('content-type');
+  } else if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
   if (storedSession?.token) {
     headers.set('Authorization', `Bearer ${storedSession.token}`);
@@ -168,6 +177,9 @@ function encodeBody(body: unknown): BodyInit | undefined {
 }
 
 export const api = {
+  upload<T>(path: string, body: FormData): Promise<T> {
+    return request<T>(path, { method: 'POST', body });
+  },
   getPage<T>(path: string): Promise<ApiPage<T>> {
     return request<ApiPage<T>>(path, { method: 'GET' }, false);
   },
@@ -182,8 +194,5 @@ export const api = {
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
-  },
-  upload<T>(path: string, formData: FormData): Promise<T> {
-    return request<T>(path, { method: 'POST', body: formData });
   },
 };

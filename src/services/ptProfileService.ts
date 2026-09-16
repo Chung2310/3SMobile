@@ -1,4 +1,5 @@
 import { api } from '@/services/api/client';
+import { getStoredSession, saveSession } from '@/services/sessionStore';
 import type { User } from '@/types/domain';
 
 export interface PtProfileInfo {
@@ -16,9 +17,9 @@ export interface PtProfileInfo {
 }
 
 /**
- * Lay thong tin ho so cua PT:
- * - So lieu huan luyen: /api/dashboard/pt (tong hoc vien, tien do tot, canh bao)
- * - Ho so tai khoan chinh xac: /api/auth/me (avatarUrl, fullName, email, phone thuc te cua user)
+ * Lấy thông tin hồ sơ của PT:
+ * - Số liệu huấn luyện: /api/dashboard/pt (tổng học viên, tiến độ tốt, cảnh báo)
+ * - Hồ sơ tài khoản chính xác: /api/auth/me (avatarUrl, fullName, email, phone thực tế của user)
  */
 export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo> {
   const profile: PtProfileInfo = {
@@ -36,7 +37,7 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
   };
 
   try {
-    // 1. Goi API dashboard PT de lay so lieu thong ke
+    // 1. Gọi API dashboard PT để lấy số liệu thống kê
     const dashboard = await api.get<{
       totalCustomers: number;
       goodProgressCount: number;
@@ -49,11 +50,11 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
       profile.openAlerts = dashboard.openAlerts || 0;
     }
   } catch {
-    // Bo qua neu loi mang khi lay dashboard
+    // Bỏ qua nếu lỗi mạng khi lấy dashboard
   }
 
   try {
-    // 2. Goi /api/auth/me de lay profile moi nhat va avatarUrl chinh xac cua user
+    // 2. Gọi /api/auth/me để lấy profile mới nhất và avatarUrl chính xác của user
     const me = await api.get<User>('/api/auth/me');
     if (me && typeof me === 'object') {
       if (typeof me.id === 'string' && me.id) profile.id = me.id;
@@ -63,10 +64,28 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
       if (typeof me.status === 'string' && me.status) profile.status = me.status;
       if (typeof me.email === 'string') profile.email = me.email;
       if (typeof me.phone === 'string') profile.phone = me.phone;
-      if (typeof me.avatarUrl === 'string') profile.avatarUrl = me.avatarUrl;
+      if (typeof me.avatarUrl === 'string' && me.avatarUrl.trim()) profile.avatarUrl = me.avatarUrl.trim();
+
+      // Đồng bộ thông tin mới nhất vào session lưu trữ
+      try {
+        const stored = await getStoredSession();
+        if (stored && stored.user) {
+          const resolvedAvatar = (typeof me.avatarUrl === 'string' && me.avatarUrl.trim())
+            ? me.avatarUrl.trim()
+            : (stored.user.avatarUrl || '');
+          stored.user = {
+            ...stored.user,
+            ...me,
+            avatarUrl: resolvedAvatar,
+          };
+          await saveSession(stored);
+        }
+      } catch {
+        // Bỏ qua nếu lỗi lưu session
+      }
     }
   } catch {
-    // Neu khong goi duoc /api/auth/me thi giu nguyen thong tin tu session
+    // Nếu không gọi được /api/auth/me thì giữ nguyên thông tin từ session
   }
 
   return profile;

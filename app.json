@@ -14,7 +14,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên.",
-          "cameraPermission": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên."
+          "cameraPermission": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên.",
+          "microphonePermission": false
         }
       ]
     ],
