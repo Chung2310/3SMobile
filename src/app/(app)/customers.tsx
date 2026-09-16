@@ -15,9 +15,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerDetailModal } from '@/components/CustomerDetailModal';
+import { CustomerGoalsModal } from '@/components/CustomerGoalsModal';
 import { PtPackageModal } from '@/components/PtPackageModal';
 import { PaginationBar } from '@/components/PaginationBar';
 import { SectionHeader } from '@/components/UI';
+import { AppBottomBar } from '@/components/navigation/AppBottomBar';
 import {
   CustomerCard,
   CustomerFormModal,
@@ -28,6 +30,7 @@ import {
 } from '@/components/customers/index';
 import { deleteCustomer, fetchCustomersList } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
+import { fetchAllGoals, fetchCustomerGoals, type GoalItem } from '@/services/goalService';
 import { colors, radius, spacing } from '@/theme';
 import type { CustomerProfile, PtCustomerSummary } from '@/types/domain';
 
@@ -55,9 +58,15 @@ export default function CustomersScreen() {
   // PT Package Modal
   const [packageCustomer, setPackageCustomer] = useState<{ id: string; fullName: string } | null>(null);
 
+  // Goal Modal
+  const [goalCustomer, setGoalCustomer] = useState<{ id: string; fullName: string; phone?: string } | null>(null);
+
   // Delete Modal
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerListItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Bản đồ mục tiêu mới nhất theo từng khách hàng
+  const [customerGoalsMap, setCustomerGoalsMap] = useState<Record<string, GoalItem>>({});
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -66,15 +75,48 @@ export default function CustomersScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [dashData, listData] = await Promise.all([
+      const [dashData, listData, goalsData] = await Promise.all([
         fetchPtDashboard().catch(() => null),
         fetchCustomersList().catch(() => []),
+        fetchAllGoals(100).catch(() => []),
       ]);
 
       if (dashData?.customers?.length) {
-        setCustomers(dashData.customers);
+        // Chỉ lấy thông tin dashboard của khách hàng thật, không lấy mock data id bắt đầu bằng cust-
+        setCustomers(dashData.customers.filter((c) => !c.customerId.startsWith('cust-')));
+      } else {
+        setCustomers([]);
       }
       setProfileCustomers(listData || []);
+
+      // 1. Lập bản đồ mục tiêu từ fetchAllGoals
+      const gMap: Record<string, GoalItem> = {};
+      if (Array.isArray(goalsData)) {
+        for (const g of goalsData) {
+          const cId =
+            typeof g.customerId === 'object' && g.customerId !== null
+              ? (g.customerId as any)._id || (g.customerId as any).id
+              : String(g.customerId);
+          if (cId && !gMap[cId]) {
+            gMap[cId] = g;
+          }
+        }
+      }
+
+      // 2. Gọi trực tiếp fetchCustomerGoals cho từng khách hàng để đảm bảo đầy đủ
+      if (listData && listData.length > 0) {
+        const goalFetches = listData.map(async (p) => {
+          if (!gMap[p._id]) {
+            const customerGoals = await fetchCustomerGoals(p._id).catch(() => []);
+            if (customerGoals && customerGoals.length > 0) {
+              gMap[p._id] = customerGoals[0];
+            }
+          }
+        });
+        await Promise.all(goalFetches);
+      }
+
+      setCustomerGoalsMap({ ...gMap });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,35 +132,35 @@ export default function CustomersScreen() {
     await loadData();
   }, [loadData]);
 
-  // Combine profile and dashboard metrics
-  const allList: CustomerListItem[] = profileCustomers.length
-    ? profileCustomers.map((p) => {
-        const dash = customers.find((c) => c.customerId === p._id);
-        return {
-          id: p._id,
-          fullName: p.fullName,
-          phone: p.phone || dash?.phone || '',
-          email: p.email || '',
-          initialGoal: p.initialGoal || dash?.initialGoal || '',
-          score: dash?.score ?? null,
-          measurementCount: dash?.measurementCount ?? 0,
-          progressCategory: dash?.progressCategory ?? 'GOOD',
-          status: (p.status || 'ACTIVE') as any,
-          rawProfile: p,
-        };
-      })
-    : customers.map((c) => ({
-        id: c.customerId,
-        fullName: c.fullName,
-        phone: c.phone || '',
-        email: '',
-        initialGoal: c.initialGoal || '',
-        score: c.score ?? null,
-        measurementCount: c.measurementCount,
-        progressCategory: c.progressCategory,
-        status: 'ACTIVE' as const,
-        rawProfile: null,
-      }));
+  // Hiển thị danh sách khách hàng thực tế kèm mục tiêu thật từ /api/goals
+  const allList: CustomerListItem[] = profileCustomers.map((p) => {
+    const dash = customers.find((c) => c.customerId === p._id);
+    const latestGoal = customerGoalsMap[p._id];
+
+    let displayGoal = '';
+    if (latestGoal?.title) {
+      if (latestGoal.targetValue != null) {
+        displayGoal = `${latestGoal.title} (${latestGoal.targetValue} ${latestGoal.targetUnit || ''})`.trim();
+      } else {
+        displayGoal = latestGoal.title;
+      }
+    } else if (p.initialGoal) {
+      displayGoal = p.initialGoal;
+    }
+
+    return {
+      id: p._id,
+      fullName: p.fullName,
+      phone: p.phone || dash?.phone || '',
+      email: p.email || '',
+      initialGoal: displayGoal,
+      score: dash?.score ?? null,
+      measurementCount: dash?.measurementCount ?? 0,
+      progressCategory: dash?.progressCategory ?? 'GOOD',
+      status: (p.status || 'ACTIVE') as any,
+      rawProfile: p,
+    };
+  });
 
   const filtered = allList.filter((c) => {
     if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
@@ -213,7 +255,7 @@ export default function CustomersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+          { paddingBottom: 24 },
         ]}
         refreshControl={
           <RefreshControl
@@ -288,6 +330,13 @@ export default function CustomersScreen() {
                 onManagePackages={(cust) =>
                   setPackageCustomer({ id: cust.id, fullName: cust.fullName })
                 }
+                onGoals={(cust) =>
+                  setGoalCustomer({
+                    id: cust.id,
+                    fullName: cust.fullName,
+                    phone: cust.phone,
+                  })
+                }
                 onEdit={handleEdit}
                 onDelete={(cust) => setDeletingCustomer(cust)}
               />
@@ -354,7 +403,17 @@ export default function CustomersScreen() {
         onClose={() => setPackageCustomer(null)}
       />
 
-      {/* 4. Confirm Delete Modal */}
+      {/* 4. Customer Goals Modal */}
+      <CustomerGoalsModal
+        visible={Boolean(goalCustomer)}
+        customer={goalCustomer}
+        onClose={() => {
+          setGoalCustomer(null);
+          void loadData();
+        }}
+      />
+
+      {/* 5. Confirm Delete Modal */}
       <ConfirmDeleteModal
         visible={Boolean(deletingCustomer)}
         title="Xóa khách hàng?"
@@ -366,7 +425,7 @@ export default function CustomersScreen() {
         onCancel={() => setDeletingCustomer(null)}
       />
 
-      {/* 5. Status Filter Bottom Sheet */}
+      {/* 6. Status Filter Bottom Sheet */}
       <CustomerStatusFilterSheet
         visible={showStatusSheet}
         statusFilter={statusFilter}
@@ -377,6 +436,9 @@ export default function CustomersScreen() {
         onSelect={(st) => setStatusFilter(st)}
         onClose={() => setShowStatusSheet(false)}
       />
+
+      {/* FOOTER TAB BAR */}
+      <AppBottomBar />
     </View>
   );
 }
@@ -417,85 +479,105 @@ const styles = StyleSheet.create({
   },
   pageSubtitle: {
     fontSize: 11,
+    fontWeight: '500',
     color: colors.textMuted,
     marginTop: 1,
   },
   addHeaderBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#00C2FF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#00C2FF',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     elevation: 3,
   },
   addHeaderBtnPressed: {
     backgroundColor: '#0098CC',
-    transform: [{ scale: 0.92 }],
+    transform: [{ scale: 0.95 }],
   },
   toastWrap: {
+    position: 'absolute',
+    top: 70,
+    left: spacing.lg,
+    right: spacing.lg,
+    zIndex: 999,
+    backgroundColor: '#1E293B',
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderBottomWidth: 1,
-    borderBottomColor: '#BBF7D0',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
   },
   toastText: {
-    color: '#16A34A',
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+    flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: spacing.xs,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    height: 46,
-    marginBottom: spacing.sm,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   searchIcon: {
-    marginRight: spacing.sm,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13.5,
     color: colors.text,
+    padding: 0,
   },
   filterTriggerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'flex-start',
+    marginBottom: spacing.sm,
+    marginTop: 4,
   },
   filterTriggerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   filterTriggerBtnActive: {
-    backgroundColor: '#E0F7FE',
+    backgroundColor: '#E0F2FE',
     borderColor: '#BAE6FD',
   },
   filterTriggerText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '600',
     color: '#4B5563',
   },
@@ -505,7 +587,8 @@ const styles = StyleSheet.create({
   },
   emptySearchWrap: {
     alignItems: 'center',
-    paddingVertical: 32,
+    justifyContent: 'center',
+    paddingVertical: 40,
     gap: 12,
   },
   emptySearchImg: {
@@ -517,5 +600,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     fontWeight: '500',
+    paddingHorizontal: 24,
   },
 });

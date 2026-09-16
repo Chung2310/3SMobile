@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -88,7 +88,8 @@ const QUICK_FEATURES: QuickFeature[] = [
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
+  const { session, refreshProfile } = useAuth();
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [dashboard, setDashboard] = useState<PtDashboardData | null>(null);
@@ -97,6 +98,10 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [progressSectionY, setProgressSectionY] = useState(0);
+
+  useEffect(() => {
+    setAvatarLoadError(false);
+  }, [session?.user?.avatarUrl]);
 
   const loadData = useCallback(async () => {
     try {
@@ -179,10 +184,11 @@ export default function HomeScreen() {
             hitSlop={8}
             accessibilityLabel="Hồ sơ cá nhân"
           >
-            {session?.user?.avatarUrl ? (
+            {session?.user?.avatarUrl && !avatarLoadError ? (
               <Image
                 source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
                 style={styles.avatarImg}
+                onError={() => setAvatarLoadError(true)}
               />
             ) : (
               <View style={styles.avatarFallback}>

@@ -85,3 +85,17 @@ test('API reports permission errors instead of rendering an empty successful pag
   try { await assert.rejects(() => api.getPage('/api/exercises'), (error) => error.status === 403 && error.message === 'Không có quyền'); }
   finally { global.fetch = originalFetch; }
 });
+
+test('multipart image upload preserves authorization and lets fetch set the boundary', async () => {
+  const originalFetch = global.fetch;
+  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => ({ token: 'test-token' }) } });
+  const form = new FormData(); form.append('image', new Blob(['image'], { type: 'image/png' }), 'progress.png');
+  global.fetch = async (url, options) => {
+    assert.equal(options.body, form);
+    assert.equal(options.headers.get('Content-Type'), null);
+    assert.equal(options.headers.get('Authorization'), 'Bearer test-token');
+    return new Response(JSON.stringify({ data: { url: 'https://example.com/progress.png' } }), { status: 200 });
+  };
+  try { assert.equal((await api.upload('/api/upload/image', form)).url, 'https://example.com/progress.png'); }
+  finally { global.fetch = originalFetch; }
+});

@@ -12,6 +12,7 @@ interface CustomerCardProps {
   item: CustomerListItem;
   onPress: (item: CustomerListItem) => void;
   onManagePackages: (item: CustomerListItem) => void;
+  onGoals?: (item: CustomerListItem) => void;
   onEdit: (item: CustomerListItem) => void;
   onDelete: (item: CustomerListItem) => void;
 }
@@ -20,6 +21,7 @@ export function CustomerCard({
   item,
   onPress,
   onManagePackages,
+  onGoals,
   onEdit,
   onDelete,
 }: CustomerCardProps) {
@@ -102,7 +104,26 @@ export function CustomerCard({
 
         <View style={styles.actionDivider} />
 
-        {/* 2. Hồ sơ (Con mắt) */}
+        {/* 2. Mục tiêu (Icon target) */}
+        {onGoals && (
+          <>
+            <Pressable
+              style={({ pressed }) => [
+                styles.compactActionBtn,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => onGoals(item)}
+              hitSlop={8}
+              accessibilityLabel="Mục tiêu của khách hàng"
+            >
+              <Feather name="target" size={16} color="#0284C7" />
+            </Pressable>
+
+            <View style={styles.actionDivider} />
+          </>
+        )}
+
+        {/* 3. Hồ sơ (Con mắt) */}
         <Pressable
           style={({ pressed }) => [
             styles.compactActionBtn,

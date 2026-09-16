@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme';
 
 interface DatePickerModalProps {
   visible: boolean;
@@ -85,20 +85,23 @@ export function DatePickerModal({
 
   useEffect(() => {
     if (visible) {
-      if (parsedInitialDate) {
-        setSelectedDate(parsedInitialDate);
-        setViewYear(parsedInitialDate.getFullYear());
-        setViewMonth(parsedInitialDate.getMonth());
-      } else if (shouldUseToday) {
-        setSelectedDate(today);
-        setViewYear(today.getFullYear());
-        setViewMonth(today.getMonth());
-      } else {
-        setSelectedDate(null);
-        setViewYear(1998);
-        setViewMonth(0);
-      }
-      setViewMode('calendar');
+      const timer = setTimeout(() => {
+        if (parsedInitialDate) {
+          setSelectedDate(parsedInitialDate);
+          setViewYear(parsedInitialDate.getFullYear());
+          setViewMonth(parsedInitialDate.getMonth());
+        } else if (shouldUseToday) {
+          setSelectedDate(today);
+          setViewYear(today.getFullYear());
+          setViewMonth(today.getMonth());
+        } else {
+          setSelectedDate(null);
+          setViewYear(1998);
+          setViewMonth(0);
+        }
+        setViewMode('calendar');
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [visible, parsedInitialDate, shouldUseToday, today]);
 
@@ -464,8 +467,8 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingBottom: 24,
     maxHeight: '90%',
   },

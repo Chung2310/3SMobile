@@ -7,10 +7,25 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "3sgym",
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên.",
+          "cameraPermission": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên.",
+          "microphonePermission": false
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "vn.3sgym.mobile"
+      "bundleIdentifier": "vn.3sgym.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên.",
+        "NSPhotoLibraryUsageDescription": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên."
+      }
     },
     "android": {
       "package": "vn.3sgym.mobile",
@@ -20,6 +35,13 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ],
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {

@@ -1,0 +1,137 @@
+import { api } from '@/services/api/client';
+
+export type GoalType =
+  | 'WEIGHT_LOSS'
+  | 'FAT_LOSS'
+  | 'WEIGHT_GAIN'
+  | 'MUSCLE_GAIN'
+  | 'RECOMPOSITION'
+  | 'FITNESS';
+
+export type GoalStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface GoalItem {
+  _id: string;
+  id?: string;
+  customerId: string;
+  ptId?: string;
+  type: GoalType;
+  title: string;
+  targetValue?: number | null;
+  targetUnit?: string;
+  deadline: string;
+  sessionsPerWeek: number;
+  cardioNotes?: string;
+  evaluationNotes?: string;
+  status: GoalStatus;
+  publishedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateGoalPayload {
+  customerId: string;
+  type: GoalType;
+  title: string;
+  targetValue?: number | null;
+  targetUnit?: string;
+  deadline: string;
+  sessionsPerWeek?: number;
+  cardioNotes?: string;
+  evaluationNotes?: string;
+}
+
+export const GOAL_TYPE_OPTIONS: { value: GoalType; label: string }[] = [
+  { value: 'FAT_LOSS', label: 'Giảm mỡ' },
+  { value: 'WEIGHT_LOSS', label: 'Giảm cân' },
+  { value: 'WEIGHT_GAIN', label: 'Tăng cân' },
+  { value: 'MUSCLE_GAIN', label: 'Tăng cơ' },
+  { value: 'RECOMPOSITION', label: 'Tái cấu trúc cơ thể' },
+  { value: 'FITNESS', label: 'Thể lực' },
+];
+
+export const GOAL_TYPE_LABELS: Record<GoalType, string> = {
+  FAT_LOSS: 'Giảm mỡ',
+  WEIGHT_LOSS: 'Giảm cân',
+  WEIGHT_GAIN: 'Tăng cân',
+  MUSCLE_GAIN: 'Tăng cơ',
+  RECOMPOSITION: 'Tái cấu trúc cơ thể',
+  FITNESS: 'Thể lực',
+};
+
+export async function fetchCustomerGoals(customerId: string): Promise<GoalItem[]> {
+  try {
+    const res = await api.get<any>(`/api/goals?customerId=${customerId}`);
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.items)) return res.items;
+    if (res && Array.isArray(res.data)) return res.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAllGoals(limit = 100): Promise<GoalItem[]> {
+  try {
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const res = await api.get<any>(`/api/goals?limit=${safeLimit}`);
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.items)) return res.items;
+    if (res && Array.isArray(res.data)) return res.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createGoal(payload: CreateGoalPayload): Promise<GoalItem> {
+  const cleanPayload: Record<string, unknown> = {
+    customerId: payload.customerId,
+    type: payload.type,
+    title: payload.title.trim(),
+    deadline: payload.deadline,
+    targetValue: payload.targetValue ?? null,
+    sessionsPerWeek: payload.sessionsPerWeek ?? 3,
+  };
+  if (payload.targetUnit?.trim()) {
+    cleanPayload.targetUnit = payload.targetUnit.trim();
+  }
+  if (payload.cardioNotes?.trim()) {
+    cleanPayload.cardioNotes = payload.cardioNotes.trim();
+  }
+  if (payload.evaluationNotes?.trim()) {
+    cleanPayload.evaluationNotes = payload.evaluationNotes.trim();
+  }
+
+  const res = await api.post<any>('/api/goals', cleanPayload);
+  return (res && res.data) ? res.data : res;
+}
+
+export async function updateGoal(id: string, payload: Partial<CreateGoalPayload>): Promise<GoalItem> {
+  const cleanPayload: Record<string, unknown> = {};
+  if (payload.title !== undefined) cleanPayload.title = payload.title.trim();
+  if (payload.type !== undefined) cleanPayload.type = payload.type;
+  if (payload.deadline !== undefined) cleanPayload.deadline = payload.deadline;
+  if (payload.targetValue !== undefined) cleanPayload.targetValue = payload.targetValue ?? null;
+  if (payload.targetUnit !== undefined) cleanPayload.targetUnit = payload.targetUnit.trim();
+  if (payload.sessionsPerWeek !== undefined) cleanPayload.sessionsPerWeek = payload.sessionsPerWeek;
+  if (payload.cardioNotes !== undefined) cleanPayload.cardioNotes = payload.cardioNotes.trim();
+  if (payload.evaluationNotes !== undefined) cleanPayload.evaluationNotes = payload.evaluationNotes.trim();
+
+  const res = await api.patch<any>(`/api/goals/${id}`, cleanPayload);
+  return (res && res.data) ? res.data : res;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await api.delete(`/api/goals/${id}`);
+}
+
+export async function publishGoal(id: string): Promise<GoalItem> {
+  const res = await api.patch<any>(`/api/goals/${id}/publish`, {});
+  return (res && res.data) ? res.data : res;
+}
+
+export async function unpublishGoal(id: string): Promise<GoalItem> {
+  const res = await api.patch<any>(`/api/goals/${id}/unpublish`, {});
+  return (res && res.data) ? res.data : res;
+}
