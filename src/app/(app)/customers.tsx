@@ -24,6 +24,7 @@ import { CustomerDetailModal } from '@/components/CustomerDetailModal';
 import { CustomerGoalsModal } from '@/components/CustomerGoalsModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { PtPackageModal } from '@/components/PtPackageModal';
+import { AppBottomBar } from '@/components/navigation/AppBottomBar';
 import {
   createCustomer,
   deleteCustomer,
@@ -426,7 +427,7 @@ export default function CustomersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+          { paddingBottom: 24 },
         ]}
       >
         {/* 2. SEARCH BOX */}
@@ -1109,6 +1110,9 @@ export default function CustomersScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* FOOTER TAB BAR */}
+      <AppBottomBar />
     </View>
   );
 }

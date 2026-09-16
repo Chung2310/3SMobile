@@ -41,6 +41,7 @@
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES"
       ],
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {
