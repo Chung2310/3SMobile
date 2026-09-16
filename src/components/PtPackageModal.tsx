@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -62,36 +62,55 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadPackages = async () => {
-    if (!customer?.id) return;
+  const customerId = customer?.id;
+
+  const loadPackages = useCallback(async () => {
+    if (!customerId) return;
     try {
       setLoading(true);
-      const data = await fetchCustomerPackages(customer.id);
+      const data = await fetchCustomerPackages(customerId);
       setPackages(data);
     } catch {
       // Ignore
     } finally {
       setLoading(false);
     }
+  }, [customerId]);
+
+  const handleClose = () => {
+    setShowAddForm(false);
+    setName('');
+    setTotalSessions('24');
+    const today = getTodayIso();
+    setStartDate(today);
+    setEndDate(calculateEndDate(today, 24));
+    setFormError(null);
+    onClose();
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (visible && customer?.id) {
-        setShowAddForm(false);
-        setName('');
-        setTotalSessions('24');
-        const today = getTodayIso();
-        setStartDate(today);
-        setEndDate(calculateEndDate(today, 24));
-        setFormError(null);
-        void loadPackages();
-      } else {
-        setPackages([]);
+    if (!visible || !customerId) return;
+    let active = true;
+
+    void (async () => {
+      try {
+        const data = await fetchCustomerPackages(customerId);
+        if (active) {
+          setPackages(data);
+          setLoading(false);
+        }
+      } catch {
+        if (active) {
+          setPackages([]);
+          setLoading(false);
+        }
       }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [visible, customer?.id, loadPackages]);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [visible, customerId]);
 
   const handleApplyTemplate = (templateName: string, sessions: number) => {
     setName(templateName);
@@ -106,7 +125,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   };
 
   const handleCreatePackage = async () => {
-    if (!customer?.id) return;
+    if (!customerId) return;
     if (!name.trim()) {
       setFormError('Vui lòng nhập tên gói PT.');
       return;
@@ -131,7 +150,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
         endDate,
         status: 'ACTIVE',
       };
-      await createCustomerPackage(customer.id, payload);
+      await createCustomerPackage(customerId, payload);
       setShowAddForm(false);
       setName('');
       await loadPackages();
@@ -143,11 +162,11 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   };
 
   const handleDeletePackage = async (pkgId: string) => {
-    if (!customer?.id) return;
+    if (!customerId) return;
     try {
       setDeletingId(pkgId);
-      await deleteCustomerPackage(customer.id, pkgId);
-      setPackages((prev) => prev.filter((p) => p._id !== pkgId));
+      await deleteCustomerPackage(customerId, pkgId);
+      setPackages((prev) => prev.filter((p) => (p._id || (p as any).id) !== pkgId));
     } catch {
       // Ignore
     } finally {
@@ -171,11 +190,16 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.backdrop}
       >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleClose}
+          accessibilityLabel="Đóng modal gói PT"
+        />
         <View style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
@@ -191,7 +215,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
               </View>
             </View>
 
-            <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+            <Pressable onPress={handleClose} hitSlop={12} style={styles.closeBtn}>
               <Feather name="x" size={20} color={colors.text} />
             </Pressable>
           </View>
@@ -359,12 +383,13 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
               </View>
             ) : (
               packages.map((pkg) => {
+                const pkgId = pkg._id || (pkg as any).id;
                 const badge = getStatusBadge(pkg.status);
-                const isDeleting = deletingId === pkg._id;
+                const isDeleting = deletingId === pkgId;
                 const remaining = pkg.remainingSessions ?? pkg.totalSessions;
 
                 return (
-                  <View key={pkg._id} style={styles.packageCard}>
+                  <View key={pkgId} style={styles.packageCard}>
                     <View style={styles.packageCardHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.packageName}>{pkg.name}</Text>
@@ -398,7 +423,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                       <Pressable
                         style={styles.deletePkgBtn}
                         hitSlop={8}
-                        onPress={() => handleDeletePackage(pkg._id)}
+                        onPress={() => handleDeletePackage(pkgId)}
                         disabled={isDeleting}
                       >
                         {isDeleting ? (
