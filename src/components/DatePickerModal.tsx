@@ -15,6 +15,7 @@ interface DatePickerModalProps {
   value?: string; // YYYY-MM-DD or DD/MM/YYYY
   title?: string;
   maxDate?: Date | null;
+  defaultToToday?: boolean;
   onClose: () => void;
   onSelect: (isoDate: string, displayDate: string) => void;
 }
@@ -31,6 +32,7 @@ export function DatePickerModal({
   value,
   title = 'Chọn ngày sinh',
   maxDate,
+  defaultToToday,
   onClose,
   onSelect,
 }: DatePickerModalProps) {
@@ -55,16 +57,29 @@ export function DatePickerModal({
     return null;
   }, [value]);
 
-  const [viewMode, setViewMode] = useState<'calendar' | 'year' | 'month'>('calendar');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(parsedInitialDate);
+  const isBirthday = useMemo(() => {
+    const t = (title || '').toLowerCase();
+    return t.includes('sinh') || t.includes('birth');
+  }, [title]);
 
-  // Mặc định năm hiển thị: Nếu có ngày chọn thì dùng ngày đó, nếu chưa có thì mặc định năm 1998 để chọn ngày sinh nhanh
+  const shouldUseToday = defaultToToday ?? !isBirthday;
+
+  const [viewMode, setViewMode] = useState<'calendar' | 'year' | 'month'>('calendar');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+    if (parsedInitialDate) return parsedInitialDate;
+    if (shouldUseToday) return today;
+    return null;
+  });
+
+  // Mặc định năm hiển thị: Nếu là ngày đo / ngày chung thì mặc định năm hiện tại (now), chỉ ngày sinh mới mặc định 1998
   const [viewYear, setViewYear] = useState<number>(() => {
     if (parsedInitialDate) return parsedInitialDate.getFullYear();
+    if (shouldUseToday) return today.getFullYear();
     return 1998;
   });
   const [viewMonth, setViewMonth] = useState<number>(() => {
     if (parsedInitialDate) return parsedInitialDate.getMonth();
+    if (shouldUseToday) return today.getMonth();
     return 0; // Tháng 1
   });
 
@@ -74,10 +89,18 @@ export function DatePickerModal({
         setSelectedDate(parsedInitialDate);
         setViewYear(parsedInitialDate.getFullYear());
         setViewMonth(parsedInitialDate.getMonth());
+      } else if (shouldUseToday) {
+        setSelectedDate(today);
+        setViewYear(today.getFullYear());
+        setViewMonth(today.getMonth());
+      } else {
+        setSelectedDate(null);
+        setViewYear(1998);
+        setViewMonth(0);
       }
       setViewMode('calendar');
     }
-  }, [visible, parsedInitialDate]);
+  }, [visible, parsedInitialDate, shouldUseToday, today]);
 
   // Danh sách các năm (1940 -> maxDate year)
   const yearsList = useMemo(() => {

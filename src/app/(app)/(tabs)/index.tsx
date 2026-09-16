@@ -346,7 +346,13 @@ export default function HomeScreen() {
         </View>
 
         {/* Filter Pills ngắn */}
-        <View style={styles.filterRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterRow}
+        >
           <Pressable
             onPress={() => setFilter('ALL')}
             style={[styles.filterPill, filter === 'ALL' && styles.filterPillActive]}
@@ -401,7 +407,7 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           )}
-        </View>
+        </ScrollView>
 
         {/* Customer Items */}
         {filteredCustomers.length === 0 ? (
@@ -761,10 +767,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textMuted,
   },
+  filterScrollView: {
+    marginHorizontal: -spacing.lg,
+    marginVertical: spacing.xs,
+  },
   filterRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
     gap: 8,
-    marginVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   filterPill: {
     paddingHorizontal: 12,

@@ -50,7 +50,8 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
   const storedSession = await getStoredSession();
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
-  if (init.body && !headers.has('Content-Type')) {
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  if (init.body && !headers.has('Content-Type') && !isFormData) {
     headers.set('Content-Type', 'application/json');
   }
   if (storedSession?.token) {
@@ -132,5 +133,63 @@ export const api = {
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
+  },
+  upload<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
+    const storedSessionPromise = getStoredSession();
+    const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
+    const targetUrl = `${normalizedBase}${path}`;
+
+    return new Promise<T>((resolve, reject) => {
+      storedSessionPromise
+        .then((storedSession) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', targetUrl);
+          xhr.setRequestHeader('Accept', 'application/json');
+          if (storedSession?.token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${storedSession.token}`);
+          }
+          if (onProgress && xhr.upload) {
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable && event.total > 0) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                onProgress(percent);
+              }
+            };
+          }
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const json = JSON.parse(xhr.responseText);
+                resolve(json?.data !== undefined ? json.data : json);
+              } catch {
+                resolve(xhr.responseText as unknown as T);
+              }
+            } else {
+              try {
+                const json = JSON.parse(xhr.responseText);
+                reject(
+                  new ApiError(
+                    json?.message || `Tải lên thất bại (${xhr.status}).`,
+                    xhr.status,
+                    json
+                  )
+                );
+              } catch {
+                reject(new ApiError(`Tải lên thất bại (${xhr.status}).`, xhr.status));
+              }
+            }
+          };
+          xhr.onerror = () => {
+            reject(
+              new ApiError(
+                `Không thể kết nối máy chủ khi tải tệp lên tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`,
+                0
+              )
+            );
+          };
+          xhr.send(formData);
+        })
+        .catch(reject);
+    });
   },
 };

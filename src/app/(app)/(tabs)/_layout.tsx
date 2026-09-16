@@ -7,22 +7,48 @@ import {
 } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { colors } from '@/theme';
 
 interface TabDef {
   name: string;
   label: string;
-  icon: keyof typeof Feather.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+  inactiveIcon: keyof typeof Ionicons.glyphMap;
 }
 
 const TABS: TabDef[] = [
-  { name: 'assistant', label: 'Trợ lý AI', icon: 'cpu' },
-  { name: 'nutrition', label: 'Dinh dưỡng', icon: 'coffee' },
-  { name: 'index', label: 'Tổng quan', icon: 'home' },
-  { name: 'roadmap', label: 'Roadmap', icon: 'map' },
-  { name: 'progress', label: 'Inbody', icon: 'maximize' },
+  {
+    name: 'assistant',
+    label: 'Trợ lý AI',
+    activeIcon: 'sparkles',
+    inactiveIcon: 'sparkles-outline',
+  },
+  {
+    name: 'nutrition',
+    label: 'Dinh dưỡng',
+    activeIcon: 'nutrition',
+    inactiveIcon: 'nutrition-outline',
+  },
+  {
+    name: 'index',
+    label: 'Tổng quan',
+    activeIcon: 'home',
+    inactiveIcon: 'home-outline',
+  },
+  {
+    name: 'roadmap',
+    label: 'Roadmap',
+    activeIcon: 'trail-sign',
+    inactiveIcon: 'trail-sign-outline',
+  },
+  {
+    name: 'progress',
+    label: 'Inbody',
+    activeIcon: 'body',
+    inactiveIcon: 'body-outline',
+  },
 ];
 
 function FixedTabBar({ state, navigation }: any) {
@@ -77,13 +103,13 @@ function FixedTabBar({ state, navigation }: any) {
             {isCenter ? (
               <View style={styles.centerIconPlaceholder}>
                 <View style={styles.activeCircle}>
-                  <Feather name="home" size={20} color="#FFFFFF" />
+                  <Ionicons name="home" size={20} color="#FFFFFF" />
                 </View>
               </View>
             ) : (
               <View style={styles.iconContainer}>
-                <Feather
-                  name={tab.icon}
+                <Ionicons
+                  name={isFocused ? tab.activeIcon : tab.inactiveIcon}
                   size={20}
                   color={isFocused ? colors.primary : colors.textMuted}
                 />

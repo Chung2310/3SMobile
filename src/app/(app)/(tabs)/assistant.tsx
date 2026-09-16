@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -101,7 +101,7 @@ export default function AssistantScreen() {
             <Feather name="arrow-left" size={22} color={colors.text} />
           </Pressable>
           <View style={styles.aiBadge}>
-            <Feather name="cpu" size={16} color={colors.primary} />
+            <Ionicons name="sparkles" size={17} color={colors.primary} />
           </View>
           <View style={{ marginLeft: 10 }}>
             <Text style={styles.headerTitle}>Trợ lý PT AI</Text>
