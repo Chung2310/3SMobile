@@ -192,6 +192,10 @@ export const api = {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
   },
   upload<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
+    if (!onProgress || typeof XMLHttpRequest === 'undefined') {
+      return request<T>(path, { method: 'POST', body: formData });
+    }
+
     const storedSessionPromise = getStoredSession();
     const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
     const targetUrl = `${normalizedBase}${path}`;
