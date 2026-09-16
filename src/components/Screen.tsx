@@ -1,6 +1,7 @@
+import { ContextIcon } from '@/components/LibraryIcon';
 import type { ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,7 +38,7 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
       <View style={styles.container}>
         {title ? (
           <View style={styles.header}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>{onBack && <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Feather name="arrow-left" size={24} color={colors.text} /></Pressable>}<Text numberOfLines={2} ellipsizeMode="tail" style={[styles.title, { flex: 1 }]}>{title}</Text></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>{onBack && <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><ContextIcon name="arrow-left" size={24} color={colors.text} /></Pressable>}<Text numberOfLines={2} ellipsizeMode="tail" style={[styles.title, { flex: 1 }]}>{title}</Text></View>
             {subtitle ? <Text numberOfLines={3} ellipsizeMode="tail" style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
         ) : null}
