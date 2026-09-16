@@ -1,5 +1,4 @@
-import { api } from '@/services/api/client';
-import { getStoredSession, saveSession } from '@/services/sessionStore';
+﻿import { api } from '@/services/api/client';
 import type { PtCustomerSummary, PtDashboardData } from '@/types/domain';
 
 // Dữ liệu mẫu dự phòng khi chưa kết nối mạng hoặc tài khoản thử nghiệm
@@ -68,7 +67,7 @@ export const DEMO_PT_DASHBOARD: PtDashboardData = {
       changes: { bodyFatChange: -1.2, muscleChange: -0.6, weightChange: 0.8, daysBetween: 24 },
       openAlerts: 1,
       riskFactors: ['Tỷ lệ mỡ tăng nhẹ, cơ giảm'],
-      improvementTips: ['Kiểm tra lại chế độ ngủ nghỉ và calo nạp vào.'],
+      improvementTips: ['Kiểm tra lại chế độ nghỉ ngơi và calo nạp vào.'],
     },
   ],
 };
@@ -77,29 +76,6 @@ export async function fetchPtDashboard(): Promise<PtDashboardData> {
   try {
     const data = await api.get<PtDashboardData>('/api/dashboard/pt');
     if (data && typeof data === 'object' && 'goodProgressCount' in data) {
-      if (data.customers && data.customers.length > 0) {
-        try {
-          const firstCustId = data.customers[0].customerId;
-          const journey = await api.get<{
-            customer?: {
-              assignedPt?: {
-                avatarUrl?: string;
-              };
-            };
-          }>(`/api/customers/${firstCustId}/journey`);
-          const url = journey?.customer?.assignedPt?.avatarUrl;
-          if (url) {
-            data.ptAvatarUrl = url;
-            const stored = await getStoredSession();
-            if (stored && stored.user && stored.user.avatarUrl !== url) {
-              stored.user.avatarUrl = url;
-              await saveSession(stored);
-            }
-          }
-        } catch {
-          // bỏ qua nếu không gọi được journey
-        }
-      }
       return data;
     }
     return DEMO_PT_DASHBOARD;

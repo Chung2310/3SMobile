@@ -6,10 +6,14 @@ import { useJourney } from '@/context/JourneyContext';
 import { asRecords, formatDate, getLatestRecord, readDate, readNumber, readText } from '@/services/journey';
 import { colors, spacing, typography } from '@/theme';
 
+import { router } from 'expo-router';
+
 export default function ProgressScreen() {
   const { journey, loading, refreshing, error, refresh } = useJourney();
-  if (loading && !journey) return <Screen title="Inbody"><LoadingState /></Screen>;
-  if (error && !journey) return <Screen title="Inbody"><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
+  const handleBack = () => router.navigate('/(app)/(tabs)');
+
+  if (loading && !journey) return <Screen title="Chỉ số InBody" onBack={handleBack}><LoadingState /></Screen>;
+  if (error && !journey) return <Screen title="Chỉ số InBody" onBack={handleBack}><ErrorState message={error} onRetry={() => void refresh()} /></Screen>;
 
   const measurements = asRecords(journey?.measurements);
   const inbodyRecords = asRecords(journey?.inbodyRecords);
@@ -21,7 +25,13 @@ export default function ProgressScreen() {
   const muscle = readNumber(latest, ['muscleMass', 'muscleMassKg', 'skeletalMuscle']);
 
   return (
-    <Screen title="Inbody" subtitle="Nhìn lại dữ liệu chỉ số cơ thể để thấy bạn đã đi xa thế nào." refreshing={refreshing} onRefresh={refresh}>
+    <Screen
+      title="Chỉ số InBody"
+      subtitle="Theo dõi cân nặng, tỷ lệ cơ và mỡ cơ thể"
+      refreshing={refreshing}
+      onRefresh={refresh}
+      onBack={handleBack}
+    >
       <SectionHeader title="Chỉ số gần nhất" />
       {latest ? (
         <Card>

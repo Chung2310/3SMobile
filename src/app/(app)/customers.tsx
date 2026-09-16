@@ -350,9 +350,10 @@ export default function CustomersScreen() {
       {/* 1. TOP BAR */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.navigate('/(app)/(tabs)')}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+          accessibilityLabel="Quay lại"
         >
           <Feather name="arrow-left" size={22} color={colors.text} />
         </Pressable>

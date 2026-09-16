@@ -9,6 +9,8 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { colors } from '@/theme';
+
 interface TabDef {
   name: string;
   label: string;
@@ -25,10 +27,11 @@ const TABS: TabDef[] = [
 
 function FixedTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
+  // Safe padding vừa vặn, cân xứng cho cả iPhone lẫn Android
   const bottomPadding =
     Platform.OS === 'android'
-      ? Math.max(insets.bottom, 48) + 8
-      : Math.max(insets.bottom, 16);
+      ? Math.max(insets.bottom, 6)
+      : Math.max(insets.bottom, 10);
 
   // Xác định tab đang active hiện tại
   const currentRouteName = state.routes[state.index]?.name || 'index';
@@ -55,7 +58,7 @@ function FixedTabBar({ state, navigation }: any) {
       style={[
         styles.tabBarContainer,
         {
-          height: 56 + bottomPadding,
+          height: 50 + bottomPadding,
           paddingBottom: bottomPadding,
         },
       ]}
@@ -68,19 +71,21 @@ function FixedTabBar({ state, navigation }: any) {
           <Pressable
             key={tab.name}
             onPress={() => handleTabPress(tab.name)}
-            style={[styles.tabItem, isCenter && styles.tabItemCenter]}
+            style={styles.tabItem}
             hitSlop={8}
           >
             {isCenter ? (
-              <View style={styles.activeCircle}>
-                <Feather name="home" size={22} color="#FFFFFF" />
+              <View style={styles.centerIconPlaceholder}>
+                <View style={styles.activeCircle}>
+                  <Feather name="home" size={20} color="#FFFFFF" />
+                </View>
               </View>
             ) : (
               <View style={styles.iconContainer}>
                 <Feather
                   name={tab.icon}
                   size={20}
-                  color={isFocused ? '#16A34A' : '#9CA3AF'}
+                  color={isFocused ? colors.primary : colors.textMuted}
                 />
               </View>
             )}
@@ -151,12 +156,6 @@ export default function TabsLayout() {
 
       {/* Các tab cũ ẩn khỏi navigation */}
       <Tabs.Screen
-        name="customers"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
         name="workouts"
         options={{
           href: null,
@@ -180,64 +179,66 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    paddingTop: 8,
-    elevation: 12,
+    paddingTop: 4,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     overflow: 'visible',
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    height: 44,
+    paddingBottom: 2,
   },
-  tabItemCenter: {
-    flex: 1,
+  centerIconPlaceholder: {
+    height: 24,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -14,
-    zIndex: 10,
-  },
-  tabItemActive: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -14,
+    position: 'relative',
     zIndex: 10,
   },
   activeCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#22C55E',
-    borderWidth: 3,
+    position: 'absolute',
+    bottom: -1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    elevation: 3,
   },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 26,
+    height: 24,
+    width: 24,
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '400',
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
     textAlign: 'center',
+    includeFontPadding: false,
+    lineHeight: 12,
   },
   tabLabelActive: {
-    color: '#16A34A',
-    fontWeight: '500',
+    color: colors.primary,
+    fontWeight: '700',
   },
   tabLabelInactive: {
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
 });
+

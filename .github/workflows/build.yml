@@ -1,0 +1,182 @@
+name: Build IPA & APK (Product)
+
+on:
+  push:
+    branches:
+      - product
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-product-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-ios:
+    name: iOS IPA (Unsigned)
+    runs-on: macos-14
+    timeout-minutes: 90
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.3sgym.vn' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Generate native iOS project
+        run: npx --no-install expo prebuild --platform ios --no-install
+
+      - name: Install CocoaPods
+        working-directory: ios
+        run: pod install
+
+      - name: Build and package unsigned device IPA
+        run: bash scripts/build-unsigned-ios.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3SGym-ios-unsigned-${{ github.run_number }}
+          path: ${{ runner.temp }}/3s-unsigned-artifacts/3SGym-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload iOS build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3SGym-ios-build-log-${{ github.run_number }}
+          path: ${{ runner.temp }}/3s-xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Step summary
+        run: |
+          echo "### 📱 3S Gym iOS IPA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tải file **3SGym-unsigned.ipa** từ mục Artifacts của run này." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cài đặt trực tiếp lên iPhone thông qua Sideloadly, AltStore, Scarlet hoặc TrollStore (không cần tài khoản Apple Developer trả phí)." >> "$GITHUB_STEP_SUMMARY"
+
+  build-apk:
+    name: Android APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.3sgym.vn' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Prepare Android release signing & version code
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: node scripts/prepare-android-release.cjs
+
+      - name: Generate native Android project
+        run: npx --no-install expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 \
+            2>&1 | tee "$RUNNER_TEMP/3s-gradle.log"
+
+      - name: Sign APK
+        run: |
+          # Tìm file APK được gradle build ra
+          RAW_APK="$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)"
+          test -s "$RAW_APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+
+          echo "Signing $RAW_APK using $APP_ANDROID_KEYSTORE..."
+          "$APKSIGNER" sign --ks "$APP_ANDROID_KEYSTORE" \
+            --ks-pass "pass:$APP_ANDROID_KEYSTORE_PASSWORD" \
+            --key-pass "pass:$APP_ANDROID_KEYSTORE_PASSWORD" \
+            "$RAW_APK"
+
+          "$APKSIGNER" verify --verbose "$RAW_APK"
+
+          mkdir -p "$RUNNER_TEMP/3s-android-artifacts"
+          cp "$RAW_APK" "$RUNNER_TEMP/3s-android-artifacts/3SGym.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3SGym-android-apk-${{ github.run_number }}
+          path: ${{ runner.temp }}/3s-android-artifacts/3SGym.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Android build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3SGym-android-build-log-${{ github.run_number }}
+          path: ${{ runner.temp }}/3s-gradle.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Step summary
+        run: |
+          echo "### 🤖 3S Gym Android APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tải file **3SGym.apk** từ mục Artifacts của run này để cài đặt trực tiếp trên mọi thiết bị Android." >> "$GITHUB_STEP_SUMMARY"
+          echo "- VersionCode: $APP_ANDROID_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production Key: $APP_IS_PRODUCTION_KEY" >> "$GITHUB_STEP_SUMMARY"

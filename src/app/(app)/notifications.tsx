@@ -84,6 +84,7 @@ export default function NotificationsScreen() {
       subtitle="Cập nhật mới nhất từ phòng gym."
       refreshing={refreshing}
       onRefresh={() => load(true)}
+      onBack={() => router.navigate('/(app)/(tabs)')}
     >
       {loading ? (
         <LoadingState />

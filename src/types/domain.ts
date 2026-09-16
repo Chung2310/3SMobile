@@ -7,6 +7,7 @@ export interface User {
   fullName?: string;
   name?: string;
   email?: string;
+  phone?: string;
   avatarUrl?: string;
   customer?: JsonRecord;
   [key: string]: unknown;
@@ -14,12 +15,15 @@ export interface User {
 
 export interface Session {
   token: string;
+  refreshToken?: string;
   user: User;
 }
 
 export interface LoginResponse {
   token?: string;
   accessToken?: string;
+  refreshToken?: string;
+  clientType?: string;
   user?: User;
   account?: User;
   [key: string]: unknown;

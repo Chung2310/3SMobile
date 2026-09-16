@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { ContextIcon } from '@/components/LibraryIcon';
 import { colors } from '@/theme/colors';
 
 interface ConfirmDeleteModalProps {
@@ -17,6 +17,7 @@ interface ConfirmDeleteModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   loading?: boolean;
+  error?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -28,6 +29,7 @@ export function ConfirmDeleteModal({
   confirmLabel = 'Xóa vĩnh viễn',
   cancelLabel = 'Hủy',
   loading = false,
+  error,
   onConfirm,
   onCancel,
 }: ConfirmDeleteModalProps) {
@@ -36,11 +38,18 @@ export function ConfirmDeleteModal({
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.iconCircle}>
-            <Feather name="alert-triangle" size={28} color="#EF4444" />
+            <ContextIcon name="alert-triangle" size={28} color="#EF4444" />
           </View>
 
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
+
+          {!!error && (
+            <View style={styles.errorContainer}>
+              <ContextIcon name="alert-circle" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           <View style={styles.actionsRow}>
             <Pressable
@@ -60,7 +69,7 @@ export function ConfirmDeleteModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Feather name="trash-2" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <ContextIcon name="trash-2" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
                   <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
                 </>
               )}
@@ -149,5 +158,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+    width: '100%',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#EF4444',
+    lineHeight: 18,
   },
 });

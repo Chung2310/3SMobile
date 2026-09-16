@@ -152,6 +152,10 @@ export default function LoginScreen() {
       {/* 2. LOGO WHITE Ở GIỮA PHÍA TRÊN MÀN HÌNH */}
       <View style={[styles.headerArea, { paddingTop: Math.max(insets.top, 20) + 16 }]}>
         <Image source={LOGO_WHITE} style={styles.logo} resizeMode="contain" />
+        <View style={styles.coachBadge}>
+          <Feather name="shield" size={12} color="#38BDF8" style={{ marginRight: 6 }} />
+          <Text style={styles.coachBadgeText}>CỔNG HUẤN LUYỆN VIÊN (PT)</Text>
+        </View>
         <Text style={styles.brandSub}>GYM - YOGA - ZUMBA - KICKFIT</Text>
       </View>
 
@@ -188,11 +192,11 @@ export default function LoginScreen() {
           }}
           style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
         >
-          <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          <Text style={styles.loginButtonText}>Đăng nhập Huấn luyện viên</Text>
         </Pressable>
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
-        <Text style={styles.assistantFooterText}>Trợ lý PT AI của 3S WELLNESS</Text>
+        <Text style={styles.assistantFooterText}>Trợ lý PT AI của 3S WELLNESS • Dành riêng cho HLV</Text>
       </View>
 
       {/* 4. MÀN HÌNH GIỚI THIỆU INTRO (NỀN ĐEN + LOGO TRẮNG Ở GIỮA) */}
@@ -232,7 +236,14 @@ export default function LoginScreen() {
 
             {/* Header */}
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Đăng nhập</Text>
+              <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                <View style={styles.sheetPtBadge}>
+                  <Feather name="award" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={styles.sheetPtBadgeText}>PT WORKSPACE</Text>
+                </View>
+                <Text style={styles.sheetTitle}>Đăng nhập HLV</Text>
+                <Text style={styles.sheetSubtitle}>Dành riêng cho PT & Ban huấn luyện 3S Gym</Text>
+              </View>
               <Pressable
                 onPress={() => setModalVisible(false)}
                 disabled={submitting}
@@ -322,6 +333,14 @@ export default function LoginScreen() {
                   <Text style={styles.submitButtonText}>Đăng nhập</Text>
                 )}
               </Pressable>
+
+              {/* Ghi chú dành cho Hội viên / Customer */}
+              <View style={styles.sheetFooterNote}>
+                <Feather name="info" size={14} color={colors.textMuted} style={{ marginRight: 6, marginTop: 2 }} />
+                <Text style={styles.sheetFooterNoteText}>
+                  Ứng dụng di động chỉ hỗ trợ tài khoản Huấn luyện viên (PT). Hội viên vui lòng liên hệ quầy lễ tân hoặc truy cập Web Portal.
+                </Text>
+              </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -572,5 +591,58 @@ const styles = StyleSheet.create({
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  coachBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 132, 199, 0.3)',
+    borderColor: 'rgba(56, 189, 248, 0.5)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  coachBadgeText: {
+    color: '#38BDF8',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  sheetPtBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceIce,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  sheetPtBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 0.8,
+  },
+  sheetSubtitle: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  sheetFooterNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+  },
+  sheetFooterNoteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textMuted,
   },
 });

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/services/config';
-import { getStoredSession } from '@/services/sessionStore';
+import { getStoredSession, saveSession } from '@/services/sessionStore';
 
 export interface ApiPage<T> { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } }
 
@@ -63,13 +63,47 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
   }
 
   let response: Response;
+  const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
+  const targetUrl = `${normalizedBase}${path}`;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(targetUrl, {
       ...init,
       headers,
     });
-  } catch {
-    throw new ApiError('Không thể kết nối máy chủ. Kiểm tra mạng hoặc API URL.', 0);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[API Fetch Error] ${init.method || 'GET'} ${targetUrl}:`, err);
+    throw new ApiError(`Không thể kết nối máy chủ (${errorMsg}) tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`, 0);
+  }
+
+  // Tự động gia hạn phiên đăng nhập ngầm nếu gặp 401 và có refreshToken
+  if (response.status === 401 && storedSession?.refreshToken && !path.includes('/api/auth/')) {
+    try {
+      const refreshRes = await fetch(`${normalizedBase}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ refreshToken: storedSession.refreshToken }),
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        const payload = refreshData?.data || refreshData;
+        if (payload?.token) {
+          const updatedSession = {
+            ...storedSession,
+            token: payload.token,
+            refreshToken: payload.refreshToken || storedSession.refreshToken,
+          };
+          await saveSession(updatedSession);
+          headers.set('Authorization', `Bearer ${payload.token}`);
+          response = await fetch(targetUrl, {
+            ...init,
+            headers,
+          });
+        }
+      }
+    } catch {
+      // Bỏ qua lỗi refresh và chuyển tiếp lỗi 401
+    }
   }
 
   const body = await parseBody(response);
@@ -98,8 +132,8 @@ export const api = {
   get<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'GET' });
   },
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return request<T>(path, { method: 'POST', body: encodeBody(body) });
+  post<T>(path: string, body?: unknown, options?: { headers?: HeadersInit }): Promise<T> {
+    return request<T>(path, { method: 'POST', body: encodeBody(body), headers: options?.headers });
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });

@@ -6,6 +6,7 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="customers" />
       <Stack.Screen name="plans" />
+      <Stack.Screen name="workout-studio" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="progress-workspace" />
       <Stack.Screen name="wallet" />
