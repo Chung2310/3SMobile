@@ -4,6 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { router } from 'expo-router';
+
 import { colors, spacing, typography } from '@/theme';
 
 interface ScreenProps {
@@ -13,11 +15,12 @@ interface ScreenProps {
   refreshing?: boolean;
   onRefresh?: () => Promise<void>;
   scroll?: boolean;
-  onBack?: () => void;
+  onBack?: (() => void) | null;
 }
 
 export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, onBack }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const handleBack = onBack === null ? undefined : (onBack !== undefined ? onBack : () => router.navigate('/(app)/(tabs)'));
 
   const content = scroll ? (
     <ScrollView
@@ -37,8 +40,29 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
       <View style={styles.container}>
         {title ? (
           <View style={styles.header}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>{onBack && <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Feather name="arrow-left" size={24} color={colors.text} /></Pressable>}<Text numberOfLines={2} ellipsizeMode="tail" style={[styles.title, { flex: 1 }]}>{title}</Text></View>
-            {subtitle ? <Text numberOfLines={3} ellipsizeMode="tail" style={styles.subtitle}>{subtitle}</Text> : null}
+            <View style={styles.headerRow}>
+              {handleBack && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Quay lại"
+                  onPress={handleBack}
+                  hitSlop={12}
+                  style={styles.backBtn}
+                >
+                  <Feather name="arrow-left" size={20} color={colors.text} />
+                </Pressable>
+              )}
+              <View style={styles.titleWrap}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={styles.title}>
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.subtitle}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
           </View>
         ) : null}
         {content}
@@ -50,9 +74,44 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1 },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm },
-  title: { ...typography.display, fontFamily: 'Inter_800ExtraBold', textTransform: 'uppercase', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { ...typography.body, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: spacing.xs },
-  scrollContent: { padding: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxl },
+  header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginRight: 10,
+  },
+  titleWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  scrollContent: { padding: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xxl },
   staticContent: { flex: 1, padding: spacing.lg },
 });

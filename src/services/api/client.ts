@@ -58,13 +58,17 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
   }
 
   let response: Response;
+  const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
+  const targetUrl = `${normalizedBase}${path}`;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(targetUrl, {
       ...init,
       headers,
     });
-  } catch {
-    throw new ApiError('Không thể kết nối máy chủ. Kiểm tra mạng hoặc API URL.', 0);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[API Fetch Error] ${init.method || 'GET'} ${targetUrl}:`, err);
+    throw new ApiError(`Không thể kết nối máy chủ (${errorMsg}) tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`, 0);
   }
 
   const body = await parseBody(response);
