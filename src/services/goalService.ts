@@ -108,7 +108,17 @@ export async function createGoal(payload: CreateGoalPayload): Promise<GoalItem> 
 }
 
 export async function updateGoal(id: string, payload: Partial<CreateGoalPayload>): Promise<GoalItem> {
-  const res = await api.patch<any>(`/api/goals/${id}`, payload);
+  const cleanPayload: Record<string, unknown> = {};
+  if (payload.title !== undefined) cleanPayload.title = payload.title.trim();
+  if (payload.type !== undefined) cleanPayload.type = payload.type;
+  if (payload.deadline !== undefined) cleanPayload.deadline = payload.deadline;
+  if (payload.targetValue !== undefined) cleanPayload.targetValue = payload.targetValue ?? null;
+  if (payload.targetUnit !== undefined) cleanPayload.targetUnit = payload.targetUnit.trim();
+  if (payload.sessionsPerWeek !== undefined) cleanPayload.sessionsPerWeek = payload.sessionsPerWeek;
+  if (payload.cardioNotes !== undefined) cleanPayload.cardioNotes = payload.cardioNotes.trim();
+  if (payload.evaluationNotes !== undefined) cleanPayload.evaluationNotes = payload.evaluationNotes.trim();
+
+  const res = await api.patch<any>(`/api/goals/${id}`, cleanPayload);
   return (res && res.data) ? res.data : res;
 }
 

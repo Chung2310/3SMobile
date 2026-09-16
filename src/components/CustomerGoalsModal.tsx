@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import {
   fetchCustomerGoals,
   createGoal,
+  updateGoal,
   deleteGoal,
   publishGoal,
   unpublishGoal,
@@ -84,6 +85,7 @@ export function CustomerGoalsModal({
   onClose,
 }: CustomerGoalsModalProps) {
   const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [goals, setGoals] = useState<GoalItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -147,15 +149,35 @@ export function CustomerGoalsModal({
 
   const handleClose = () => {
     setViewMode('list');
+    setEditingGoalId(null);
     setFormError('');
     onClose();
   };
 
   const handleStartCreate = () => {
+    setEditingGoalId(null);
     setForm({
       ...initialFormState,
       deadlineIso: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       deadlineDisplay: formatDateDisplay(new Date(Date.now() + 30 * 86400000).toISOString()),
+    });
+    setFormError('');
+    setViewMode('create');
+  };
+
+  const handleStartEdit = (goal: GoalItem) => {
+    const goalId = goal._id || goal.id || '';
+    setEditingGoalId(goalId);
+    setForm({
+      title: goal.title || '',
+      type: goal.type || 'FAT_LOSS',
+      targetValue: goal.targetValue != null ? String(goal.targetValue) : '',
+      targetUnit: goal.targetUnit || 'kg',
+      deadlineIso: goal.deadline ? new Date(goal.deadline).toISOString().slice(0, 10) : '',
+      deadlineDisplay: formatDateDisplay(goal.deadline),
+      sessionsPerWeek: String(goal.sessionsPerWeek || 3),
+      cardioNotes: goal.cardioNotes || '',
+      evaluationNotes: goal.evaluationNotes || '',
     });
     setFormError('');
     setViewMode('create');
@@ -210,40 +232,73 @@ export function CustomerGoalsModal({
     setSubmitting(true);
     setFormError('');
     try {
-      const createdGoal = await createGoal({
-        customerId: customer.id,
-        title: trimmedTitle,
-        type: form.type,
-        targetValue: targetVal,
-        targetUnit: form.targetUnit.trim(),
-        deadline: new Date(form.deadlineIso).toISOString(),
-        sessionsPerWeek: sessions,
-        cardioNotes: form.cardioNotes.trim(),
-        evaluationNotes: form.evaluationNotes.trim(),
-      });
+      if (editingGoalId) {
+        await updateGoal(editingGoalId, {
+          title: trimmedTitle,
+          type: form.type,
+          targetValue: targetVal,
+          targetUnit: form.targetUnit.trim(),
+          deadline: new Date(form.deadlineIso).toISOString(),
+          sessionsPerWeek: sessions,
+          cardioNotes: form.cardioNotes.trim(),
+          evaluationNotes: form.evaluationNotes.trim(),
+        });
 
-      // Nếu bấm "Lưu & Công bố", gọi API công bố mục tiêu
-      if (status === 'PUBLISHED') {
-        const createdId = createdGoal?._id || createdGoal?.id;
-        if (createdId) {
-          await publishGoal(createdId);
+        // Nếu bấm "Lưu & Công bố", gọi tiếp publishGoal
+        if (status === 'PUBLISHED') {
+          await publishGoal(editingGoalId);
         }
-      }
 
-      setAlertConfig({
-        visible: true,
-        title: 'Thành công',
-        message: status === 'PUBLISHED' ? 'Đã tạo và công bố mục tiêu thành công.' : 'Đã lưu bản nháp mục tiêu thành công.',
-        type: 'success',
-        confirmLabel: 'Đóng',
-        onConfirm: () => {
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-          setViewMode('list');
-          loadGoals();
-        },
-      });
+        setAlertConfig({
+          visible: true,
+          title: 'Thành công',
+          message: status === 'PUBLISHED' ? 'Đã cập nhật và công bố mục tiêu thành công.' : 'Đã cập nhật bản nháp mục tiêu thành công.',
+          type: 'success',
+          confirmLabel: 'Đóng',
+          onConfirm: () => {
+            setAlertConfig((prev) => ({ ...prev, visible: false }));
+            setEditingGoalId(null);
+            setViewMode('list');
+            loadGoals();
+          },
+        });
+      } else {
+        const createdGoal = await createGoal({
+          customerId: customer.id,
+          title: trimmedTitle,
+          type: form.type,
+          targetValue: targetVal,
+          targetUnit: form.targetUnit.trim(),
+          deadline: new Date(form.deadlineIso).toISOString(),
+          sessionsPerWeek: sessions,
+          cardioNotes: form.cardioNotes.trim(),
+          evaluationNotes: form.evaluationNotes.trim(),
+        });
+
+        // Nếu bấm "Lưu & Công bố", gọi API công bố mục tiêu
+        if (status === 'PUBLISHED') {
+          const createdId = createdGoal?._id || createdGoal?.id;
+          if (createdId) {
+            await publishGoal(createdId);
+          }
+        }
+
+        setAlertConfig({
+          visible: true,
+          title: 'Thành công',
+          message: status === 'PUBLISHED' ? 'Đã tạo và công bố mục tiêu thành công.' : 'Đã lưu bản nháp mục tiêu thành công.',
+          type: 'success',
+          confirmLabel: 'Đóng',
+          onConfirm: () => {
+            setAlertConfig((prev) => ({ ...prev, visible: false }));
+            setEditingGoalId(null);
+            setViewMode('list');
+            loadGoals();
+          },
+        });
+      }
     } catch (err: any) {
-      setFormError(err?.message || 'Không thể tạo mục tiêu. Vui lòng kiểm tra lại các trường thông tin.');
+      setFormError(err?.message || 'Không thể lưu mục tiêu. Vui lòng kiểm tra lại các trường thông tin.');
     } finally {
       setSubmitting(false);
     }
@@ -320,7 +375,7 @@ export function CustomerGoalsModal({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.headerTitle} numberOfLines={1}>
-                  {viewMode === 'create' ? 'Tạo mục tiêu' : 'Mục tiêu của học viên'}
+                  {editingGoalId ? 'Chỉnh sửa mục tiêu' : viewMode === 'create' ? 'Tạo mục tiêu' : 'Mục tiêu của học viên'}
                 </Text>
                 <Text style={styles.headerSubtitle} numberOfLines={1}>
                   {customer.fullName}
@@ -413,14 +468,27 @@ export function CustomerGoalsModal({
                             </View>
                           </View>
 
-                          <Pressable
-                            style={styles.deleteBtn}
-                            onPress={() => handleDeleteGoal(g)}
-                            hitSlop={8}
-                            accessibilityLabel="Xóa mục tiêu"
-                          >
-                            <Feather name="trash-2" size={16} color="#EF4444" />
-                          </Pressable>
+                          <View style={styles.cardActionsGroup}>
+                            {/* NÚT SỬA - CHỈ ICON KHÔNG CÓ TEXT */}
+                            <Pressable
+                              style={styles.editBtn}
+                              onPress={() => handleStartEdit(g)}
+                              hitSlop={8}
+                              accessibilityLabel="Chỉnh sửa mục tiêu"
+                            >
+                              <Feather name="edit-2" size={15} color="#0284C7" />
+                            </Pressable>
+
+                            {/* NÚT XÓA - CHỈ ICON KHÔNG CÓ TEXT */}
+                            <Pressable
+                              style={styles.deleteBtn}
+                              onPress={() => handleDeleteGoal(g)}
+                              hitSlop={8}
+                              accessibilityLabel="Xóa mục tiêu"
+                            >
+                              <Feather name="trash-2" size={15} color="#EF4444" />
+                            </Pressable>
+                          </View>
                         </View>
 
                         {/* TITLE */}
@@ -490,7 +558,7 @@ export function CustomerGoalsModal({
                                 isPublished ? { color: '#64748B' } : { color: '#0284C7' },
                               ]}
                             >
-                              {isPublished ? 'Thu hồi về nháp' : 'Công bố cho học viên'}
+                              {isPublished ? 'Nháp' : 'Công bố'}
                             </Text>
                           </Pressable>
                         </View>
@@ -679,11 +747,14 @@ export function CustomerGoalsModal({
                 )}
               </ScrollView>
 
-              {/* FOOTER ACTIONS (Matches Screenshot: Hủy, Lưu bản nháp, Lưu & Công bố) */}
+              {/* FOOTER ACTIONS (Hủy, Lưu bản nháp, Lưu & Công bố) */}
               <View style={styles.formFooter}>
                 <Pressable
                   style={styles.btnCancel}
-                  onPress={() => setViewMode('list')}
+                  onPress={() => {
+                    setEditingGoalId(null);
+                    setViewMode('list');
+                  }}
                   disabled={submitting}
                 >
                   <Text style={styles.btnCancelText}>Hủy</Text>
@@ -964,6 +1035,19 @@ const styles = StyleSheet.create({
   },
   statusTextDraft: {
     color: '#64748B',
+  },
+  cardActionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteBtn: {
     width: 32,
