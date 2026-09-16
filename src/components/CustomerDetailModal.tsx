@@ -1183,7 +1183,7 @@ export function CustomerDetailModal({
                         onPress={handleTakePhoto}
                         disabled={uploadingPhoto}
                         hitSlop={6}
-                        accessibilityLabel="Chụp ảnh Camera"
+                        accessibilityLabel="Chụp ảnh"
                       >
                         {uploadingPhoto ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
@@ -1295,14 +1295,14 @@ export function CustomerDetailModal({
                             style={styles.emptyDarkBtn}
                             onPress={handleTakePhoto}
                             disabled={uploadingPhoto}
-                            accessibilityLabel="Chụp ảnh Camera"
+                            accessibilityLabel="Chụp ảnh"
                           >
                             {uploadingPhoto ? (
                               <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
                               <>
                                 <Feather name="camera" size={15} color="#FFFFFF" />
-                                <Text style={styles.emptyDarkBtnText}>Chụp ảnh Camera</Text>
+                                <Text style={styles.emptyDarkBtnText}>Chụp ảnh </Text>
                               </>
                             )}
                           </Pressable>
