@@ -133,8 +133,6 @@ export function CustomerDetailModal({
   // Before / After subtab & comparison state
   const [photoSubTab, setPhotoSubTab] = useState<'gallery' | 'compare'>('gallery');
   const [stageFilter, setStageFilter] = useState<string>('');
-  const [beforePhotoId, setBeforePhotoId] = useState<string>('');
-  const [afterPhotoId, setAfterPhotoId] = useState<string>('');
 
   // Photo Upload State
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -541,23 +539,15 @@ export function CustomerDetailModal({
   );
 
   const beforePhotoObj = useMemo(() => {
-    if (beforePhotoId) {
-      const found = photos.find((p) => recordId(p) === beforePhotoId);
-      if (found) return found;
-    }
     return sortedPhotosChronological[0] || null;
-  }, [beforePhotoId, photos, sortedPhotosChronological]);
+  }, [sortedPhotosChronological]);
 
   const afterPhotoObj = useMemo(() => {
-    if (afterPhotoId) {
-      const found = photos.find((p) => recordId(p) === afterPhotoId);
-      if (found) return found;
-    }
     if (sortedPhotosChronological.length > 1) {
       return sortedPhotosChronological[sortedPhotosChronological.length - 1];
     }
     return null;
-  }, [afterPhotoId, photos, sortedPhotosChronological]);
+  }, [sortedPhotosChronological]);
 
   // Gallery grid shows newest first, filterable by dynamic stage
   const filteredPhotos = useMemo(() => {
@@ -1335,19 +1325,6 @@ export function CustomerDetailModal({
                             )}
                           </View>
                         </View>
-
-                        {/* NÚT HOÁN ĐỔI BEFORE <-> AFTER */}
-                        <Pressable
-                          style={styles.swapBtn}
-                          onPress={() => {
-                            const tmp = beforePhotoId;
-                            setBeforePhotoId(afterPhotoId);
-                            setAfterPhotoId(tmp);
-                          }}
-                        >
-                          <Feather name="refresh-cw" size={14} color="#0284C7" />
-                          <Text style={styles.swapBtnText}>Hoán đổi vị trí ảnh</Text>
-                        </Pressable>
                       </>
                     )}
                   </View>
@@ -2493,22 +2470,6 @@ const styles = StyleSheet.create({
   compareEmptyText: {
     fontSize: 12,
     color: '#94A3B8',
-  },
-  swapBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  swapBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0284C7',
   },
 
   /* CONSULTATIONS TAB */

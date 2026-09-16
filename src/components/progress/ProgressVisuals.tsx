@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Text, View, Pressable, ScrollView } from 'react-native';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import { useState, useEffect } from 'react';
+import { Text, View, Pressable, ScrollView, Animated, Easing } from 'react-native';
+import Svg, { Circle, Line, Polyline, Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors } from '@/theme';
 import { dayKey, metricSeries } from '@/services/progress';
 import { readText, formatDate } from '@/services/journey';
@@ -9,11 +9,111 @@ import { Button, Notice, ws } from '../workouts/Controls';
 
 export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; metric: string; unit: string }) {
   const points = metricSeries(records, metric);
+  const [animVal] = useState(() => new Animated.Value(0));
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    animVal.setValue(0);
+    const id = animVal.addListener(({ value }) => {
+      setProgress(value);
+    });
+    Animated.timing(animVal, {
+      toValue: 1,
+      duration: 850,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      animVal.removeListener(id);
+    };
+  }, [metric, records, animVal]);
+
   if (!points.length) return <Notice text="Chưa có số đo cho chỉ số này." />;
-  const values = points.map((p) => p.value); const min = Math.min(...values); const max = Math.max(...values);
-  const first = Date.parse(points[0].date); const last = Date.parse(points[points.length - 1].date);
-  const plot = points.map((p) => ({ x: 20 + (Date.parse(p.date) - first) / (last - first || 1) * 280, y: 140 - (p.value - min) / (max - min || 1) * 110 }));
-  return <View style={ws.sub}><Text style={ws.badge}>Mới nhất</Text><Text numberOfLines={1} ellipsizeMode="tail" style={ws.display}>{values[values.length - 1]} {unit}</Text><Text numberOfLines={2} ellipsizeMode="tail" style={ws.muted}>Thấp nhất {min} · Cao nhất {max} {unit}</Text><View accessible accessibilityLabel={`Biểu đồ gồm ${points.length} số đo, từ ${values[0]} đến ${values[values.length - 1]} ${unit}`}><Svg width="100%" height={170} viewBox="0 0 320 170"><Line x1={20} y1={150} x2={300} y2={150} stroke={colors.border} /><Polyline points={plot.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke={colors.primary} strokeWidth={3} />{plot.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={4} fill={colors.primary} />)}</Svg></View><Text numberOfLines={2} ellipsizeMode="tail" style={ws.muted}>{formatDate(points[0].date)} — {formatDate(points[points.length - 1].date)}</Text>{points.length === 1 && <Text style={ws.muted}>Cần thêm một lần đo để thấy xu hướng.</Text>}</View>;
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const first = Date.parse(points[0].date);
+  const last = Date.parse(points[points.length - 1].date);
+  const plot = points.map((p) => ({
+    x: points.length === 1 ? 160 : 20 + ((Date.parse(p.date) - first) / (last - first || 1)) * 280,
+    y: 140 - ((p.value - min) / (max - min || 1)) * 110,
+  }));
+
+  const animatedPlot = plot.map((p, i) => {
+    const staggerDelay = plot.length > 1 ? (i / (plot.length - 1)) * 0.35 : 0;
+    const pointProgress = Math.min(1, Math.max(0, (progress - staggerDelay) / 0.65));
+    // Rise from baseline 150 to target p.y
+    const currentY = 150 - (150 - p.y) * pointProgress;
+    return {
+      x: p.x,
+      y: currentY,
+      progress: pointProgress,
+    };
+  });
+
+  const areaPoints =
+    animatedPlot.length > 1
+      ? [
+          ...animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`),
+          `${animatedPlot[animatedPlot.length - 1].x.toFixed(1)},150`,
+          `${animatedPlot[0].x.toFixed(1)},150`,
+        ].join(' ')
+      : '';
+
+  return (
+    <View style={ws.sub}>
+      <Text style={ws.badge}>Mới nhất</Text>
+      <Text numberOfLines={1} ellipsizeMode="tail" style={ws.display}>
+        {values[values.length - 1]} {unit}
+      </Text>
+      <Text numberOfLines={2} ellipsizeMode="tail" style={ws.muted}>
+        Thấp nhất {min} · Cao nhất {max} {unit}
+      </Text>
+      <View
+        accessible
+        accessibilityLabel={`Biểu đồ gồm ${points.length} số đo, từ ${values[0]} đến ${values[values.length - 1]} ${unit}`}
+      >
+        <Svg width="100%" height={170} viewBox="0 0 320 170">
+          <Defs>
+            <LinearGradient id="metricChartGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.22} />
+              <Stop offset="100%" stopColor={colors.primary} stopOpacity={0.01} />
+            </LinearGradient>
+          </Defs>
+          <Line x1={20} y1={150} x2={300} y2={150} stroke={colors.border} strokeDasharray="4 4" />
+          {animatedPlot.length > 1 && (
+            <Polygon points={areaPoints} fill="url(#metricChartGrad)" />
+          )}
+          <Polyline
+            points={animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {animatedPlot.map((p, i) => (
+            <Circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r={Math.max(0, 4.5 * p.progress)}
+              fill={colors.primary}
+              stroke="#FFFFFF"
+              strokeWidth={1.5}
+            />
+          ))}
+        </Svg>
+      </View>
+      <Text numberOfLines={2} ellipsizeMode="tail" style={ws.muted}>
+        {formatDate(points[0].date)} — {formatDate(points[points.length - 1].date)}
+      </Text>
+      {points.length === 1 && (
+        <Text style={ws.muted}>Cần thêm một lần đo để thấy xu hướng.</Text>
+      )}
+    </View>
+  );
 }
 export function SessionCalendar({ sessions, selected, onSelect }: { sessions: JsonRecord[]; selected: string; onSelect: (value: string) => void }) {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
