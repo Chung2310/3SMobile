@@ -31,7 +31,7 @@ import {
   updateCustomer,
 } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
-import { fetchAllGoals, type GoalItem } from '@/services/goalService';
+import { fetchAllGoals, fetchCustomerGoals, type GoalItem } from '@/services/goalService';
 import { colors, radius, spacing, typography } from '@/theme';
 import type {
   CreateCustomerPayload,
@@ -148,7 +148,7 @@ export default function CustomersScreen() {
       const [dashData, listData, goalsData] = await Promise.all([
         fetchPtDashboard().catch(() => null),
         fetchCustomersList().catch(() => []),
-        fetchAllGoals(200).catch(() => []),
+        fetchAllGoals(100).catch(() => []),
       ]);
 
       if (dashData?.customers?.length) {
@@ -159,7 +159,7 @@ export default function CustomersScreen() {
       }
       setProfileCustomers(listData || []);
 
-      // Lập bản đồ mục tiêu mới nhất của từng khách hàng từ API (danh sách đã sort createdAt: -1)
+      // 1. Lập bản đồ mục tiêu từ fetchAllGoals
       const gMap: Record<string, GoalItem> = {};
       if (Array.isArray(goalsData)) {
         for (const g of goalsData) {
@@ -172,7 +172,21 @@ export default function CustomersScreen() {
           }
         }
       }
-      setCustomerGoalsMap(gMap);
+
+      // 2. Để đảm bảo 100% không sót bất kỳ mục tiêu thật nào, gọi trực tiếp fetchCustomerGoals cho từng khách hàng
+      if (listData && listData.length > 0) {
+        const goalFetches = listData.map(async (p) => {
+          if (!gMap[p._id]) {
+            const customerGoals = await fetchCustomerGoals(p._id).catch(() => []);
+            if (customerGoals && customerGoals.length > 0) {
+              gMap[p._id] = customerGoals[0];
+            }
+          }
+        });
+        await Promise.all(goalFetches);
+      }
+
+      setCustomerGoalsMap({ ...gMap });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -193,7 +207,7 @@ export default function CustomersScreen() {
     const dash = customers.find((c) => c.customerId === p._id);
     const latestGoal = customerGoalsMap[p._id];
 
-    // Hiển thị mục tiêu mới nhất từ API /api/goals, hoặc initialGoal nếu người dùng đã nhập
+    // CHỈ HIỂN THỊ MỤC TIÊU THẬT TỪ /api/goals, XÓA BỎ HOÀN TOÀN MOCK DATA
     let displayGoal = '';
     if (latestGoal?.title) {
       if (latestGoal.targetValue != null) {
@@ -201,8 +215,6 @@ export default function CustomersScreen() {
       } else {
         displayGoal = latestGoal.title;
       }
-    } else if (p.initialGoal) {
-      displayGoal = p.initialGoal;
     }
 
     return {

@@ -71,9 +71,10 @@ export async function fetchCustomerGoals(customerId: string): Promise<GoalItem[]
   }
 }
 
-export async function fetchAllGoals(limit = 200): Promise<GoalItem[]> {
+export async function fetchAllGoals(limit = 100): Promise<GoalItem[]> {
   try {
-    const res = await api.get<any>(`/api/goals?limit=${limit}`);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const res = await api.get<any>(`/api/goals?limit=${safeLimit}`);
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.items)) return res.items;
     if (res && Array.isArray(res.data)) return res.data;
