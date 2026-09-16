@@ -1,7 +1,7 @@
 export const colors = {
   // 3S Gym Brand Tokens (Calibrated for mobile eye comfort)
-  primary: '#0284C7',
-  primaryDark: '#0369A1',       // 3S Ocean Blue (interactive primary, dịu mắt, thân thiện)
+  primary: '#0284C7',       // 3S Ocean Blue (interactive primary, dịu mắt, thân thiện)
+  primaryDark: '#0369A1',   // 3S Ocean Blue Dark (pressed state)
   primaryNavy: '#003B70',   // 3S Deep Navy (tiêu đề, thương hiệu)
   secondary: '#00A4E4',     // 3S Electric Sky Blue
   accent: '#FF3366',        // 3S Sport Coral/Pink

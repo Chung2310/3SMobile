@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -27,7 +26,8 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<PtProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -53,11 +53,15 @@ export default function ProfileScreen() {
   }, [loadProfile]);
 
   async function handleSignOut() {
-    setShowSignOutModal(true);
-  }
-
-  async function confirmSignOut() {
-    setShowSignOutModal(false);
+    if (!confirmingLogout) {
+      setConfirmingLogout(true);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => {
+        setConfirmingLogout(false);
+      }, 4000);
+      return;
+    }
+    if (resetTimer.current) clearTimeout(resetTimer.current);
     await signOut();
     router.replace('/(auth)/login');
   }
@@ -97,14 +101,15 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
           {
             paddingBottom:
               Platform.OS === 'android'
-                ? Math.max(insets.bottom, 24) + 40
-                : Math.max(insets.bottom, 16) + 30,
+                ? Math.max(insets.bottom, 24) + 120
+                : Math.max(insets.bottom, 16) + 80,
           },
         ]}
         refreshControl={
@@ -233,10 +238,20 @@ export default function ProfileScreen() {
 
               <Pressable
                 onPress={() => void handleSignOut()}
-                style={({ pressed }) => [styles.signOutBtn, pressed && styles.signOutBtnPressed]}
+                style={({ pressed }) => [
+                  styles.signOutBtn,
+                  confirmingLogout && styles.signOutBtnConfirming,
+                  pressed && styles.signOutBtnPressed,
+                ]}
               >
-                <Feather name="log-out" size={18} color="#EF4444" />
-                <Text style={styles.signOutText}>Đăng xuất tài khoản</Text>
+                <Feather
+                  name={confirmingLogout ? 'alert-triangle' : 'log-out'}
+                  size={18}
+                  color={confirmingLogout ? '#FFFFFF' : '#EF4444'}
+                />
+                <Text style={[styles.signOutText, confirmingLogout && styles.signOutTextConfirming]}>
+                  {confirmingLogout ? 'Chạm lần nữa để xác nhận đăng xuất' : 'Đăng xuất tài khoản'}
+                </Text>
               </Pressable>
             </View>
 
@@ -245,46 +260,6 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
 
-      {/* Modal bo góc - Xác nhận đăng xuất */}
-      <Modal
-        visible={showSignOutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSignOutModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowSignOutModal(false)}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalIconWrap}>
-              <Feather name="log-out" size={28} color="#EF4444" />
-            </View>
-            <Text style={styles.modalTitle}>Đăng xuất</Text>
-            <Text style={styles.modalMessage}>Bạn có chắc muốn đăng xuất khỏi tài khoản?</Text>
-            <View style={styles.modalBtnRow}>
-              <Pressable
-                onPress={() => setShowSignOutModal(false)}
-                style={({ pressed }) => [
-                  styles.modalBtnCancel,
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <Text style={styles.modalBtnCancelText}>Hủy</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void confirmSignOut()}
-                style={({ pressed }) => [
-                  styles.modalBtnConfirm,
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <Text style={styles.modalBtnConfirmText}>Đăng xuất</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -532,14 +507,21 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     marginTop: 4,
   },
+  signOutBtnConfirming: {
+    backgroundColor: '#EF4444',
+    borderColor: '#DC2626',
+  },
   signOutBtnPressed: {
-    backgroundColor: 'rgba(239, 68, 68, 0.16)',
+    opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   signOutText: {
     fontSize: 14,
     fontWeight: '800',
     color: '#EF4444',
+  },
+  signOutTextConfirming: {
+    color: '#FFFFFF',
   },
   appVersionText: {
     textAlign: 'center',
@@ -550,10 +532,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
