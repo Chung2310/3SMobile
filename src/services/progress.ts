@@ -72,7 +72,31 @@ export function sessionPayload(customerId: string, plan: JsonRecord, draft: Json
   if (!Object.keys(ATTENDANCE).includes(attendance)) throw new Error('Vui lòng chọn trạng thái điểm danh.');
   const results = asRecords(draft.results); const exercises = asRecords(session.exercises);
   if (attendance !== 'ABSENT' && results.length !== exercises.length) throw new Error('Kết quả không khớp với buổi tập.');
-  return { customerId, workoutPlanId: recordId(plan), workoutPlanVersion: Number(plan.version), sessionIndex, performedAt: dateIso(String(draft.date), String(draft.time)), attendance, absenceReason: attendance === 'ABSENT' ? readText(draft, ['absenceReason']) : '', feeling: readText(draft, ['feeling']), notes: readText(draft, ['notes']), idempotencyKey, exerciseResults: attendance === 'ABSENT' ? [] : exercises.map((exercise, index) => ({ exerciseIndex: index, ...(readText(exercise, ['exerciseId']) ? { exerciseId: readText(exercise, ['exerciseId']) } : {}), result: cleanResult(readText(exercise, ['trackingType']), results[index]) })) };
+  return { ...sessionAttachments(draft), customerId, workoutPlanId: recordId(plan), workoutPlanVersion: Number(plan.version), sessionIndex, performedAt: dateIso(String(draft.date), String(draft.time)), attendance, absenceReason: attendance === 'ABSENT' ? readText(draft, ['absenceReason']) : '', feeling: readText(draft, ['feeling']), notes: readText(draft, ['notes']), idempotencyKey, exerciseResults: attendance === 'ABSENT' ? [] : exercises.map((exercise, index) => ({ exerciseIndex: index, ...(readText(exercise, ['exerciseId']) ? { exerciseId: readText(exercise, ['exerciseId']) } : {}), result: cleanResult(readText(exercise, ['trackingType']), results[index]) })) };
+}
+export function sessionAttachments(draft: JsonRecord): JsonRecord {
+  if (draft.attendance === 'ABSENT') return {};
+  const result: JsonRecord = {};
+  const body = asRecord(draft.bodyMeasurement);
+  if (MEASUREMENTS.some(([key]) => body[key] !== undefined && String(body[key]).trim() !== '')) {
+    const measured = measurementPayload({ ...body, date: draft.date });
+    delete measured.measuredAt;
+    result.bodyMeasurement = measured;
+  }
+  const photos = asRecords(draft.progressPhotos);
+  if (photos.length > 4) throw new Error('Tối đa 4 ảnh mỗi buổi tập.');
+  if (photos.length) result.progressPhotos = photos.map((photo) => {
+    const photoUrl = readText(photo, ['photoUrl']), angle = readText(photo, ['angle']);
+    if (!/^(https?:\/\/|\/uploads\/|data:image\/(png|jpeg|webp);base64,)/i.test(photoUrl) || !['FRONT', 'SIDE', 'BACK', 'OTHER'].includes(angle)) throw new Error('Ảnh tiến độ không hợp lệ.');
+    return { photoUrl, angle };
+  });
+  const signature = asRecord(draft.customerSignature);
+  if (signature.signatureUrl) {
+    const signatureUrl = readText(signature, ['signatureUrl']);
+    if (!/^(https?:\/\/|data:image\/png;base64,)/i.test(signatureUrl)) throw new Error('Chữ ký không hợp lệ.');
+    result.customerSignature = { signatureUrl, signedAt: signature.signedAt, signerName: readText(signature, ['signerName']) };
+  }
+  return result;
 }
 export function measurementPayload(draft: JsonRecord): JsonRecord {
   const result: JsonRecord = { measuredAt: dateIso(String(draft.date)) }; const measurements: JsonRecord = {};

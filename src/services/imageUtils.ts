@@ -1,15 +1,20 @@
-﻿import { API_BASE_URL } from '@/services/config';
+import { API_BASE_URL } from '@/services/config';
 
 /**
- * Chuan hoa duong dan anh:
- * - Neu la null/undefined/rong -> tra ve null
- * - Neu da la URL tuyet doi (http://, https://, data:, blob:) -> giu nguyen
- * - Neu la duong dan tuong doi (/uploads/...) -> ghep voi API_BASE_URL
+ * Chuẩn hoá đường dẫn ảnh:
+ * - Nếu là null/undefined/rỗng -> trả về null
+ * - Nếu bắt đầu bằng // -> thêm https:
+ * - Nếu đã là URL tuyệt đối (http://, https://, data:, blob:) -> giữ nguyên hoặc chuẩn hoá host
+ * - Nếu là đường dẫn tương đối (/uploads/...) -> ghép với API_BASE_URL
  */
 export function resolveImageUrl(url?: string | null): string | null {
   if (!url || typeof url !== 'string') return null;
   const trimmed = url.trim();
   if (!trimmed) return null;
+
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
 
   if (
     trimmed.startsWith('http://') ||
@@ -17,6 +22,12 @@ export function resolveImageUrl(url?: string | null): string | null {
     trimmed.startsWith('data:') ||
     trimmed.startsWith('blob:')
   ) {
+    if (trimmed.includes('localhost:3008')) {
+      return trimmed.replace('http://localhost:3008', API_BASE_URL);
+    }
+    if (trimmed.includes('127.0.0.1:3008')) {
+      return trimmed.replace('http://127.0.0.1:3008', API_BASE_URL);
+    }
     return trimmed;
   }
 

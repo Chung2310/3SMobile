@@ -80,3 +80,24 @@ test('reports accept same-day periods and reject empty or reversed reports', () 
 test('historical session title uses the stored snapshot', () => {
   assert.equal(sessionTitle({planSnapshot:{title:'Old plan',session:{name:'Old session'}},name:'New session'}),'Old session');
 });
+
+test('session saves optional measurements photos and signature without changing actual results', () => {
+  const extra = { bodyMeasurement: { weight: '70', waist: '80', bodyFatPercentage: '0' }, progressPhotos: [{ photoUrl: 'https://example.com/photo.jpg', angle: 'FRONT' }], customerSignature: { signatureUrl: 'data:image/png;base64,AAAA', signedAt: '2026-09-15T10:00:00.000Z', signerName: 'Test' } };
+  const result = sessionPayload('c1', plan, { ...draft, ...extra }, 'retry-key');
+  assert.deepEqual(result.bodyMeasurement, { weight: 70, bodyFatPercentage: 0, measurements: { waist: 80 } });
+  assert.deepEqual(result.progressPhotos, extra.progressPhotos);
+  assert.equal(result.customerSignature.signerName, 'Test');
+  assert.equal(result.exerciseResults[0].result.sets[0].weight, 40);
+  const absent = sessionPayload('c1', plan, { ...draft, ...extra, attendance: 'ABSENT' }, 'retry-key');
+  for (const key of ['bodyMeasurement', 'progressPhotos', 'customerSignature']) assert.equal(absent[key], undefined);
+});
+test('optional session data rejects unsafe media and invalid measurements', () => {
+  for (const extra of [
+    { bodyMeasurement: { weight: '-1' } },
+    { progressPhotos: [{ photoUrl: 'javascript:bad', angle: 'FRONT' }] },
+    { progressPhotos: [{ photoUrl: 'https://example.com/p.jpg', angle: 'INVALID' }] },
+    { progressPhotos: Array.from({ length: 5 }, () => ({ photoUrl: 'https://example.com/p.jpg', angle: 'FRONT' })) },
+    { customerSignature: { signatureUrl: 'file:///secret' } },
+  ]) assert.throws(() => sessionPayload('c1', plan, { ...draft, ...extra }, 'retry-key'));
+  assert.equal(sessionPayload('c1', plan, { ...draft, bodyMeasurement: { weight: ' ' } }, 'retry-key').bodyMeasurement, undefined);
+});
