@@ -1,12 +1,13 @@
+import { ContextIcon } from '@/components/LibraryIcon';
 import type { ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
-import { colors, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 interface ScreenProps {
   title?: string;
@@ -49,7 +50,7 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
                   hitSlop={12}
                   style={styles.backBtn}
                 >
-                  <Feather name="arrow-left" size={20} color={colors.text} />
+                  <ContextIcon name="arrow-left" size={20} color={colors.text} />
                 </Pressable>
               )}
               <View style={styles.titleWrap}>

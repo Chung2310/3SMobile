@@ -69,6 +69,17 @@ export function planPayload(draft: JsonRecord): JsonRecord {
     if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error('Số ngày phải từ 1 đến 365.');
     payload.durationDays = days;
   }
+  if (payload.defaultSets !== undefined && (!Number.isInteger(Number(payload.defaultSets)) || Number(payload.defaultSets) < 1 || Number(payload.defaultSets) > 100)) throw new Error('Số hiệp mặc định phải từ 1 đến 100.');
+  const scheduledItems = asRecords(draft.scheduledExercises);
+  for (const item of scheduledItems) {
+    const week = Number(item.weekNumber ?? 1), day = Number(item.dayNumber), start = Number(item.startMinute), duration = Number(item.durationMinutes);
+    if (!Number.isInteger(week) || week < 1 || !Number.isInteger(day) || day < 1 || day > 7 || !Number.isInteger(start) || start < 0 || start > 1425 || start % 15 !== 0 || !Number.isInteger(duration) || duration < 15 || duration % 15 !== 0 || start + duration > 1440) throw new Error('Giờ bắt đầu và thời lượng phải theo bước 15 phút, nằm trong ngày.');
+  }
+  const ordered = [...scheduledItems].sort((a, b) => Number(a.weekNumber ?? 1) - Number(b.weekNumber ?? 1) || Number(a.dayNumber) - Number(b.dayNumber) || Number(a.startMinute) - Number(b.startMinute));
+  for (let i = 1; i < ordered.length; i++) {
+    const previous = ordered[i - 1], current = ordered[i];
+    if (Number(previous.weekNumber ?? 1) === Number(current.weekNumber ?? 1) && Number(previous.dayNumber) === Number(current.dayNumber) && Number(current.startMinute) < Number(previous.startMinute) + Number(previous.durationMinutes)) throw new Error('Các bài tập trong cùng ngày không được trùng thời gian.');
+  }
   const cleanExercise = (exercise: JsonRecord, extra: string[] = []) => {
     if (!readText(exercise, ['name'])) throw new Error('Vui lòng nhập tên cho tất cả bài tập.');
     const kind = readText(exercise, ['trackingType']);
@@ -114,6 +125,7 @@ export function planPayload(draft: JsonRecord): JsonRecord {
     });
   }
   if (Array.isArray(draft.unscheduledExercises)) payload.unscheduledExercises = asRecords(draft.unscheduledExercises).map((item) => cleanExercise(item, ['durationMinutes']));
+  if (asRecords(draft.generatedExercises).length) payload.generatedExercises = asRecords(draft.generatedExercises);
   return payload;
 }
 

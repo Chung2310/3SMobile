@@ -20,6 +20,7 @@ import { TopPerformersPodium } from '@/components/TopPerformersPodium';
 import { Card } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
 import { fetchPtDashboard } from '@/services/dashboardService';
+import { resolveImageUrl } from '@/services/imageUtils';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { ProgressCategory, PtCustomerSummary, PtDashboardData } from '@/types/domain';
 
@@ -159,7 +160,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <View style={styles.headerRightActions}>
+<View style={styles.headerRightActions}>
           {/* Nút thông báo */}
           <Pressable
             onPress={() => router.push('/(app)/notifications')}
@@ -178,9 +179,9 @@ export default function HomeScreen() {
             hitSlop={8}
             accessibilityLabel="Hồ sơ cá nhân"
           >
-            {dashboard?.ptAvatarUrl || session?.user?.avatarUrl ? (
+            {session?.user?.avatarUrl ? (
               <Image
-                source={{ uri: dashboard?.ptAvatarUrl || session?.user?.avatarUrl }}
+                source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
                 style={styles.avatarImg}
               />
             ) : (

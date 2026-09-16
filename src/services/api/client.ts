@@ -127,8 +127,8 @@ export const api = {
   get<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'GET' });
   },
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return request<T>(path, { method: 'POST', body: encodeBody(body) });
+  post<T>(path: string, body?: unknown, options?: { headers?: HeadersInit }): Promise<T> {
+    return request<T>(path, { method: 'POST', body: encodeBody(body), headers: options?.headers });
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
