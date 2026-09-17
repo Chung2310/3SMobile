@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppAlertModal } from '@/components/AppAlertModal';
 import { api } from '@/services/api/client';
+
+const BANNER_WALLET = require('../../../assets/public/banner-wallet.png');
 
 export interface CreditWallet {
   id?: string;
@@ -349,22 +352,29 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          {/* Phương thức thanh toán PayOS */}
-          <View style={styles.paymentMethodBox}>
-            <View style={styles.methodHeaderRow}>
-              <View style={styles.methodHeaderLeft}>
-                <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
-                <Text style={styles.methodTitle}>Chuyển khoản VietQR tự động qua PayOS</Text>
+          {/* Phương thức chuyển khoản QR tự động */}
+          <ImageBackground
+            source={BANNER_WALLET}
+            style={styles.paymentMethodBox}
+            imageStyle={styles.paymentMethodBgImage}
+            resizeMode="cover"
+          >
+            <View style={styles.paymentMethodOverlay}>
+              <View style={styles.methodHeaderRow}>
+                <View style={styles.methodHeaderLeft}>
+                  <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
+                  <Text style={styles.methodTitle}>Chuyển khoản QR tự động</Text>
+                </View>
+                <View style={styles.instantBadge}>
+                  <Feather name="zap" size={11} color="#15803D" style={{ marginRight: 3 }} />
+                  <Text style={styles.instantBadgeText}>Tự động 24/7</Text>
+                </View>
               </View>
-              <View style={styles.instantBadge}>
-                <Feather name="zap" size={11} color="#15803D" style={{ marginRight: 3 }} />
-                <Text style={styles.instantBadgeText}>Tự động 24/7</Text>
-              </View>
+              <Text style={styles.bankSupportText}>
+                Hỗ trợ: VCB, MB Bank, Techcombank, ACB, VPBank, MoMo, ZaloPay và 40+ ngân hàng...
+              </Text>
             </View>
-            <Text style={styles.bankSupportText}>
-              Hỗ trợ: Vietcombank, MB Bank, Techcombank, ACB, VPBank, MoMo, ZaloPay và 40+ ngân hàng.
-            </Text>
-          </View>
+          </ImageBackground>
 
           {/* Tóm tắt thanh toán & Nút tạo QR */}
           <View style={styles.checkoutBar}>
@@ -820,12 +830,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   paymentMethodBox: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderRadius: 14,
+    overflow: 'hidden',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  paymentMethodBgImage: {
+    borderRadius: 14,
+  },
+  paymentMethodOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    padding: 12,
   },
   methodHeaderRow: {
     flexDirection: 'row',
