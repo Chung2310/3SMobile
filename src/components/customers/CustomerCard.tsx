@@ -109,10 +109,9 @@ export function CustomerCard({
             {item.phone ? (
               <View style={styles.phoneGroup}>
                 <Pressable
-                  onPress={() => handleCall(item.phone)}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  onPress={() => onPress(item)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Gọi điện cho ${item.fullName}`}
+                  accessibilityLabel={`Xem chi tiết ${item.fullName}`}
                 >
                   <Text style={styles.phoneTextCompact}>{item.phone}</Text>
                 </Pressable>
