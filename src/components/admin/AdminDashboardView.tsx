@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -410,6 +412,274 @@ function AdminPtWorkloadBarChart({
   );
 }
 
+/* ============================================================================
+ * BOTTOM SHEET MODAL COMPONENTS FOR ADMIN FILTERS
+ * ============================================================================ */
+
+interface AdminPtFilterSheetProps {
+  visible: boolean;
+  ptsList: Array<{ ptId: string; fullName: string }>;
+  selectedPtId: string;
+  onSelect: (ptId: string) => void;
+  onClose: () => void;
+}
+
+function AdminPtFilterSheet({
+  visible,
+  ptsList,
+  selectedPtId,
+  onSelect,
+  onClose,
+}: AdminPtFilterSheetProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPts = useMemo(() => {
+    if (!searchQuery.trim()) return ptsList;
+    const q = searchQuery.toLowerCase().trim();
+    return ptsList.filter((p) => p.fullName.toLowerCase().includes(q));
+  }, [ptsList, searchQuery]);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.sheetOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.sheetContent}>
+          <View style={styles.sheetHandle} />
+
+          <View style={styles.sheetHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="people" size={18} color="#0284C7" />
+              <Text style={styles.sheetTitle}>Chọn Huấn luyện viên (PT)</Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              style={({ pressed }) => [styles.sheetCloseBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Feather name="x" size={18} color="#64748B" />
+            </Pressable>
+          </View>
+
+          {ptsList.length > 5 && (
+            <View style={styles.sheetSearchWrap}>
+              <Feather name="search" size={14} color="#94A3B8" />
+              <TextInput
+                style={styles.sheetSearchInput}
+                placeholder="Tìm tên HLV..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')} hitSlop={6}>
+                  <Feather name="x-circle" size={14} color="#94A3B8" />
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          <ScrollView style={styles.sheetScrollList} showsVerticalScrollIndicator={false}>
+            {/* Option "Tất cả HLV" */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.sheetOptionItem,
+                selectedPtId === 'ALL' && styles.sheetOptionItemActive,
+                pressed && { opacity: 0.75 },
+              ]}
+              onPress={() => {
+                onSelect('ALL');
+                onClose();
+              }}
+            >
+              <View style={styles.sheetOptionLeft}>
+                <View style={[styles.avatarCircle, selectedPtId === 'ALL' && styles.avatarCircleActive]}>
+                  <Ionicons name="people-outline" size={16} color={selectedPtId === 'ALL' ? '#0284C7' : '#64748B'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.sheetOptionTitle,
+                      selectedPtId === 'ALL' && styles.sheetOptionTitleActive,
+                    ]}
+                  >
+                    Tất cả HLV
+                  </Text>
+                  <Text style={styles.sheetOptionSub}>Hiển thị dữ liệu toàn bộ hệ thống</Text>
+                </View>
+              </View>
+              {selectedPtId === 'ALL' && <Feather name="check" size={18} color="#0284C7" />}
+            </Pressable>
+
+            {/* Individual PT Options */}
+            {filteredPts.map((pt) => {
+              const isSelected = selectedPtId === pt.ptId;
+              const shortInitial = (pt.fullName || 'PT').slice(0, 2).toUpperCase();
+              return (
+                <Pressable
+                  key={pt.ptId}
+                  style={({ pressed }) => [
+                    styles.sheetOptionItem,
+                    isSelected && styles.sheetOptionItemActive,
+                    pressed && { opacity: 0.75 },
+                  ]}
+                  onPress={() => {
+                    onSelect(pt.ptId);
+                    onClose();
+                  }}
+                >
+                  <View style={styles.sheetOptionLeft}>
+                    <View style={[styles.avatarCircle, isSelected && styles.avatarCircleActive]}>
+                      <Text style={[styles.avatarInitialText, isSelected && { color: '#0284C7' }]}>
+                        {shortInitial}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.sheetOptionTitle,
+                          isSelected && styles.sheetOptionTitleActive,
+                        ]}
+                      >
+                        {pt.fullName}
+                      </Text>
+                      <Text style={styles.sheetOptionSub}>Huấn luyện viên cá nhân</Text>
+                    </View>
+                  </View>
+                  {isSelected && <Feather name="check" size={18} color="#0284C7" />}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+interface AdminStatusFilterSheetProps {
+  visible: boolean;
+  selectedStatus: string;
+  totalCustomers: number;
+  activeCount: number;
+  leadCount: number;
+  inactiveCount: number;
+  onSelect: (status: string) => void;
+  onClose: () => void;
+}
+
+function AdminStatusFilterSheet({
+  visible,
+  selectedStatus,
+  totalCustomers,
+  activeCount,
+  leadCount,
+  inactiveCount,
+  onSelect,
+  onClose,
+}: AdminStatusFilterSheetProps) {
+  const options = [
+    {
+      id: 'ALL',
+      label: 'Tất cả trạng thái',
+      subText: 'Hiển thị đầy đủ mọi danh mục',
+      count: totalCustomers,
+      dotColor: '#0284C7',
+    },
+    {
+      id: 'ACTIVE',
+      label: 'Đang tập luyện',
+      subText: 'Đang có gói tập / tập thường xuyên',
+      count: activeCount,
+      dotColor: '#10B981',
+    },
+    {
+      id: 'LEAD',
+      label: 'Tiềm năng / Mới',
+      subText: 'Đã tư vấn / chưa chốt gói',
+      count: leadCount,
+      dotColor: '#F59E0B',
+    },
+    {
+      id: 'INACTIVE',
+      label: 'Tạm dừng / Nghỉ',
+      subText: 'Đã hết hạn hoặc tạm bảo lưu',
+      count: inactiveCount,
+      dotColor: '#64748B',
+    },
+  ];
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.sheetOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.sheetContent}>
+          <View style={styles.sheetHandle} />
+
+          <View style={styles.sheetHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="funnel" size={16} color="#0284C7" />
+              <Text style={styles.sheetTitle}>Trạng thái hội viên</Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              style={({ pressed }) => [styles.sheetCloseBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Feather name="x" size={18} color="#64748B" />
+            </Pressable>
+          </View>
+
+          <View style={styles.sheetOptionsList}>
+            {options.map((opt) => {
+              const isSelected = selectedStatus === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  style={({ pressed }) => [
+                    styles.sheetOptionItem,
+                    isSelected && styles.sheetOptionItemActive,
+                    pressed && { opacity: 0.75 },
+                  ]}
+                  onPress={() => {
+                    onSelect(opt.id);
+                    onClose();
+                  }}
+                >
+                  <View style={styles.sheetOptionLeft}>
+                    <View style={[styles.sheetDotIndicator, { backgroundColor: opt.dotColor }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.sheetOptionTitle,
+                          isSelected && styles.sheetOptionTitleActive,
+                        ]}
+                      >
+                        {opt.label} ({opt.count})
+                      </Text>
+                      <Text style={styles.sheetOptionSub}>{opt.subText}</Text>
+                    </View>
+                  </View>
+                  {isSelected && <Feather name="check" size={18} color="#0284C7" />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps) {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -421,6 +691,10 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+
+  // Bottom Sheets for Filter
+  const [showPtSheet, setShowPtSheet] = useState(false);
+  const [showStatusSheet, setShowStatusSheet] = useState(false);
 
   // Date pickers
   const [showFromPicker, setShowFromPicker] = useState(false);
@@ -629,75 +903,75 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             )}
           </View>
 
-          {/* PT Selector Row */}
-          <Text style={styles.fieldLabel}>Chọn Huấn luyện viên (PT):</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
-            <View style={styles.statusPillsRow}>
-              <Pressable
-                onPress={() => setSelectedPtId('ALL')}
+          {/* Filter Selectors Row (PT & Customer Status) */}
+          <View style={styles.filterSelectorsRow}>
+            {/* PT Selector Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterSelectorBtn,
+                selectedPtId !== 'ALL' && styles.filterSelectorBtnActive,
+                pressed && styles.btnPressed,
+              ]}
+              onPress={() => setShowPtSheet(true)}
+            >
+              <Ionicons
+                name="people"
+                size={14}
+                color={selectedPtId !== 'ALL' ? '#0284C7' : '#64748B'}
+              />
+              <Text
                 style={[
-                  styles.statusChip,
-                  selectedPtId === 'ALL' && styles.statusChipActive,
+                  styles.filterSelectorBtnText,
+                  selectedPtId !== 'ALL' && styles.filterSelectorBtnTextActive,
                 ]}
+                numberOfLines={1}
               >
-                <Text
-                  style={[
-                    styles.statusChipText,
-                    selectedPtId === 'ALL' && styles.statusChipTextActive,
-                  ]}
-                >
-                  Tất cả HLV
-                </Text>
-              </Pressable>
-              {ptsList.map((pt) => (
-                <Pressable
-                  key={pt.ptId}
-                  onPress={() => setSelectedPtId(pt.ptId)}
-                  style={[
-                    styles.statusChip,
-                    selectedPtId === pt.ptId && styles.statusChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusChipText,
-                      selectedPtId === pt.ptId && styles.statusChipTextActive,
-                    ]}
-                  >
-                    {pt.fullName}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
+                {selectedPtId === 'ALL'
+                  ? 'Tất cả HLV'
+                  : ptsList.find((p) => p.ptId === selectedPtId)?.fullName || 'HLV đã chọn'}
+              </Text>
+              <Feather
+                name="chevron-down"
+                size={14}
+                color={selectedPtId !== 'ALL' ? '#0284C7' : '#94A3B8'}
+              />
+            </Pressable>
 
-          {/* Status Pills Selector */}
-          <Text style={styles.fieldLabel}>Trạng thái hội viên:</Text>
-          <View style={styles.statusPillsRow}>
-            {[
-              { id: 'ALL', label: 'Tất cả' },
-              { id: 'ACTIVE', label: 'Đang tập' },
-              { id: 'LEAD', label: 'Tiềm năng' },
-              { id: 'INACTIVE', label: 'Tạm dừng' },
-            ].map((st) => (
-              <Pressable
-                key={st.id}
-                onPress={() => setSelectedStatus(st.id)}
+            {/* Status Selector Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterSelectorBtn,
+                selectedStatus !== 'ALL' && styles.filterSelectorBtnActive,
+                pressed && styles.btnPressed,
+              ]}
+              onPress={() => setShowStatusSheet(true)}
+            >
+              <Ionicons
+                name="funnel"
+                size={13}
+                color={selectedStatus !== 'ALL' ? '#0284C7' : '#64748B'}
+              />
+              <Text
                 style={[
-                  styles.statusChip,
-                  selectedStatus === st.id && styles.statusChipActive,
+                  styles.filterSelectorBtnText,
+                  selectedStatus !== 'ALL' && styles.filterSelectorBtnTextActive,
                 ]}
+                numberOfLines={1}
               >
-                <Text
-                  style={[
-                    styles.statusChipText,
-                    selectedStatus === st.id && styles.statusChipTextActive,
-                  ]}
-                >
-                  {st.label}
-                </Text>
-              </Pressable>
-            ))}
+                {selectedStatus === 'ALL'
+                  ? 'Tất cả trạng thái'
+                  : selectedStatus === 'ACTIVE'
+                  ? 'Đang tập'
+                  : selectedStatus === 'LEAD'
+                  ? 'Tiềm năng'
+                  : 'Tạm dừng'}
+              </Text>
+              <Feather
+                name="chevron-down"
+                size={14}
+                color={selectedStatus !== 'ALL' ? '#0284C7' : '#94A3B8'}
+              />
+            </Pressable>
           </View>
 
           {/* Date Pickers */}
@@ -952,6 +1226,26 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       )}
 
+      {/* Admin Filter Bottom Sheets */}
+      <AdminPtFilterSheet
+        visible={showPtSheet}
+        ptsList={ptsList}
+        selectedPtId={selectedPtId}
+        onSelect={(ptId) => setSelectedPtId(ptId)}
+        onClose={() => setShowPtSheet(false)}
+      />
+
+      <AdminStatusFilterSheet
+        visible={showStatusSheet}
+        selectedStatus={selectedStatus}
+        totalCustomers={totalCustomers}
+        activeCount={activeCount}
+        leadCount={leadCount}
+        inactiveCount={inactiveCount}
+        onSelect={(st) => setSelectedStatus(st)}
+        onClose={() => setShowStatusSheet(false)}
+      />
+
       {/* Date Pickers */}
       <DatePickerModal
         visible={showFromPicker}
@@ -1126,32 +1420,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#EF4444',
   },
-  fieldLabel: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  statusPillsRow: {
+  filterSelectorsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    gap: 8,
   },
-  statusChip: {
+  filterSelectorBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+    minHeight: 44,
   },
-  statusChipActive: {
-    backgroundColor: '#0284C7',
+  filterSelectorBtnActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
   },
-  statusChipText: {
-    fontSize: 11.5,
-    fontWeight: '500',
-    color: '#475569',
+  filterSelectorBtnText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
   },
-  statusChipTextActive: {
-    color: '#FFFFFF',
+  filterSelectorBtnTextActive: {
+    color: '#0284C7',
     fontWeight: '700',
   },
   dateRowContainer: {
@@ -1169,10 +1468,140 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    minHeight: 38,
   },
   dateChipText: {
     fontSize: 11.5,
     color: '#334155',
+  },
+
+  /* Bottom Sheet Overlay & Modal Styles */
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 34,
+    maxHeight: '80%',
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  sheetCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 38,
+    marginBottom: 12,
+    gap: 8,
+  },
+  sheetSearchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    color: '#0F172A',
+    paddingVertical: 0,
+  },
+  sheetScrollList: {
+    maxHeight: 320,
+  },
+  sheetOptionsList: {
+    gap: 8,
+  },
+  sheetOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    minHeight: 48,
+    marginBottom: 6,
+  },
+  sheetOptionItemActive: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#F0F9FF',
+  },
+  sheetOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  avatarCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCircleActive: {
+    backgroundColor: '#E0F2FE',
+  },
+  avatarInitialText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  sheetOptionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  sheetOptionTitleActive: {
+    color: '#0284C7',
+    fontWeight: '700',
+  },
+  sheetOptionSub: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  sheetDotIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 
   /* 2x2 KPI Grid Layout (Dạng Lưới 2x2 - Không trượt) */
