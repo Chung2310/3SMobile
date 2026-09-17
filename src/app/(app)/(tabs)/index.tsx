@@ -20,6 +20,7 @@ import { ProgressPieChart } from '@/components/ProgressPieChart';
 import { TopPerformersPodium } from '@/components/TopPerformersPodium';
 import { Card } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api/client';
 import { fetchCustomersList } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
 import { resolveImageUrl } from '@/services/imageUtils';
@@ -143,15 +144,30 @@ export default function HomeScreen() {
     void loadData();
   };
 
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
+  const fetchCreditBalance = useCallback(async () => {
+    try {
+      const res = await api.get<any>('/api/credits/me');
+      const payload = res?.data || res;
+      if (payload && typeof payload.availableCredits === 'number') {
+        setCreditBalance(payload.availableCredits);
+      }
+    } catch {
+      // Silently ignore if fails
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       const data = await fetchPtDashboard();
       setDashboard(data);
+      void fetchCreditBalance();
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchCreditBalance]);
 
   useFocusEffect(
     useCallback(() => {
@@ -162,10 +178,11 @@ export default function HomeScreen() {
           setLoading(false);
         }
       });
+      void fetchCreditBalance();
       return () => {
         active = false;
       };
-    }, [])
+    }, [fetchCreditBalance])
   );
 
   const onRefresh = useCallback(() => {
@@ -219,16 +236,18 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-<View style={styles.headerRightActions}>
-          {/* Nút thông báo */}
+        <View style={styles.headerRightActions}>
+          {/* Nút Số dư Credit với icon ngôi sao AI (Bấm để mở Ví Credit) */}
           <Pressable
-            onPress={() => router.push('/(app)/notifications')}
-            style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
+            onPress={() => router.push('/(app)/wallet')}
+            style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
             hitSlop={8}
-            accessibilityLabel="Thông báo"
+            accessibilityLabel="Số dư Credit AI"
           >
-            <Feather name="bell" size={17} color="#334155" />
-            <View style={styles.bellDot} />
+            <Ionicons name="sparkles" size={14} color="#0284C7" />
+            <Text style={styles.headerCreditValue}>
+              {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
+            </Text>
           </Pressable>
 
           {/* Ảnh đại diện PT (Bấm để xem hồ sơ) */}
@@ -709,31 +728,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+  headerCreditBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    gap: 5,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 18,
+    paddingHorizontal: 11,
+    height: 36,
   },
-  headerIconBtnPressed: {
+  headerCreditBadgePressed: {
     backgroundColor: '#E0F2FE',
-    transform: [{ scale: 0.94 }],
+    transform: [{ scale: 0.95 }],
   },
-  bellDot: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: colors.accent,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+  headerCreditValue: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#0284C7',
   },
   avatarWrap: {
     position: 'relative',
