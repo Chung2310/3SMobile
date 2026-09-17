@@ -4,11 +4,11 @@ import type { JsonRecord } from '../types/domain';
 export const LEVELS = { BEGINNER: 'Người mới', INTERMEDIATE: 'Trung cấp', ADVANCED: 'Nâng cao' };
 export const TRACKING = { STRENGTH: 'Sức mạnh', BODYWEIGHT: 'Trọng lượng cơ thể', CARDIO: 'Cardio', INTERVAL: 'Tập ngắt quãng', MOBILITY: 'Linh hoạt' };
 export const PRESCRIPTIONS: Record<string, [string, string, string?][]> = {
-  STRENGTH: [['sets', 'Số hiệp'], ['reps', 'Số lần'], ['targetWeight', 'Mức tạ', 'kg'], ['restSeconds', 'Nghỉ', 'giây'], ['targetRpe', 'RPE'], ['targetRir', 'Số lần dự trữ']],
-  BODYWEIGHT: [['sets', 'Số hiệp'], ['reps', 'Số lần'], ['addedWeight', 'Tạ thêm', 'kg'], ['restSeconds', 'Nghỉ', 'giây'], ['targetRpe', 'RPE'], ['targetRir', 'Số lần dự trữ']],
-  CARDIO: [['durationMinutes', 'Thời lượng', 'phút'], ['distanceKm', 'Quãng đường', 'km'], ['targetPaceSecondsPerKm', 'Pace', 'giây/km'], ['targetHeartRate', 'Nhịp tim', 'bpm'], ['inclinePercent', 'Độ dốc', '%'], ['targetRpe', 'RPE']],
-  INTERVAL: [['rounds', 'Số vòng'], ['workSeconds', 'Thời gian tập', 'giây'], ['restSeconds', 'Nghỉ', 'giây'], ['distanceMetersPerRound', 'Quãng đường/vòng', 'm'], ['repsPerRound', 'Số lần/vòng'], ['targetRpe', 'RPE']],
-  MOBILITY: [['durationMinutes', 'Thời lượng', 'phút'], ['reps', 'Số lần'], ['side', 'Bên tập (LEFT / RIGHT / BOTH)'], ['targetDiscomfort', 'Mức khó chịu']],
+  STRENGTH: [['sets', 'Sets'], ['reps', 'Reps'], ['targetWeight', 'Weight', 'kg'], ['restSeconds', 'Rest', 's'], ['targetRpe', 'RPE'], ['targetRir', 'RIR']],
+  BODYWEIGHT: [['sets', 'Sets'], ['reps', 'Reps'], ['addedWeight', 'Added Weight', 'kg'], ['restSeconds', 'Rest', 's'], ['targetRpe', 'RPE'], ['targetRir', 'RIR']],
+  CARDIO: [['durationMinutes', 'Duration', 'min'], ['distanceKm', 'Distance', 'km'], ['targetPaceSecondsPerKm', 'Pace', 's/km'], ['targetHeartRate', 'Heart Rate', 'bpm'], ['inclinePercent', 'Incline', '%'], ['targetRpe', 'RPE']],
+  INTERVAL: [['rounds', 'Rounds'], ['workSeconds', 'Work Time', 's'], ['restSeconds', 'Rest', 's'], ['distanceMetersPerRound', 'Distance/Round', 'm'], ['repsPerRound', 'Reps/Round'], ['targetRpe', 'RPE']],
+  MOBILITY: [['durationMinutes', 'Duration', 'min'], ['reps', 'Reps'], ['side', 'Side (LEFT / RIGHT / BOTH)'], ['targetDiscomfort', 'Discomfort Level']],
 };
 export function recordId(record: unknown): string { return readText(record, ['_id', 'id']); }
 export interface WorkoutDay { key: string; name: string; exercises: JsonRecord[] }

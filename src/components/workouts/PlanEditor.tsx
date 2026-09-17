@@ -830,7 +830,7 @@ function ExerciseEditor({ exercise, onChange }: { exercise: JsonRecord; onChange
       ))}
 
       <Field
-        label="Tempo (ví dụ: 3-0-1-0)"
+        label="Tempo (e.g. 3-0-1-0)"
         value={String(exercise.tempo ?? '')}
         onChange={(tempo) => onChange({ tempo })}
       />

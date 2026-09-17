@@ -10,9 +10,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerGoalData, InBodyRecordData } from '@/types/inbody';
 import { api } from '@/services/api/client';
 import { analyzeInBody } from '@/services/inbodyAnalytics';
@@ -54,17 +54,9 @@ export function InBodyDetailSheet({
   onDelete,
   onStatusChanged,
 }: InBodyDetailSheetProps) {
+  const [goals, setGoals] = useState<CustomerGoalData[]>([]);
   const [togglingStatus, setTogglingStatus] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type?: AlertModalType;
-    title: string;
-    message: string;
-  }>({ visible: false, title: '', message: '' });
-
-  const showAlert = (cfg: { type?: AlertModalType; title: string; message: string }) => {
-    setAlertConfig({ visible: true, ...cfg });
-  };
+  const { alertConfig, showError } = useAppAlert();
   const [customerGoal, setCustomerGoal] = useState<CustomerGoalData | null>(null);
   const [customerHistory, setCustomerHistory] = useState<InBodyRecordData[]>(historyRecords || []);
 
@@ -177,7 +169,7 @@ export function InBodyDetailSheet({
       onStatusChanged?.(updated);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
-      showAlert({ type: 'error', title: 'Lỗi', message: msg });
+      showError(msg);
     } finally {
       setTogglingStatus(false);
     }
@@ -196,7 +188,6 @@ export function InBodyDetailSheet({
   };
 
   return (
-    <>
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheetContainer}>
@@ -406,16 +397,9 @@ export function InBodyDetailSheet({
           </ScrollView>
         </View>
       </View>
-    </Modal>
 
-    <AppAlertModal
-      visible={alertConfig.visible}
-      type={alertConfig.type}
-      title={alertConfig.title}
-      message={alertConfig.message}
-      onConfirm={() => setAlertConfig((c) => ({ ...c, visible: false }))}
-    />
-    </>
+      <AppAlertModal {...alertConfig} />
+    </Modal>
   );
 }
 

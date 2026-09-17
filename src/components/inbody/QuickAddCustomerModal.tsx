@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import { createCustomer } from '@/services/customerService';
-import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
 
 export interface QuickCustomerInitialData {
   fullName?: string | null;
@@ -43,51 +43,7 @@ export function QuickAddCustomerModal({
   const [initialWeight, setInitialWeight] = useState('');
   const [initialGoal, setInitialGoal] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type?: AlertModalType;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    onConfirm: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
-
-  const showAlert = (cfg: {
-    type?: AlertModalType;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }) => {
-    setAlertConfig({
-      visible: true,
-      type: cfg.type || 'info',
-      title: cfg.title,
-      message: cfg.message,
-      confirmLabel: cfg.confirmLabel || 'Đã hiểu',
-      cancelLabel: cfg.cancelLabel,
-      onConfirm: () => {
-        setAlertConfig((prev) => ({ ...prev, visible: false }));
-        cfg.onConfirm?.();
-      },
-      onCancel: cfg.onCancel
-        ? () => {
-            setAlertConfig((prev) => ({ ...prev, visible: false }));
-            cfg.onCancel?.();
-          }
-        : undefined,
-    });
-  };
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   useEffect(() => {
     if (visible) {
@@ -103,50 +59,30 @@ export function QuickAddCustomerModal({
   const handleSave = async () => {
     const cleanName = fullName.trim();
     if (!cleanName || cleanName.length < 2) {
-      showAlert({
-        type: 'warning',
-        title: 'Thiếu thông tin',
-        message: 'Vui lòng nhập họ và tên học viên (tối thiểu 2 ký tự).',
-      });
+      showWarning('Vui lòng nhập họ và tên học viên (tối thiểu 2 ký tự).', 'Thiếu thông tin');
       return;
     }
 
     const cleanPhone = phone.trim();
     if (!cleanPhone) {
-      showAlert({
-        type: 'warning',
-        title: 'Thiếu thông tin',
-        message: 'Vui lòng nhập số điện thoại học viên.',
-      });
+      showWarning('Vui lòng nhập số điện thoại học viên.', 'Thiếu thông tin');
       return;
     }
 
     if (!/^[0-9+]{9,15}$/.test(cleanPhone)) {
-      showAlert({
-        type: 'warning',
-        title: 'Sai số điện thoại',
-        message: 'Số điện thoại phải từ 9 đến 15 chữ số.',
-      });
+      showWarning('Số điện thoại phải từ 9 đến 15 chữ số.', 'Sai số điện thoại');
       return;
     }
 
     const hNum = height.trim() ? Number(height) : undefined;
     if (hNum != null && (isNaN(hNum) || hNum <= 0)) {
-      showAlert({
-        type: 'warning',
-        title: 'Sai chiều cao',
-        message: 'Chiều cao phải là số dương.',
-      });
+      showWarning('Chiều cao phải là số dương.', 'Sai chiều cao');
       return;
     }
 
     const wNum = initialWeight.trim() ? Number(initialWeight) : undefined;
     if (wNum != null && (isNaN(wNum) || wNum <= 0)) {
-      showAlert({
-        type: 'warning',
-        title: 'Sai cân nặng',
-        message: 'Cân nặng phải là số dương.',
-      });
+      showWarning('Cân nặng phải là số dương.', 'Sai cân nặng');
       return;
     }
 
@@ -165,23 +101,13 @@ export function QuickAddCustomerModal({
       };
 
       const created = await createCustomer(payload);
-      showAlert({
-        type: 'success',
-        title: 'Thành công',
-        message: `Đã thêm học viên "${created.fullName}" vào hệ thống!`,
-        confirmLabel: 'OK',
-        onConfirm: () => {
-          onCreated(created);
-          onClose();
-        },
+      showSuccess(`Đã thêm học viên "${created.fullName}" vào hệ thống!`, 'Thành công', () => {
+        onCreated(created);
+        onClose();
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tạo học viên mới.';
-      showAlert({
-        type: 'error',
-        title: 'Lỗi tạo học viên',
-        message: msg,
-      });
+      showError(msg, 'Lỗi tạo học viên');
     } finally {
       setLoading(false);
     }
@@ -359,17 +285,7 @@ export function QuickAddCustomerModal({
         </View>
       </KeyboardAvoidingView>
 
-      {/* Alert popup bo góc 24px */}
-      <AppAlertModal
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        confirmLabel={alertConfig.confirmLabel}
-        cancelLabel={alertConfig.cancelLabel}
-        onConfirm={alertConfig.onConfirm}
-        onCancel={alertConfig.onCancel}
-      />
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

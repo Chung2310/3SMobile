@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
+
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '@/theme';
@@ -19,6 +19,7 @@ import { fetchCustomersList } from '@/services/customerService';
 import { inbodyService } from '@/services/inbodyService';
 import { analyzeInBody } from '@/services/inbodyAnalytics';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodySummaryBanner } from './InBodySummaryBanner';
 import { InBodyEvolutionChart } from './InBodyEvolutionChart';
@@ -49,6 +50,7 @@ export function InBodyListScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { alertConfig, showError } = useAppAlert();
 
   const [records, setRecords] = useState<InBodyRecordData[]>([]);
   const [customers, setCustomers] = useState<CustomerProfile[]>([]);
@@ -67,16 +69,6 @@ export function InBodyListScreen() {
   const [detailRecord, setDetailRecord] = useState<InBodyRecordData | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<InBodyRecordData | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type?: AlertModalType;
-    title: string;
-    message: string;
-  }>({ visible: false, title: '', message: '' });
-
-  const showAlert = (cfg: { type?: AlertModalType; title: string; message: string }) => {
-    setAlertConfig({ visible: true, ...cfg });
-  };
 
   // Load customers list for filter & forms
   const loadCustomers = async () => {
@@ -212,7 +204,7 @@ export function InBodyListScreen() {
       setDeletingRecord(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể xóa phiếu.';
-      showAlert({ type: 'error', title: 'Lỗi', message: msg });
+      showError(msg);
     } finally {
       setDeletingLoading(false);
     }
@@ -228,7 +220,6 @@ export function InBodyListScreen() {
   }, [customers, selectedCustomerId]);
 
   return (
-    <>
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* Top Bar Header */}
       <View style={styles.topHeader}>
@@ -498,16 +489,9 @@ export function InBodyListScreen() {
         onClose={() => setShowCustomerPicker(false)}
         onSelect={(id) => setSelectedCustomerId(id)}
       />
-    </View>
 
-    <AppAlertModal
-      visible={alertConfig.visible}
-      type={alertConfig.type}
-      title={alertConfig.title}
-      message={alertConfig.message}
-      onConfirm={() => setAlertConfig((c) => ({ ...c, visible: false }))}
-    />
-    </>
+      <AppAlertModal {...alertConfig} />
+    </View>
   );
 }
 

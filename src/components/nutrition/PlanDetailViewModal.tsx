@@ -237,12 +237,12 @@ export function PlanDetailViewModal({
 
             {isCurrentlyActive && (
               <View style={styles.activePill}>
-                <Text style={styles.activePillText}>🟢 Đang áp dụng kỳ này</Text>
+                <Text style={styles.activePillText}>Đang áp dụng kỳ này</Text>
               </View>
             )}
             {isUpcoming && (
               <View style={styles.upcomingPill}>
-                <Text style={styles.upcomingPillText}>🔵 Sắp diễn ra</Text>
+                <Text style={styles.upcomingPillText}>Sắp diễn ra</Text>
               </View>
             )}
 
@@ -512,7 +512,7 @@ export function PlanDetailViewModal({
                           </View>
 
                           {dish.notes ? (
-                            <Text style={styles.dishNotes}>💡 {dish.notes}</Text>
+                            <Text style={styles.dishNotes}>{dish.notes}</Text>
                           ) : null}
                         </View>
                       ))
