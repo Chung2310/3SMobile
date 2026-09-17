@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -9,8 +9,10 @@ import {
   View,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { api } from '@/services/api/client';
 
 const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
+const DEFAULT_FOOD_IMAGE = require('../../assets/public/anh-minh-hoa-mon-an.png');
 
 export interface FoodItem {
   name: string;
@@ -170,6 +172,17 @@ export function CustomerTodayNutritionModal({
   const [showNotes, setShowNotes] = useState(false);
   const [expandedMeals, setExpandedMeals] = useState<Record<number, boolean>>({});
 
+  // Ảnh món ăn / bữa ăn động được tải từ API
+  const [dynamicImages, setDynamicImages] = useState<Record<string, string>>({});
+  const fetchedKeysRef = useRef<Set<string>>(new Set());
+
+  // Modal xem ảnh phóng to
+  const [previewImage, setPreviewImage] = useState<{
+    url: any;
+    title: string;
+    isStatic?: boolean;
+  } | null>(null);
+
   // Phân tích khoảng thời gian (hh:mm - hh:mm)
   const parseTimeRange = (timeSlot?: string) => {
     if (!timeSlot) return null;
@@ -242,6 +255,65 @@ export function CustomerTodayNutritionModal({
     };
   }, [activeDay, currentTimeNumber, currentHour, isViewingToday]);
 
+  const currentMeal = realtimeMealInfo?.meal;
+
+  // Tự động tìm nạp ảnh món ăn qua API backend /api/images/meal-image (nếu chưa có sẵn ảnh trong payload)
+  useEffect(() => {
+    if (!visible || !plan) return;
+
+    const toFetch: { name: string; items?: string[] }[] = [];
+
+    // Kiểm tra bữa ăn hiện tại
+    if (
+      currentMeal &&
+      !currentMeal.imageUrl &&
+      !dynamicImages[currentMeal.name] &&
+      !fetchedKeysRef.current.has(currentMeal.name)
+    ) {
+      toFetch.push({
+        name: currentMeal.name,
+        items: currentMeal.items?.map((i) => i.name),
+      });
+    }
+
+    // Kiểm tra từng món ăn trong các bữa ăn của ngày đang xem
+    activeDay.meals.forEach((m) => {
+      m.items?.forEach((it) => {
+        if (
+          !it.imageUrl &&
+          !dynamicImages[it.name] &&
+          !fetchedKeysRef.current.has(it.name)
+        ) {
+          toFetch.push({ name: it.name, items: [it.name] });
+        }
+      });
+    });
+
+    if (toFetch.length === 0) return;
+
+    // Giới hạn số lượng truy vấn nền
+    const batch = toFetch.slice(0, 6);
+    batch.forEach((target) => {
+      fetchedKeysRef.current.add(target.name);
+      api
+        .post<any>('/api/images/meal-image', {
+          mealName: target.name,
+          items: target.items || [target.name],
+          aspectRatio: '4:3',
+          forceRegenerate: false,
+        })
+        .then((res) => {
+          const url = res?.imageUrl || res?.data?.imageUrl;
+          if (url && typeof url === 'string') {
+            setDynamicImages((prev) => ({ ...prev, [target.name]: url }));
+          }
+        })
+        .catch(() => {
+          // Bỏ qua lỗi, dùng ảnh minh họa mặc định
+        });
+    });
+  }, [visible, plan, currentMeal, activeDay, dynamicImages]);
+
   const toggleMeal = (mIdx: number) => {
     setExpandedMeals((prev) => ({
       ...prev,
@@ -260,14 +332,21 @@ export function CustomerTodayNutritionModal({
     }, 0);
   }, [activeDay]);
 
-  const currentMeal = realtimeMealInfo?.meal;
-
   if (!plan) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.modalOverlay}>
+        {/* Backdrop bấm ra ngoài để đóng */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Đóng modal"
+        />
+
+        {/* Khung modal dạng View độc lập để không chặn gesture vuốt cuộn của ScrollView */}
+        <View style={styles.card}>
           {/* ================= HEADER TRẮNG HIỆN ĐẠI CÙNG 3S CHEF ================= */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -313,7 +392,7 @@ export function CustomerTodayNutritionModal({
             </Pressable>
           </View>
 
-          {/* ================= THANH ĐIỀU HƯỚNG SÁNG VÀ TINH GỌN ================= */}
+          {/* ================= THANH ĐIỀU HƯỚNG GỌN GÀNG ================= */}
           <View style={styles.navBar}>
             {/* Chuyển đổi chế độ xem: Bữa Hiện Tại / Cả Ngày */}
             <View style={styles.modeSegment}>
@@ -432,17 +511,49 @@ export function CustomerTodayNutritionModal({
             </View>
           )}
 
-          {/* ================= NỘI DUNG CHÍNH (NỀN TRẮNG SẠCH SẼ) ================= */}
+          {/* ================= NỘI DUNG CUỘN (SCROLL KHÔNG BỊ KHÓA) ================= */}
           <ScrollView
             style={styles.scrollArea}
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
           >
             {/* CHẾ ĐỘ 1: BỮA HIỆN TẠI (THỜI GIAN THỰC) */}
             {viewMode === 'realtime' && (
               <View>
                 {currentMeal ? (
                   <View style={styles.realtimeCard}>
+                    {/* Banner ảnh món ăn / bữa ăn */}
+                    {(() => {
+                      const mealImg = currentMeal.imageUrl || dynamicImages[currentMeal.name];
+                      const isDefault = !mealImg;
+                      return (
+                        <Pressable
+                          style={styles.mealBannerWrap}
+                          onPress={() =>
+                            setPreviewImage({
+                              url: isDefault ? DEFAULT_FOOD_IMAGE : mealImg,
+                              title: currentMeal.name,
+                              isStatic: isDefault,
+                            })
+                          }
+                        >
+                          <Image
+                            source={isDefault ? DEFAULT_FOOD_IMAGE : { uri: mealImg }}
+                            style={styles.mealBannerImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.mealBannerOverlay}>
+                            <View style={styles.zoomHintBadge}>
+                              <Feather name="maximize-2" size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+                              <Text style={styles.zoomHintText}>Bấm xem ảnh</Text>
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })()}
+
                     {/* Thanh trạng thái bữa ăn */}
                     <View style={styles.realtimeCardHeader}>
                       <View style={styles.realtimeHeaderLeft}>
@@ -486,63 +597,88 @@ export function CustomerTodayNutritionModal({
 
                       {Array.isArray(currentMeal.items) && currentMeal.items.length > 0 ? (
                         <View style={styles.foodItemsCol}>
-                          {currentMeal.items.map((item, idx) => (
-                            <View key={idx} style={styles.foodItemCard}>
-                              <View style={styles.foodItemMain}>
-                                <View style={styles.foodItemTitleRow}>
-                                  <View style={styles.foodIndexBadge}>
-                                    <Text style={styles.foodIndexText}>{idx + 1}</Text>
+                          {currentMeal.items.map((item, idx) => {
+                            const itemImg = item.imageUrl || dynamicImages[item.name];
+                            const isDefaultItemImg = !itemImg;
+
+                            return (
+                              <View key={idx} style={styles.foodItemCard}>
+                                {/* Thumbnail ảnh món ăn */}
+                                <Pressable
+                                  style={styles.foodThumbWrap}
+                                  onPress={() =>
+                                    setPreviewImage({
+                                      url: isDefaultItemImg ? DEFAULT_FOOD_IMAGE : itemImg,
+                                      title: item.name,
+                                      isStatic: isDefaultItemImg,
+                                    })
+                                  }
+                                >
+                                  <Image
+                                    source={isDefaultItemImg ? DEFAULT_FOOD_IMAGE : { uri: itemImg }}
+                                    style={styles.foodThumbImage}
+                                    resizeMode="cover"
+                                  />
+                                </Pressable>
+
+                                <View style={styles.foodItemMain}>
+                                  <View style={styles.foodItemTitleRow}>
+                                    <View style={styles.foodIndexBadge}>
+                                      <Text style={styles.foodIndexText}>{idx + 1}</Text>
+                                    </View>
+                                    <Text style={styles.foodItemName} numberOfLines={2}>
+                                      {item.name}
+                                    </Text>
                                   </View>
-                                  <Text style={styles.foodItemName}>{item.name}</Text>
+
+                                  {!!item.prepTip && (
+                                    <View style={styles.prepTipWrap}>
+                                      <Ionicons name="bulb-outline" size={12} color="#0284C7" style={{ marginRight: 4 }} />
+                                      <Text style={styles.prepTipText}>{item.prepTip}</Text>
+                                    </View>
+                                  )}
+
+                                  {/* Macros chi tiết nếu có */}
+                                  {(!!item.protein || !!item.carbs || !!item.fat) && (
+                                    <View style={styles.macrosRow}>
+                                      {!!item.protein && (
+                                        <View style={[styles.macroPill, { backgroundColor: '#F0FDF4' }]}>
+                                          <Text style={[styles.macroPillText, { color: '#16A34A' }]}>
+                                            P: {item.protein}g
+                                          </Text>
+                                        </View>
+                                      )}
+                                      {!!item.carbs && (
+                                        <View style={[styles.macroPill, { backgroundColor: '#EFF6FF' }]}>
+                                          <Text style={[styles.macroPillText, { color: '#2563EB' }]}>
+                                            C: {item.carbs}g
+                                          </Text>
+                                        </View>
+                                      )}
+                                      {!!item.fat && (
+                                        <View style={[styles.macroPill, { backgroundColor: '#FFF7ED' }]}>
+                                          <Text style={[styles.macroPillText, { color: '#EA580C' }]}>
+                                            F: {item.fat}g
+                                          </Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                  )}
                                 </View>
 
-                                {!!item.prepTip && (
-                                  <View style={styles.prepTipWrap}>
-                                    <Ionicons name="bulb-outline" size={12} color="#0284C7" style={{ marginRight: 4 }} />
-                                    <Text style={styles.prepTipText}>{item.prepTip}</Text>
-                                  </View>
-                                )}
-
-                                {/* Macros chi tiết nếu có */}
-                                {(!!item.protein || !!item.carbs || !!item.fat) && (
-                                  <View style={styles.macrosRow}>
-                                    {!!item.protein && (
-                                      <View style={[styles.macroPill, { backgroundColor: '#F0FDF4' }]}>
-                                        <Text style={[styles.macroPillText, { color: '#16A34A' }]}>
-                                          P: {item.protein}g
-                                        </Text>
-                                      </View>
-                                    )}
-                                    {!!item.carbs && (
-                                      <View style={[styles.macroPill, { backgroundColor: '#EFF6FF' }]}>
-                                        <Text style={[styles.macroPillText, { color: '#2563EB' }]}>
-                                          C: {item.carbs}g
-                                        </Text>
-                                      </View>
-                                    )}
-                                    {!!item.fat && (
-                                      <View style={[styles.macroPill, { backgroundColor: '#FFF7ED' }]}>
-                                        <Text style={[styles.macroPillText, { color: '#EA580C' }]}>
-                                          F: {item.fat}g
-                                        </Text>
-                                      </View>
-                                    )}
-                                  </View>
-                                )}
+                                <View style={styles.foodItemRightMeta}>
+                                  {!!item.amount && (
+                                    <View style={styles.portionPill}>
+                                      <Text style={styles.portionPillText}>{item.amount}</Text>
+                                    </View>
+                                  )}
+                                  {!!item.calories && (
+                                    <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
+                                  )}
+                                </View>
                               </View>
-
-                              <View style={styles.foodItemRightMeta}>
-                                {!!item.amount && (
-                                  <View style={styles.portionPill}>
-                                    <Text style={styles.portionPillText}>{item.amount}</Text>
-                                  </View>
-                                )}
-                                {!!item.calories && (
-                                  <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
-                                )}
-                              </View>
-                            </View>
-                          ))}
+                            );
+                          })}
                         </View>
                       ) : (
                         <View style={styles.emptyItemsBox}>
@@ -603,6 +739,8 @@ export function CustomerTodayNutritionModal({
                 {activeDay.meals.map((meal, mIdx) => {
                   const isCurrent = realtimeMealInfo?.index === mIdx && isViewingToday;
                   const isExpanded = Boolean(expandedMeals[mIdx]);
+                  const mealImg = meal.imageUrl || dynamicImages[meal.name];
+                  const isDefault = !mealImg;
 
                   return (
                     <View
@@ -673,32 +811,72 @@ export function CustomerTodayNutritionModal({
                       {/* Chi tiết danh sách món khi mở rộng */}
                       {isExpanded && (
                         <View style={styles.accordionBody}>
+                          {/* Banner ảnh bữa ăn nhỏ trong accordion nếu có */}
+                          <Pressable
+                            style={styles.accordionMealImgWrap}
+                            onPress={() =>
+                              setPreviewImage({
+                                url: isDefault ? DEFAULT_FOOD_IMAGE : mealImg,
+                                title: meal.name,
+                                isStatic: isDefault,
+                              })
+                            }
+                          >
+                            <Image
+                              source={isDefault ? DEFAULT_FOOD_IMAGE : { uri: mealImg }}
+                              style={styles.accordionMealImg}
+                              resizeMode="cover"
+                            />
+                          </Pressable>
+
                           {Array.isArray(meal.items) && meal.items.length > 0 ? (
                             <View style={styles.expandedItemsCol}>
-                              {meal.items.map((item, iIdx) => (
-                                <View key={iIdx} style={styles.expandedItemCard}>
-                                  <View style={styles.expandedItemInfo}>
-                                    <Text style={styles.expandedItemName}>{item.name}</Text>
-                                    {!!item.prepTip && (
-                                      <View style={styles.prepTipWrap}>
-                                        <Ionicons name="bulb-outline" size={11} color="#0284C7" style={{ marginRight: 4 }} />
-                                        <Text style={styles.prepTipText}>{item.prepTip}</Text>
-                                      </View>
-                                    )}
-                                  </View>
+                              {meal.items.map((item, iIdx) => {
+                                const itemImg = item.imageUrl || dynamicImages[item.name];
+                                const isDefaultItem = !itemImg;
 
-                                  <View style={styles.expandedItemRight}>
-                                    {!!item.amount && (
-                                      <View style={styles.portionPill}>
-                                        <Text style={styles.portionPillText}>{item.amount}</Text>
-                                      </View>
-                                    )}
-                                    {!!item.calories && (
-                                      <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
-                                    )}
+                                return (
+                                  <View key={iIdx} style={styles.expandedItemCard}>
+                                    <Pressable
+                                      style={styles.accordionItemThumbWrap}
+                                      onPress={() =>
+                                        setPreviewImage({
+                                          url: isDefaultItem ? DEFAULT_FOOD_IMAGE : itemImg,
+                                          title: item.name,
+                                          isStatic: isDefaultItem,
+                                        })
+                                      }
+                                    >
+                                      <Image
+                                        source={isDefaultItem ? DEFAULT_FOOD_IMAGE : { uri: itemImg }}
+                                        style={styles.accordionItemThumb}
+                                        resizeMode="cover"
+                                      />
+                                    </Pressable>
+
+                                    <View style={styles.expandedItemInfo}>
+                                      <Text style={styles.expandedItemName}>{item.name}</Text>
+                                      {!!item.prepTip && (
+                                        <View style={styles.prepTipWrap}>
+                                          <Ionicons name="bulb-outline" size={11} color="#0284C7" style={{ marginRight: 4 }} />
+                                          <Text style={styles.prepTipText}>{item.prepTip}</Text>
+                                        </View>
+                                      )}
+                                    </View>
+
+                                    <View style={styles.expandedItemRight}>
+                                      {!!item.amount && (
+                                        <View style={styles.portionPill}>
+                                          <Text style={styles.portionPillText}>{item.amount}</Text>
+                                        </View>
+                                      )}
+                                      {!!item.calories && (
+                                        <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
+                                      )}
+                                    </View>
                                   </View>
-                                </View>
-                              ))}
+                                );
+                              })}
                             </View>
                           ) : (
                             <Text style={styles.emptyFoodText}>Chưa có danh sách món ăn cụ thể.</Text>
@@ -764,23 +942,65 @@ export function CustomerTodayNutritionModal({
               <Text style={styles.closeFooterText}>Đóng</Text>
             </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+
+        {/* ================= MODAL PHÓNG TO ẢNH MÓN ĂN ================= */}
+        {previewImage && (
+          <Modal
+            visible={true}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setPreviewImage(null)}
+          >
+            <View style={styles.previewBackdrop}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setPreviewImage(null)}
+              />
+              <View style={styles.previewCard}>
+                <View style={styles.previewHeader}>
+                  <Text style={styles.previewTitle} numberOfLines={1}>
+                    {previewImage.title}
+                  </Text>
+                  <Pressable
+                    style={styles.previewCloseBtn}
+                    onPress={() => setPreviewImage(null)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Đóng ảnh phóng to"
+                  >
+                    <Feather name="x" size={18} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+                <View style={styles.previewImageContainer}>
+                  <Image
+                    source={previewImage.isStatic ? previewImage.url : { uri: previewImage.url }}
+                    style={styles.previewImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   card: {
     width: '100%',
     maxWidth: 520,
+    height: '88%',
     maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -792,6 +1012,8 @@ const styles = StyleSheet.create({
     elevation: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    display: 'flex',
+    flexDirection: 'column',
   },
 
   /* HEADER TRẮNG CÙNG 3S CHEF */
@@ -901,7 +1123,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  /* THANH ĐIỀU HƯỚNG GỌN GÀNG */
+  /* THANH ĐIỀU HƯỚNG */
   navBar: {
     backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
@@ -1024,17 +1246,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  /* SCROLL CONTENT */
+  /* KHU VỰC CUỘN NỘI DUNG */
   scrollArea: {
-    flexGrow: 1,
+    flex: 1,
+    width: '100%',
   },
   scrollContent: {
     padding: 14,
+    paddingBottom: 24,
     gap: 12,
     backgroundColor: '#FAFAFA',
   },
 
-  /* REALTIME CURRENT MEAL CARD */
+  /* REALTIME CARD */
   realtimeCard: {
     borderRadius: 20,
     borderWidth: 1.5,
@@ -1046,6 +1270,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
+  },
+  mealBannerWrap: {
+    width: '100%',
+    height: 145,
+    backgroundColor: '#E2E8F0',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mealBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mealBannerOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+  },
+  zoomHintBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  zoomHintText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   realtimeCardHeader: {
     backgroundColor: '#F0FDF4',
@@ -1153,32 +1406,43 @@ const styles = StyleSheet.create({
   foodItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    padding: 10,
+    gap: 10,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
+  foodThumbWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  foodThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
   foodItemMain: {
     flex: 1,
-    paddingRight: 10,
   },
   foodItemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   foodIndexBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 5,
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
@@ -1199,8 +1463,7 @@ const styles = StyleSheet.create({
   prepTipWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    marginLeft: 28,
+    marginTop: 3,
   },
   prepTipText: {
     fontSize: 11,
@@ -1211,11 +1474,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 6,
-    marginLeft: 28,
+    marginTop: 5,
   },
   macroPill: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
@@ -1464,23 +1726,45 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
     backgroundColor: '#F8FAFC',
   },
+  accordionMealImgWrap: {
+    width: '100%',
+    height: 100,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#E2E8F0',
+    marginBottom: 8,
+  },
+  accordionMealImg: {
+    width: '100%',
+    height: '100%',
+  },
   expandedItemsCol: {
     gap: 6,
   },
   expandedItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    padding: 8,
+    gap: 8,
+  },
+  accordionItemThumbWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+  },
+  accordionItemThumb: {
+    width: '100%',
+    height: '100%',
   },
   expandedItemInfo: {
     flex: 1,
-    paddingRight: 8,
+    paddingRight: 6,
   },
   expandedItemName: {
     fontSize: 13,
@@ -1592,5 +1876,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+
+  /* PREVIEW ẢNH PHÓNG TO */
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  previewCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+    paddingRight: 10,
+  },
+  previewCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewImageContainer: {
+    width: '100%',
+    height: 300,
+    backgroundColor: '#0F172A',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
   },
 });
