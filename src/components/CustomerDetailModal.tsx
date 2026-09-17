@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -12,7 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,6 +53,8 @@ import type {
 
 const MASCOT_COACH = require('../../assets/public/3s-coach.png');
 const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
+const ICON_GMAIL = require('../../assets/public/gmail-icon.png');
+const ICON_ZALO = require('../../assets/public/zalo-icon.png');
 
 type DetailTabKey =
   | 'overview'
@@ -77,6 +81,42 @@ interface CustomerDetailModalProps {
   onEdit?: () => void;
   onManagePackages?: () => void;
 }
+
+const handleCall = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
+  });
+};
+
+const handleSms = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
+  });
+};
+
+const handleZalo = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
+  });
+};
+
+const handleEmail = (email?: string) => {
+  if (!email) return;
+  const cleanEmail = email.trim();
+  if (!cleanEmail) return;
+  Linking.openURL(`mailto:${cleanEmail}`).catch(() => {
+    Alert.alert('Không thể mở ứng dụng Email', `Thiết bị không thể mở ứng dụng soạn email cho: ${cleanEmail}`);
+  });
+};
 
 const formatDateDisplay = (isoStr?: string | null): string => {
   if (!isoStr) return 'Chưa cập nhật';
@@ -724,6 +764,16 @@ export function CustomerDetailModal({
       <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
         {/* TOP HEADER */}
         <View style={styles.topHeader}>
+          <Pressable
+            onPress={onClose}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+          >
+            <Feather name="arrow-left" size={20} color="#0F172A" />
+          </Pressable>
+
           <View style={styles.headerLeft}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
@@ -758,21 +808,13 @@ export function CustomerDetailModal({
                 }}
                 hitSlop={8}
                 style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
+                accessibilityRole="button"
                 accessibilityLabel="Sửa thông tin khách hàng"
               >
                 <Feather name="edit-2" size={13} color="#475569" />
                 <Text style={styles.editBtnText}>Sửa</Text>
               </Pressable>
             )}
-
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              style={({ pressed }) => [styles.closeBtn, pressed && styles.btnPressed]}
-              accessibilityLabel="Đóng chi tiết hồ sơ"
-            >
-              <Feather name="x" size={20} color="#0F172A" />
-            </Pressable>
           </View>
         </View>
 
@@ -888,7 +930,7 @@ export function CustomerDetailModal({
                 {/* Thẻ Mục tiêu tập luyện */}
                 <View style={styles.contentCard}>
                   <View style={styles.cardHeaderRow}>
-                    <Feather name="target" size={16} color="#0284C7" />
+                    <MaterialCommunityIcons name="bullseye-arrow" size={18} color="#EF4444" />
                     <Text style={styles.cardTitle}>Mục tiêu tập luyện</Text>
                   </View>
                   <Text style={styles.cardBodyText}>
@@ -954,13 +996,75 @@ export function CustomerDetailModal({
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Số điện thoại:</Text>
-                    <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                    <View style={styles.infoPhoneWrap}>
+                      <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                      {customer.phone ? (
+                        <View style={styles.overviewPhoneActions}>
+                          <Pressable
+                            style={styles.overviewCallBtn}
+                            onPress={() => handleCall(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gọi điện"
+                          >
+                            <Feather name="phone" size={12} color="#0284C7" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewSmsBtn}
+                            onPress={() => handleSms(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gửi SMS"
+                          >
+                            <Feather name="message-square" size={12} color="#16A34A" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewZaloBtn}
+                            onPress={() => handleZalo(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Mở Zalo"
+                          >
+                            <Image source={ICON_ZALO} style={styles.overviewZaloIcon} resizeMode="contain" />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Email:</Text>
-                    <Text style={styles.infoVal}>
-                      {customer.email || profile?.email || 'Chưa cập nhật'}
-                    </Text>
+                    {(() => {
+                      const emailVal = (customer.email || profile?.email || '').trim();
+                      const hasEmail = Boolean(emailVal && emailVal.includes('@'));
+                      return (
+                        <View style={styles.infoEmailWrap}>
+                          <Text
+                            style={[
+                              styles.infoVal,
+                              !hasEmail && styles.infoValMuted,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {emailVal || 'Chưa cập nhật'}
+                          </Text>
+                          {hasEmail ? (
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.emailSendBtn,
+                                pressed && styles.emailSendBtnPressed,
+                              ]}
+                              onPress={() => handleEmail(emailVal)}
+                              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Gửi email cho ${emailVal}`}
+                            >
+                              <Image source={ICON_GMAIL} style={styles.gmailBtnIcon} resizeMode="contain" />
+                              <Text style={styles.emailSendBtnText}>Gửi Gmail</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      );
+                    })()}
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Ngày sinh:</Text>
@@ -2351,6 +2455,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
   metaText: {
     fontSize: 12,
     color: '#64748B',
@@ -2577,6 +2692,88 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     flex: 1,
+  },
+  infoPhoneWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overviewPhoneActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  overviewCallBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewSmsBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewZaloBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    overflow: 'hidden',
+  },
+  overviewZaloIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+  },
+  infoEmailWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  infoValMuted: {
+    color: '#94A3B8',
+  },
+  gmailBtnIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 5,
+  },
+  emailSendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    minHeight: 28,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emailSendBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+  emailSendBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
   },
 
   /* INBODY TAB */
