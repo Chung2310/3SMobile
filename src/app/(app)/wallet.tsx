@@ -4,6 +4,7 @@ import {
   Image,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppAlertModal } from '@/components/AppAlertModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
+import { PayosCheckoutModal, type MobilePaymentOrder } from '@/components/credits/PayosCheckoutModal';
 import { api } from '@/services/api/client';
 
 const BANNER_WALLET = require('../../../assets/public/banner-wallet.png');
@@ -92,7 +94,7 @@ export default function WalletScreen() {
   // Lịch sử giao dịch từ BE (không dùng mockdata)
   const [ledgerItems, setLedgerItems] = useState<CreditLedgerItem[] | null>(null);
   const [loadingLedger, setLoadingLedger] = useState<boolean>(true);
-  const [filterType, setFilterType] = useState<'ALL' | 'SETTLE' | 'RESERVE' | 'TOPUP'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'TOPUP' | 'USAGE'>('ALL');
 
   // Trạng thái refresh
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -101,8 +103,11 @@ export default function WalletScreen() {
   const [selectedAmount, setSelectedAmount] = useState<number>(100000);
   const [customAmountText, setCustomAmountText] = useState<string>('100000');
 
-  // Popup thông báo tính năng QR thanh toán
-  const [showUnderDevModal, setShowUnderDevModal] = useState<boolean>(false);
+  // Quản lý thanh toán PayOS thực tế
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState<boolean>(false);
+  const [activeOrder, setActiveOrder] = useState<MobilePaymentOrder | null>(null);
+  const [creatingPayment, setCreatingPayment] = useState<boolean>(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Lọc theo ngày tháng trong lịch sử giao dịch
   const [dateFilter, setDateFilter] = useState<DateFilterType>('ALL');
@@ -221,8 +226,8 @@ export default function WalletScreen() {
     }
   };
 
-  // Xử lý thay đổi bộ lọc lịch sử
-  const handleFilterChange = (newType: 'ALL' | 'SETTLE' | 'RESERVE' | 'TOPUP') => {
+  // Xử lý thay đổi bộ lọc lịch sử (Chỉ có Nạp credit và Sử dụng AI)
+  const handleFilterChange = (newType: 'ALL' | 'TOPUP' | 'USAGE') => {
     setFilterType(newType);
     fetchLedgerData(newType);
   };
@@ -337,6 +342,38 @@ export default function WalletScreen() {
     setSelectedAmount(num);
   };
 
+  // Khởi tạo đơn nạp PayOS thực tế
+  const handleCreatePayment = async () => {
+    if (!selectedAmount || selectedAmount < 10000) {
+      setPaymentError('Số tiền nạp tối thiểu là 10.000đ');
+      return;
+    }
+    setCreatingPayment(true);
+    setPaymentError(null);
+    try {
+      const res = await api.post<any>('/api/credits/topups', {
+        gateway: 'PAYOS',
+        customAmountVnd: selectedAmount,
+      });
+      const order = res?.data || res;
+      if (order?.orderCode) {
+        setActiveOrder(order);
+        setCheckoutModalOpen(true);
+      } else {
+        throw new Error(order?.message || 'Không tạo được đơn thanh toán');
+      }
+    } catch (err: any) {
+      setPaymentError(err?.message || 'Không thể tạo đơn thanh toán. Vui lòng thử lại.');
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    fetchWalletData();
+    fetchLedgerData(filterType);
+  };
+
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* Top Header */}
@@ -351,86 +388,37 @@ export default function WalletScreen() {
           <Feather name="arrow-left" size={20} color="#0F172A" />
         </Pressable>
         <View style={styles.titleWrap}>
-          <Text style={styles.pageTitle}>Ví Credit</Text>
-          <Text style={styles.pageSubtitle}>Quản lý số dư & tác vụ AI</Text>
+          <Text style={styles.pageTitle}>Ví Credit AI</Text>
+          <Text style={styles.pageSubtitle}>Nạp credit sử dụng các tính năng AI</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <View style={styles.topBalanceBadge}>
+          <Ionicons name="sparkles" size={12} color="#0284C7" style={{ marginRight: 4 }} />
+          <Text style={styles.topBalanceText}>
+            {(wallet?.availableCredits ?? 0).toLocaleString()} cr
+          </Text>
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleManualRefresh}
+            colors={['#0284C7']}
+            tintColor="#0284C7"
+          />
+        }
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: Math.max(insets.bottom, 24) + 40 },
         ]}
       >
-        {/* ================= 1. CARD SỐ DƯ VÍ TỪ BE ================= */}
-        <View style={styles.balanceCard}>
-          {/* Hàng trên: Tiêu đề ví & Nút làm mới */}
-          <View style={styles.balanceHeader}>
-            <View style={styles.balanceHeaderLeft}>
-              <Ionicons name="sparkles" size={15} color="#BAE6FD" style={{ marginRight: 6 }} />
-              <Text style={styles.balanceCardTitle}>VÍ AI 3S GYM</Text>
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.refreshBtn, pressed && { opacity: 0.75 }]}
-              onPress={handleManualRefresh}
-              hitSlop={8}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 4 }} />
-              ) : (
-                <Feather name="refresh-cw" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
-              )}
-              <Text style={styles.refreshBtnText}>Làm mới</Text>
-            </Pressable>
-          </View>
-
-          {/* Hàng giữa: Credit khả dụng & Đang tạm giữ */}
-          {loadingWallet ? (
-            <View style={styles.loadingWalletWrap}>
-              <ActivityIndicator size="small" color="#FFFFFF" />
-              <Text style={styles.loadingWalletText}>Đang đồng bộ số dư từ máy chủ...</Text>
-            </View>
-          ) : walletError ? (
-            <View style={styles.errorWalletWrap}>
-              <Text style={styles.errorWalletText}>{walletError}</Text>
-              <Pressable style={styles.retryBtn} onPress={fetchWalletData}>
-                <Text style={styles.retryBtnText}>Thử lại</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.balanceBody}>
-              <View style={styles.availableCol}>
-                <Text style={styles.availableLabel}>CREDIT KHẢ DỤNG</Text>
-                <View style={styles.availableValueRow}>
-                  <Text style={styles.availableNumber}>
-                    {(wallet?.availableCredits ?? 0).toLocaleString()}
-                  </Text>
-                  <Text style={styles.availableUnit}>credit</Text>
-                </View>
-              </View>
-
-              <View style={styles.holdBadge}>
-                <Text style={styles.holdLabel}>ĐANG TẠM GIỮ</Text>
-                <View style={styles.holdValueRow}>
-                  <Text style={styles.holdNumber}>
-                    {(wallet?.reservedCredits ?? 0).toLocaleString()}
-                  </Text>
-                  <Text style={styles.holdUnit}>credit</Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* ================= 2. CARD NẠP CREDIT ================= */}
+        {/* ================= CARD NẠP CREDIT (PAYOS) ================= */}
         <View style={styles.topupCard}>
           <Text style={styles.sectionHeading}>Nạp credit</Text>
           <Text style={styles.sectionSubtitle}>
-            Tỉ giá: 1.000đ = 10 credit (100đ / credit)
+            Tỉ giá: 1.000đ = 10 credit
           </Text>
 
           {/* Nhóm chọn số tiền */}
@@ -462,30 +450,30 @@ export default function WalletScreen() {
             </View>
 
             {/* Ô nhập số tiền tùy chọn */}
-            <Text style={[styles.subHeading, { marginTop: 12 }]}>Số tiền tùy chọn (VND):</Text>
+            <Text style={[styles.subHeading, { marginTop: 12 }]}>Số tiền tùy chọn:</Text>
             <View style={styles.inputWrap}>
               <TextInput
                 style={styles.amountInput}
                 keyboardType="numeric"
                 value={customAmountText}
                 onChangeText={handleCustomAmountChange}
-                placeholder="Ví dụ: 100000"
+                placeholder="Nhập số tiền khác"
                 placeholderTextColor="#94A3B8"
               />
               <Text style={styles.currencySuffix}>đ</Text>
             </View>
           </View>
 
-          {/* Phương thức thanh toán bằng mã QR */}
+          {/* Phương thức thanh toán */}
           <View style={styles.paymentMethodBox}>
             <View style={styles.methodHeaderRow}>
               <View style={styles.methodHeaderLeft}>
                 <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
-                <Text style={styles.methodTitle}>Thanh toán bằng mã QR</Text>
+                <Text style={styles.methodTitle}>Thanh toán</Text>
               </View>
             </View>
             <Text style={styles.bankSupportText}>
-              Hỗ trợ: VCB, MB Bank, Techcombank, ACB, VPBank, MoMo, ZaloPay và 40+ ngân hàng...
+              Hỗ trợ quét mã bằng tất cả ngân hàng và ví điện tử
             </Text>
             <Image
               source={BANNER_WALLET}
@@ -494,24 +482,35 @@ export default function WalletScreen() {
             />
           </View>
 
-          {/* Tóm tắt thanh toán & Nút tạo QR */}
+          {/* Tóm tắt thanh toán & Nút nạp */}
           <View style={styles.checkoutBar}>
             <View style={styles.checkoutSummary}>
               <Text style={styles.checkoutLabel}>SỐ TIỀN THANH TOÁN:</Text>
               <Text style={styles.checkoutAmount}>{selectedAmount.toLocaleString()} đ</Text>
               <Text style={styles.checkoutCredits}>
-                + {calculatedCredits.toLocaleString()} credit nhận được
+                Nhận ngay: +{calculatedCredits.toLocaleString()} credit
               </Text>
             </View>
 
             <Pressable
-              style={({ pressed }) => [styles.createQrBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => setShowUnderDevModal(true)}
+              style={({ pressed }) => [
+                styles.createQrBtn,
+                pressed && { opacity: 0.85 },
+                creatingPayment && { opacity: 0.7 },
+              ]}
+              onPress={handleCreatePayment}
+              disabled={creatingPayment}
               accessibilityRole="button"
-              accessibilityLabel="Tạo mã QR thanh toán"
+              accessibilityLabel="Thanh toán"
             >
-              <Ionicons name="qr-code" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.createQrBtnText}>Tạo mã QR</Text>
+              {creatingPayment ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+              ) : (
+                <Ionicons name="qr-code" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              )}
+              <Text style={styles.createQrBtnText}>
+                {creatingPayment ? 'Đang tạo...' : 'Thanh toán'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -542,7 +541,7 @@ export default function WalletScreen() {
               </Pressable>
             </View>
 
-            {/* Filter pills */}
+            {/* Filter pills: Chỉ gồm Tất cả, Nạp credit, Sử dụng AI */}
             <View style={styles.filterRow}>
               <Pressable
                 style={[styles.filterPill, filterType === 'ALL' && styles.filterPillActive]}
@@ -553,27 +552,19 @@ export default function WalletScreen() {
                 </Text>
               </Pressable>
               <Pressable
-                style={[styles.filterPill, filterType === 'SETTLE' && styles.filterPillActive]}
-                onPress={() => handleFilterChange('SETTLE')}
-              >
-                <Text style={[styles.filterText, filterType === 'SETTLE' && styles.filterTextActive]}>
-                  Quyết toán
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.filterPill, filterType === 'RESERVE' && styles.filterPillActive]}
-                onPress={() => handleFilterChange('RESERVE')}
-              >
-                <Text style={[styles.filterText, filterType === 'RESERVE' && styles.filterTextActive]}>
-                  Tạm giữ
-                </Text>
-              </Pressable>
-              <Pressable
                 style={[styles.filterPill, filterType === 'TOPUP' && styles.filterPillActive]}
                 onPress={() => handleFilterChange('TOPUP')}
               >
                 <Text style={[styles.filterText, filterType === 'TOPUP' && styles.filterTextActive]}>
-                  Nạp tiền
+                  Nạp credit
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.filterPill, filterType === 'USAGE' && styles.filterPillActive]}
+                onPress={() => handleFilterChange('USAGE')}
+              >
+                <Text style={[styles.filterText, filterType === 'USAGE' && styles.filterTextActive]}>
+                  Sử dụng AI
                 </Text>
               </Pressable>
             </View>
@@ -623,12 +614,13 @@ export default function WalletScreen() {
                 const deltaNum = tx.availableDelta !== 0 ? tx.availableDelta : tx.reservedDelta;
                 const deltaSign = deltaNum > 0 ? `+${deltaNum}` : `${deltaNum}`;
 
-                let typeLabel = 'Giao dịch AI';
-                if (tx.type === 'SETTLE') typeLabel = 'Quyết toán AI';
-                else if (tx.type === 'RESERVE') typeLabel = 'Tạm giữ AI';
-                else if (tx.type === 'TOPUP') typeLabel = 'Nạp credit';
-                else if (tx.type === 'RELEASE') typeLabel = 'Hoàn trả AI';
+                let typeLabel = 'Sử dụng AI';
+                if (tx.type === 'TOPUP') typeLabel = 'Nạp credit';
+                else if (tx.type === 'SETTLE' || tx.type === 'RESERVE') typeLabel = 'Sử dụng AI';
+                else if (tx.type === 'RELEASE') typeLabel = 'Hoàn credit';
                 else if (tx.type === 'ADJUSTMENT') typeLabel = 'Điều chỉnh';
+
+                const isUsage = tx.type === 'SETTLE' || tx.type === 'RESERVE';
 
                 return (
                   <View key={tx._id || tx.id || `ledger-${idx}`} style={styles.txItem}>
@@ -637,16 +629,14 @@ export default function WalletScreen() {
                       <View
                         style={[
                           styles.txTypeBadge,
-                          tx.type === 'SETTLE' && styles.txTypeSettle,
-                          tx.type === 'RESERVE' && styles.txTypeReserve,
+                          isUsage && styles.txTypeSettle,
                           tx.type === 'TOPUP' && styles.txTypeTopup,
                         ]}
                       >
                         <Text
                           style={[
                             styles.txTypeText,
-                            tx.type === 'SETTLE' && styles.txTypeTextSettle,
-                            tx.type === 'RESERVE' && styles.txTypeTextReserve,
+                            isUsage && styles.txTypeTextSettle,
                             tx.type === 'TOPUP' && styles.txTypeTextTopup,
                           ]}
                         >
@@ -689,14 +679,22 @@ export default function WalletScreen() {
         </View>
       </ScrollView>
 
-      {/* Popup thông báo tính năng đang cập nhật */}
+      {/* Modal thanh toán PayOS thực tế */}
+      <PayosCheckoutModal
+        visible={checkoutModalOpen}
+        order={activeOrder}
+        onClose={() => setCheckoutModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Popup thông báo lỗi nạp */}
       <AppAlertModal
-        visible={showUnderDevModal}
-        type="info"
-        title="Tính năng đang được cập nhật"
-        message="Tính năng tạo mã QR thanh toán đang được cập nhật. Vui lòng liên hệ quản trị viên để biết thêm chi tiết."
-        confirmLabel="Đã hiểu"
-        onConfirm={() => setShowUnderDevModal(false)}
+        visible={!!paymentError}
+        type="error"
+        title="Lỗi tạo đơn nạp"
+        message={paymentError || ''}
+        confirmLabel="Đóng"
+        onConfirm={() => setPaymentError(null)}
       />
 
       {/* Modal lọc theo ngày tháng */}
@@ -902,6 +900,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     marginTop: 1,
+  },
+  topBalanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  topBalanceText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0284C7',
   },
   scrollContent: {
     padding: 16,
