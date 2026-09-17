@@ -61,6 +61,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const [formError, setFormError] = useState<string | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeletePkg, setPendingDeletePkg] = useState<PtPackage | null>(null);
 
   const customerId = customer?.id;
 
@@ -85,6 +86,7 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     setStartDate(today);
     setEndDate(calculateEndDate(today, 24));
     setFormError(null);
+    setPendingDeletePkg(null);
     onClose();
   };
 
@@ -161,12 +163,14 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     }
   };
 
-  const handleDeletePackage = async (pkgId: string) => {
-    if (!customerId) return;
+  const handleDeletePackage = async () => {
+    if (!customerId || !pendingDeletePkg) return;
+    const pkgId = pendingDeletePkg._id || (pendingDeletePkg as any).id;
     try {
       setDeletingId(pkgId);
       await deleteCustomerPackage(customerId, pkgId);
       setPackages((prev) => prev.filter((p) => (p._id || (p as any).id) !== pkgId));
+      setPendingDeletePkg(null);
     } catch {
       // Ignore
     } finally {
@@ -385,7 +389,6 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
               packages.map((pkg) => {
                 const pkgId = pkg._id || (pkg as any).id;
                 const badge = getStatusBadge(pkg.status);
-                const isDeleting = deletingId === pkgId;
                 const remaining = pkg.remainingSessions ?? pkg.totalSessions;
 
                 return (
@@ -423,14 +426,10 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                       <Pressable
                         style={styles.deletePkgBtn}
                         hitSlop={8}
-                        onPress={() => handleDeletePackage(pkgId)}
-                        disabled={isDeleting}
+                        onPress={() => setPendingDeletePkg(pkg)}
+                        accessibilityLabel={`Xóa gói tập ${pkg.name}`}
                       >
-                        {isDeleting ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
-                        ) : (
-                          <Feather name="trash-2" size={15} color="#EF4444" />
-                        )}
+                        <Feather name="trash-2" size={15} color="#EF4444" />
                       </Pressable>
                     </View>
                   </View>
@@ -452,6 +451,58 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
             }}
             onClose={() => setShowStartDatePicker(false)}
           />
+
+          {/* Popup xác nhận xóa gói tập PT */}
+          {pendingDeletePkg && (
+            <View style={styles.confirmOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => {
+                  if (!deletingId) setPendingDeletePkg(null);
+                }}
+                accessibilityLabel="Hủy xóa"
+              />
+              <View style={styles.confirmCard}>
+                <View style={styles.confirmIconWrap}>
+                  <Feather name="alert-triangle" size={26} color="#EF4444" />
+                </View>
+
+                <Text style={styles.confirmTitle}>Xác nhận xóa gói tập</Text>
+                <Text style={styles.confirmDesc}>
+                  Bạn có chắc chắn muốn xóa gói{' '}
+                  <Text style={styles.confirmHighlightName}>&quot;{pendingDeletePkg.name}&quot;</Text>{' '}
+                  của học viên không? Thao tác này không thể hoàn tác.
+                </Text>
+
+                <View style={styles.confirmActionsRow}>
+                  <Pressable
+                    style={styles.confirmCancelBtn}
+                    onPress={() => setPendingDeletePkg(null)}
+                    disabled={!!deletingId}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.confirmCancelText}>Hủy</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.confirmDeleteBtn, !!deletingId && { opacity: 0.7 }]}
+                    onPress={handleDeletePackage}
+                    disabled={!!deletingId}
+                    hitSlop={8}
+                  >
+                    {deletingId ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Feather name="trash-2" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.confirmDeleteText}>Xóa gói tập</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -754,5 +805,90 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    zIndex: 9999,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  confirmIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  confirmTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  confirmHighlightName: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  confirmActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  confirmDeleteBtn: {
+    flex: 1.2,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  confirmDeleteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
