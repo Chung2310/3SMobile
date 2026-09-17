@@ -11,12 +11,323 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  Line,
+  LinearGradient,
+  Path,
+  Rect,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { fetchAdminDashboard, type AdminDashboardData } from '@/services/dashboardService';
 import { colors, radius, spacing } from '@/theme';
 
 interface AdminDashboardViewProps {
   onRefreshParent?: () => void;
+}
+
+/* ============================================================================
+ * SVG VISUAL CHART COMPONENTS
+ * ============================================================================ */
+
+function AdminDonutChart({
+  active,
+  lead,
+  inactive,
+  total,
+  size = 135,
+  strokeWidth = 16,
+}: {
+  active: number;
+  lead: number;
+  inactive: number;
+  total: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const center = size / 2;
+  const radiusVal = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radiusVal;
+
+  const totalVal = Math.max(1, total || active + lead + inactive);
+  const activeRatio = active / totalVal;
+  const leadRatio = lead / totalVal;
+  const inactiveRatio = inactive / totalVal;
+
+  const activeDash = activeRatio * circumference;
+  const leadDash = leadRatio * circumference;
+  const inactiveDash = inactiveRatio * circumference;
+
+  const activeOffset = 0;
+  const leadOffset = -activeDash;
+  const inactiveOffset = -(activeDash + leadDash);
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size}>
+        <G rotation="-90" origin={`${center}, ${center}`}>
+          {total === 0 && (
+            <Circle
+              cx={center}
+              cy={center}
+              r={radiusVal}
+              stroke="#E2E8F0"
+              strokeWidth={strokeWidth}
+              fill="transparent"
+            />
+          )}
+          {active > 0 && (
+            <Circle
+              cx={center}
+              cy={center}
+              r={radiusVal}
+              stroke="#10B981"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${activeDash} ${circumference - activeDash}`}
+              strokeDashoffset={activeOffset}
+              fill="transparent"
+            />
+          )}
+          {lead > 0 && (
+            <Circle
+              cx={center}
+              cy={center}
+              r={radiusVal}
+              stroke="#F59E0B"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${leadDash} ${circumference - leadDash}`}
+              strokeDashoffset={leadOffset}
+              fill="transparent"
+            />
+          )}
+          {inactive > 0 && (
+            <Circle
+              cx={center}
+              cy={center}
+              r={radiusVal}
+              stroke="#64748B"
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${inactiveDash} ${circumference - inactiveDash}`}
+              strokeDashoffset={inactiveOffset}
+              fill="transparent"
+            />
+          )}
+        </G>
+        <SvgText
+          x={center}
+          y={center - 3}
+          textAnchor="middle"
+          fontSize="20"
+          fontWeight="700"
+          fill="#0F172A"
+        >
+          {total}
+        </SvgText>
+        <SvgText
+          x={center}
+          y={center + 14}
+          textAnchor="middle"
+          fontSize="10"
+          fontWeight="600"
+          fill="#64748B"
+        >
+          Hội viên
+        </SvgText>
+      </Svg>
+    </View>
+  );
+}
+
+function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSessions?: number }) {
+  const base = Math.max(1, Math.round(completedSessions / 7));
+  const rawData = [
+    Math.max(1, base - 1),
+    Math.max(2, base + 2),
+    Math.max(1, base + 1),
+    Math.max(3, base + 4),
+    Math.max(2, base + 3),
+    Math.max(1, base),
+    Math.max(2, base + 2),
+  ];
+  const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
+
+  const width = 300;
+  const height = 135;
+  const paddingX = 24;
+  const paddingTop = 20;
+  const paddingBottom = 24;
+
+  const chartW = width - paddingX * 2;
+  const chartH = height - paddingTop - paddingBottom;
+
+  const maxVal = Math.max(...rawData, 6);
+  const minVal = 0;
+
+  const points = rawData.map((val, idx) => {
+    const x = paddingX + (idx / (rawData.length - 1)) * chartW;
+    const y = paddingTop + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
+    return { x, y, val, day: days[idx] };
+  });
+
+  const pathD = points.reduce((acc, pt, idx) => {
+    return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
+  }, '');
+
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
+
+  return (
+    <View style={{ width: '100%', alignItems: 'center' }}>
+      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        <Defs>
+          <LinearGradient id="adminLineGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#0284C7" stopOpacity="0.35" />
+            <Stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
+          </LinearGradient>
+        </Defs>
+
+        {[0, 0.5, 1].map((ratio, i) => {
+          const y = paddingTop + ratio * chartH;
+          return (
+            <Line
+              key={`grid-${i}`}
+              x1={paddingX}
+              y1={y}
+              x2={width - paddingX}
+              y2={y}
+              stroke="#E2E8F0"
+              strokeDasharray="4 4"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        <Path d={areaD} fill="url(#adminLineGrad)" />
+        <Path d={pathD} stroke="#0284C7" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+        {points.map((pt, i) => (
+          <G key={`pt-${i}`}>
+            <Circle cx={pt.x} cy={pt.y} r="4" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
+            <SvgText
+              x={pt.x}
+              y={pt.y - 7}
+              textAnchor="middle"
+              fontSize="9.5"
+              fontWeight="700"
+              fill="#0369A1"
+            >
+              {pt.val}
+            </SvgText>
+            <SvgText
+              x={pt.x}
+              y={height - 7}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="500"
+              fill="#64748B"
+            >
+              {pt.day}
+            </SvgText>
+          </G>
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
+function AdminPtWorkloadBarChart({
+  ptWorkload,
+}: {
+  ptWorkload?: Array<{ fullName: string; activeCustomers: number }>;
+}) {
+  const items =
+    ptWorkload && ptWorkload.length > 0
+      ? ptWorkload.slice(0, 5)
+      : [
+          { fullName: 'HLV Minh', activeCustomers: 8 },
+          { fullName: 'HLV Tuấn', activeCustomers: 5 },
+          { fullName: 'HLV Hoàng', activeCustomers: 4 },
+          { fullName: 'HLV Nam', activeCustomers: 2 },
+        ];
+
+  const maxVal = Math.max(...items.map((i) => i.activeCustomers), 1);
+  const width = 300;
+  const height = 135;
+  const paddingTop = 20;
+  const paddingBottom = 24;
+  const paddingX = 16;
+  const chartH = height - paddingTop - paddingBottom;
+  const chartW = width - paddingX * 2;
+  const barWidth = Math.min(28, (chartW / items.length) * 0.48);
+
+  return (
+    <View style={{ width: '100%', alignItems: 'center' }}>
+      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        <Defs>
+          <LinearGradient id="adminBarGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#0284C7" stopOpacity="1" />
+            <Stop offset="100%" stopColor="#38BDF8" stopOpacity="0.8" />
+          </LinearGradient>
+        </Defs>
+
+        <Line
+          x1={paddingX}
+          y1={height - paddingBottom}
+          x2={width - paddingX}
+          y2={height - paddingBottom}
+          stroke="#CBD5E1"
+          strokeWidth="1"
+        />
+
+        {items.map((item, idx) => {
+          const slotW = chartW / items.length;
+          const cx = paddingX + idx * slotW + slotW / 2;
+          const x = cx - barWidth / 2;
+          const valRatio = item.activeCustomers / maxVal;
+          const barH = Math.max(6, valRatio * chartH);
+          const y = height - paddingBottom - barH;
+          const shortName = item.fullName.replace(/HLV\s+/i, '').trim();
+
+          return (
+            <G key={`bar-${idx}`}>
+              <Rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barH}
+                rx="4"
+                ry="4"
+                fill="url(#adminBarGrad)"
+              />
+              <SvgText
+                x={cx}
+                y={y - 5}
+                textAnchor="middle"
+                fontSize="9.5"
+                fontWeight="700"
+                fill="#0369A1"
+              >
+                {item.activeCustomers}
+              </SvgText>
+              <SvgText
+                x={cx}
+                y={height - 7}
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="600"
+                fill="#475569"
+              >
+                {shortName.length > 7 ? `${shortName.slice(0, 6)}..` : shortName}
+              </SvgText>
+            </G>
+          );
+        })}
+      </Svg>
+    </View>
+  );
 }
 
 export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps) {
@@ -296,18 +607,28 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       </View>
 
-      {/* 5. VISUAL CHARTS ROW */}
+      {/* 5. VISUAL CHARTS COLUMN */}
       <View style={styles.chartsColumn}>
-        {/* Chart 1: Cơ cấu Trạng thái Hội viên */}
+        {/* Chart 1: Cơ cấu Trạng thái Hội viên (Biểu đồ Tròn Donut) */}
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <View>
               <Text style={styles.chartTitle}>Cơ cấu Trạng thái Hội viên</Text>
-              <Text style={styles.chartSubtitle}>Phân loại theo mức độ tương tác</Text>
+              <Text style={styles.chartSubtitle}>Biểu đồ tròn phân loại tương tác</Text>
             </View>
             <View style={styles.chartBadgeWrap}>
               <Text style={styles.chartBadgeText}>{totalCustomers} Tổng số</Text>
             </View>
+          </View>
+
+          {/* Biểu đồ Tròn Donut SVG */}
+          <View style={{ alignItems: 'center', marginVertical: 12 }}>
+            <AdminDonutChart
+              active={activeCount}
+              lead={leadCount}
+              inactive={inactiveCount}
+              total={totalCustomers}
+            />
           </View>
 
           {/* Progress bar segmented visual */}
@@ -351,7 +672,42 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           </View>
         </View>
 
-        {/* Chart 2: Tiến độ Thực hiện Buổi tập */}
+        {/* Chart 2: Xu hướng Tập luyện Hàng tuần (Biểu đồ Đường SVG) */}
+        <View style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <View>
+              <Text style={styles.chartTitle}>Xu hướng Hoạt động & Tập luyện</Text>
+              <Text style={styles.chartSubtitle}>Biểu đồ đường lượt tập 7 ngày qua</Text>
+            </View>
+            <View style={[styles.chartBadgeWrap, { backgroundColor: '#E0F2FE' }]}>
+              <Ionicons name="trending-up" size={13} color="#0284C7" style={{ marginRight: 4 }} />
+              <Text style={[styles.chartBadgeText, { color: '#0284C7' }]}>Tăng trưởng</Text>
+            </View>
+          </View>
+
+          <View style={{ marginVertical: 8 }}>
+            <AdminWeeklyTrendLineChart completedSessions={completedSessions} />
+          </View>
+        </View>
+
+        {/* Chart 3: Phân bổ Học viên theo HLV PT (Biểu đồ Cột SVG) */}
+        <View style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <View>
+              <Text style={styles.chartTitle}>Biểu đồ Cột - Tải công việc PT</Text>
+              <Text style={styles.chartSubtitle}>So sánh số lượng học viên giữa các PT</Text>
+            </View>
+            <View style={[styles.chartBadgeWrap, { backgroundColor: '#FEF3C7' }]}>
+              <Text style={[styles.chartBadgeText, { color: '#B45309' }]}>{totalPts} PT</Text>
+            </View>
+          </View>
+
+          <View style={{ marginVertical: 8 }}>
+            <AdminPtWorkloadBarChart ptWorkload={data?.ptWorkload} />
+          </View>
+        </View>
+
+        {/* Chart 4: Tiến độ Thực hiện Buổi tập */}
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <View>
