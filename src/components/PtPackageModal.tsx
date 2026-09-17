@@ -475,6 +475,18 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                 accessibilityLabel="Hủy xóa"
               />
               <View style={styles.confirmCard}>
+                <Pressable
+                  style={styles.confirmCloseBtn}
+                  onPress={() => {
+                    if (!deletingId) setPendingDeletePkg(null);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Đóng"
+                >
+                  <Feather name="x" size={18} color="#64748B" />
+                </Pressable>
+
                 <View style={styles.confirmIconWrap}>
                   <Feather name="alert-triangle" size={26} color="#EF4444" />
                 </View>
@@ -827,6 +839,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   confirmCard: {
+    position: 'relative',
     width: '100%',
     maxWidth: 340,
     backgroundColor: '#FFFFFF',
@@ -838,6 +851,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 12,
+  },
+  confirmCloseBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   confirmIconWrap: {
     width: 52,

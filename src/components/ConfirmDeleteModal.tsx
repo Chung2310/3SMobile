@@ -35,8 +35,19 @@ export function ConfirmDeleteModal({
 }: ConfirmDeleteModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
+      <Pressable style={styles.backdrop} onPress={onCancel} disabled={loading}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={styles.closeBtn}
+            onPress={onCancel}
+            disabled={loading}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng"
+          >
+            <ContextIcon name="x" size={18} color={colors.textMuted} />
+          </Pressable>
+
           <View style={styles.iconCircle}>
             <ContextIcon name="alert-triangle" size={28} color="#EF4444" />
           </View>
@@ -75,8 +86,8 @@ export function ConfirmDeleteModal({
               )}
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -90,6 +101,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
+    position: 'relative',
     width: '100%',
     maxWidth: 360,
     backgroundColor: colors.card,
@@ -101,6 +113,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.cardSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   iconCircle: {
     width: 60,

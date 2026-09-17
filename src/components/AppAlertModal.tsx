@@ -39,12 +39,33 @@ export function AppAlertModal({
   };
 
   const iconConfig = getIconConfig();
-  const hasCancel = Boolean(cancelLabel && onCancel);
+  const hasCancel = Boolean(cancelLabel || onCancel);
+
+  // Safe dismiss handler: closes/cancels without triggering destructive onConfirm
+  const handleDismiss = () => {
+    if (onCancel) {
+      onCancel();
+    } else if (!hasCancel) {
+      // Pure informational dialog with single button (e.g. "Đã hiểu")
+      onConfirm();
+    }
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel || onConfirm}>
-      <Pressable style={styles.backdrop} onPress={onCancel || onConfirm}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
+      <Pressable style={styles.backdrop} onPress={handleDismiss}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          {/* Nút X ở góc trên bên phải để đóng popup */}
+          <Pressable
+            style={styles.closeBtn}
+            onPress={handleDismiss}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng popup"
+          >
+            <Feather name="x" size={18} color="#64748B" />
+          </Pressable>
+
           <View style={[styles.iconCircle, { backgroundColor: iconConfig.bg }]}>
             <Feather name={iconConfig.name} size={26} color={iconConfig.color} />
           </View>
@@ -56,11 +77,11 @@ export function AppAlertModal({
             {hasCancel && (
               <Pressable
                 style={styles.cancelBtn}
-                onPress={onCancel}
+                onPress={handleDismiss}
                 hitSlop={6}
                 accessibilityRole="button"
               >
-                <Text style={styles.cancelBtnText}>{cancelLabel}</Text>
+                <Text style={styles.cancelBtnText}>{cancelLabel || 'Hủy'}</Text>
               </Pressable>
             )}
 
@@ -92,6 +113,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
+    position: 'relative',
     width: '100%',
     maxWidth: 320,
     backgroundColor: '#FFFFFF',
@@ -103,6 +125,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 18,
     elevation: 8,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   iconCircle: {
     width: 56,

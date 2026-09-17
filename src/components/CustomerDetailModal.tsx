@@ -350,12 +350,10 @@ export function CustomerDetailModal({
         setAlertConfig((prev) => ({ ...prev, visible: false }));
         cfg.onConfirm?.();
       },
-      onCancel: cfg.onCancel
-        ? () => {
-            setAlertConfig((prev) => ({ ...prev, visible: false }));
-            cfg.onCancel?.();
-          }
-        : undefined,
+      onCancel: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        cfg.onCancel?.();
+      },
     });
   };
 
