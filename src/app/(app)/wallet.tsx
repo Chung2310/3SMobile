@@ -15,13 +15,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppAlertModal } from '@/components/AppAlertModal';
 import { api } from '@/services/api/client';
 
-interface CreditPackageOption {
+export interface CreditWallet {
+  id?: string;
+  availableCredits: number;
+  reservedCredits: number;
+}
+
+export interface CreditLedgerItem {
+  _id?: string;
+  id?: string;
+  type: 'TOPUP' | 'RESERVE' | 'SETTLE' | 'RELEASE' | 'ADJUSTMENT' | string;
+  availableDelta: number;
+  reservedDelta: number;
+  availableAfter: number;
+  reservedAfter: number;
+  reason: string;
+  createdAt: string;
+}
+
+interface PresetOption {
   amount: number;
   credits: number;
   isHot?: boolean;
 }
 
-const PRESET_AMOUNTS: CreditPackageOption[] = [
+const DEFAULT_PRESETS: PresetOption[] = [
   { amount: 50000, credits: 500 },
   { amount: 100000, credits: 1000, isHot: true },
   { amount: 200000, credits: 2000 },
@@ -30,106 +48,38 @@ const PRESET_AMOUNTS: CreditPackageOption[] = [
   { amount: 2000000, credits: 20000 },
 ];
 
-interface LedgerEntry {
-  id: string;
-  createdAt: string;
-  type: string;
-  typeLabel: string;
-  amount: number;
-  balanceAfter: number;
-  note: string;
-}
-
-const DEFAULT_TRANSACTIONS: LedgerEntry[] = [
-  {
-    id: 'tx-1',
-    createdAt: '09:36:31 17/9/2026',
-    type: 'SETTLE',
-    typeLabel: 'Quyết toán AI',
-    amount: -12,
-    balanceAfter: 235,
-    note: 'Quyết toán tác vụ AI.',
-  },
-  {
-    id: 'tx-2',
-    createdAt: '09:36:29 17/9/2026',
-    type: 'SETTLE',
-    typeLabel: 'Quyết toán AI',
-    amount: -12,
-    balanceAfter: 247,
-    note: 'Quyết toán tác vụ AI.',
-  },
-  {
-    id: 'tx-3',
-    createdAt: '09:36:28 17/9/2026',
-    type: 'SETTLE',
-    typeLabel: 'Quyết toán AI',
-    amount: -12,
-    balanceAfter: 259,
-    note: 'Quyết toán tác vụ AI.',
-  },
-  {
-    id: 'tx-4',
-    createdAt: '09:36:21 17/9/2026',
-    type: 'RESERVE',
-    typeLabel: 'Tạm giữ AI',
-    amount: -10,
-    balanceAfter: 271,
-    note: 'Tạm giữ credit cho tác vụ AI.',
-  },
-  {
-    id: 'tx-5',
-    createdAt: '09:36:19 17/9/2026',
-    type: 'RESERVE',
-    typeLabel: 'Tạm giữ AI',
-    amount: -10,
-    balanceAfter: 281,
-    note: 'Tạm giữ credit cho tác vụ AI.',
-  },
-  {
-    id: 'tx-6',
-    createdAt: '09:36:18 17/9/2026',
-    type: 'RESERVE',
-    typeLabel: 'Tạm giữ AI',
-    amount: -10,
-    balanceAfter: 291,
-    note: 'Tạm giữ credit cho tác vụ AI.',
-  },
-  {
-    id: 'tx-7',
-    createdAt: '09:36:15 17/9/2026',
-    type: 'SETTLE',
-    typeLabel: 'Quyết toán AI',
-    amount: -12,
-    balanceAfter: 301,
-    note: 'Quyết toán tác vụ AI.',
-  },
-  {
-    id: 'tx-8',
-    createdAt: '09:36:13 17/9/2026',
-    type: 'SETTLE',
-    typeLabel: 'Quyết toán AI',
-    amount: -12,
-    balanceAfter: 313,
-    note: 'Quyết toán tác vụ AI.',
-  },
-];
+const formatDate = (isoStr?: string) => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
+};
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
 
-  // Dữ liệu số dư ví
-  const [availableCredits, setAvailableCredits] = useState<number>(499);
-  const [reservedCredits, setReservedCredits] = useState<number>(1);
+  // Dữ liệu số dư ví từ BE (không dùng mockdata)
+  const [wallet, setWallet] = useState<CreditWallet | null>(null);
+  const [loadingWallet, setLoadingWallet] = useState<boolean>(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
+
+  // Lịch sử giao dịch từ BE (không dùng mockdata)
+  const [ledgerItems, setLedgerItems] = useState<CreditLedgerItem[] | null>(null);
+  const [loadingLedger, setLoadingLedger] = useState<boolean>(true);
+  const [filterType, setFilterType] = useState<'ALL' | 'SETTLE' | 'RESERVE' | 'TOPUP'>('ALL');
+
+  // Trạng thái refresh
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Nhập / chọn số tiền nạp
   const [selectedAmount, setSelectedAmount] = useState<number>(100000);
   const [customAmountText, setCustomAmountText] = useState<string>('100000');
-
-  // Lịch sử giao dịch & Bộ lọc
-  const [transactions, setTransactions] = useState<LedgerEntry[]>(DEFAULT_TRANSACTIONS);
-  const [filterType, setFilterType] = useState<'ALL' | 'SETTLE' | 'RESERVE' | 'TOPUP'>('ALL');
 
   // Popup thông báo tính năng QR thanh toán
   const [showUnderDevModal, setShowUnderDevModal] = useState<boolean>(false);
@@ -139,111 +89,112 @@ export default function WalletScreen() {
     return Math.floor(selectedAmount / 100);
   }, [selectedAmount]);
 
-  // Tải dữ liệu ví thực tế từ backend
-  const fetchWallet = useCallback(async () => {
-    setRefreshing(true);
+  // Gọi API lấy thông tin số dư ví từ backend
+  const fetchWalletData = useCallback(async () => {
     try {
-      const [walletRes, ledgerRes] = await Promise.allSettled([
-        api.get<any>('/api/credits/me'),
-        api.get<any>('/api/credits/me/ledger?page=1&limit=25'),
-      ]);
-
-      if (walletRes.status === 'fulfilled') {
-        const payload = (walletRes.value as any)?.data || walletRes.value;
-        if (typeof payload?.availableCredits === 'number') {
-          setAvailableCredits(payload.availableCredits);
-        }
-        if (typeof payload?.reservedCredits === 'number') {
-          setReservedCredits(payload.reservedCredits);
-        }
+      setWalletError(null);
+      const res = await api.get<any>('/api/credits/me');
+      const payload = res?.data || res;
+      if (payload && typeof payload.availableCredits === 'number') {
+        setWallet({
+          id: payload.id,
+          availableCredits: payload.availableCredits,
+          reservedCredits: payload.reservedCredits ?? 0,
+        });
+      } else {
+        setWallet({ availableCredits: 0, reservedCredits: 0 });
       }
-
-      if (ledgerRes.status === 'fulfilled') {
-        const payload = (ledgerRes.value as any)?.data || ledgerRes.value;
-        const list = Array.isArray(payload) ? payload : payload?.items;
-        if (Array.isArray(list) && list.length > 0) {
-          const parsed: LedgerEntry[] = list.map((item: any, idx: number) => {
-            const rawType = item.type || 'SETTLE';
-            let typeLabel = 'Quyết toán AI';
-            if (rawType === 'TOPUP') typeLabel = 'Nạp credit';
-            else if (rawType === 'RESERVE') typeLabel = 'Tạm giữ AI';
-            else if (rawType === 'RELEASE') typeLabel = 'Hoàn trả AI';
-            else if (rawType === 'ADJUSTMENT') typeLabel = 'Điều chỉnh';
-
-            const createdDate = item.createdAt ? new Date(item.createdAt) : new Date();
-            const dateStr = `${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')} ${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()}`;
-
-            return {
-              id: item._id || item.id || `tx-${idx}`,
-              createdAt: dateStr,
-              type: rawType,
-              typeLabel,
-              amount: typeof item.availableDelta === 'number' ? item.availableDelta : (item.amount || 0),
-              balanceAfter: typeof item.availableAfter === 'number' ? item.availableAfter : (item.balanceAfter || 0),
-              note: item.reason || item.note || 'Giao dịch hệ thống AI.',
-            };
-          });
-          setTransactions(parsed);
-        }
-      }
-    } catch {
-      // Giữ nguyên dữ liệu hiển thị mẫu ban đầu nếu mất kết nối mạng
+    } catch (err: any) {
+      setWalletError(err?.message || 'Không thể tải thông tin ví credit.');
     } finally {
-      setRefreshing(false);
+      setLoadingWallet(false);
     }
   }, []);
 
+  // Gọi API lấy lịch sử giao dịch từ backend theo loại lọc
+  const fetchLedgerData = useCallback(async (typeFilter: string) => {
+    setLoadingLedger(true);
+    try {
+      const typeParam = typeFilter !== 'ALL' ? `&type=${typeFilter}` : '';
+      const res = await api.get<any>(`/api/credits/me/ledger?page=1&limit=30${typeParam}`);
+      const payload = res?.data || res;
+      const list = Array.isArray(payload) ? payload : payload?.items;
+      if (Array.isArray(list)) {
+        setLedgerItems(list);
+      } else {
+        setLedgerItems([]);
+      }
+    } catch {
+      setLedgerItems([]);
+    } finally {
+      setLoadingLedger(false);
+    }
+  }, []);
+
+  // Tải dữ liệu ban đầu từ BE
   useEffect(() => {
     let active = true;
-    Promise.allSettled([
-      api.get<any>('/api/credits/me'),
-      api.get<any>('/api/credits/me/ledger?page=1&limit=25'),
-    ]).then(([walletRes, ledgerRes]) => {
-      if (!active) return;
-      if (walletRes.status === 'fulfilled') {
-        const payload = (walletRes.value as any)?.data || walletRes.value;
-        if (typeof payload?.availableCredits === 'number') {
-          setAvailableCredits(payload.availableCredits);
-        }
-        if (typeof payload?.reservedCredits === 'number') {
-          setReservedCredits(payload.reservedCredits);
-        }
-      }
 
-      if (ledgerRes.status === 'fulfilled') {
-        const payload = (ledgerRes.value as any)?.data || ledgerRes.value;
-        const list = Array.isArray(payload) ? payload : payload?.items;
-        if (Array.isArray(list) && list.length > 0) {
-          const parsed: LedgerEntry[] = list.map((item: any, idx: number) => {
-            const rawType = item.type || 'SETTLE';
-            let typeLabel = 'Quyết toán AI';
-            if (rawType === 'TOPUP') typeLabel = 'Nạp credit';
-            else if (rawType === 'RESERVE') typeLabel = 'Tạm giữ AI';
-            else if (rawType === 'RELEASE') typeLabel = 'Hoàn trả AI';
-            else if (rawType === 'ADJUSTMENT') typeLabel = 'Điều chỉnh';
-
-            const createdDate = item.createdAt ? new Date(item.createdAt) : new Date();
-            const dateStr = `${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')} ${createdDate.getDate()}/${createdDate.getMonth() + 1}/${createdDate.getFullYear()}`;
-
-            return {
-              id: item._id || item.id || `tx-${idx}`,
-              createdAt: dateStr,
-              type: rawType,
-              typeLabel,
-              amount: typeof item.availableDelta === 'number' ? item.availableDelta : (item.amount || 0),
-              balanceAfter: typeof item.availableAfter === 'number' ? item.availableAfter : (item.balanceAfter || 0),
-              note: item.reason || item.note || 'Giao dịch hệ thống AI.',
-            };
+    // 1. Tải số dư ví
+    api
+      .get<any>('/api/credits/me')
+      .then((res) => {
+        if (!active) return;
+        const payload = res?.data || res;
+        if (payload && typeof payload.availableCredits === 'number') {
+          setWallet({
+            id: payload.id,
+            availableCredits: payload.availableCredits,
+            reservedCredits: payload.reservedCredits ?? 0,
           });
-          setTransactions(parsed);
+        } else {
+          setWallet({ availableCredits: 0, reservedCredits: 0 });
         }
-      }
-    }).catch(() => {});
+      })
+      .catch((err: any) => {
+        if (!active) return;
+        setWalletError(err?.message || 'Không thể tải thông tin ví credit.');
+      })
+      .finally(() => {
+        if (active) setLoadingWallet(false);
+      });
+
+    // 2. Tải lịch sử giao dịch
+    api
+      .get<any>('/api/credits/me/ledger?page=1&limit=30')
+      .then((res) => {
+        if (!active) return;
+        const payload = res?.data || res;
+        const list = Array.isArray(payload) ? payload : payload?.items;
+        setLedgerItems(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (active) setLedgerItems([]);
+      })
+      .finally(() => {
+        if (active) setLoadingLedger(false);
+      });
 
     return () => {
       active = false;
     };
   }, []);
+
+  // Xử lý làm mới toàn bộ dữ liệu từ API
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchWalletData(), fetchLedgerData(filterType)]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Xử lý thay đổi bộ lọc lịch sử
+  const handleFilterChange = (newType: 'ALL' | 'SETTLE' | 'RESERVE' | 'TOPUP') => {
+    setFilterType(newType);
+    fetchLedgerData(newType);
+  };
 
   // Xử lý chọn mức nạp có sẵn
   const handleSelectPreset = (amount: number) => {
@@ -258,12 +209,6 @@ export default function WalletScreen() {
     const num = Number(rawNumber) || 0;
     setSelectedAmount(num);
   };
-
-  // Lọc giao dịch
-  const filteredTransactions = useMemo(() => {
-    if (filterType === 'ALL') return transactions;
-    return transactions.filter((t) => t.type === filterType);
-  }, [transactions, filterType]);
 
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
@@ -292,7 +237,7 @@ export default function WalletScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 40 },
         ]}
       >
-        {/* ================= 1. CARD SỐ DƯ VÍ (XANH DƯƠNG THỂ THAO) ================= */}
+        {/* ================= 1. CARD SỐ DƯ VÍ TỪ BE ================= */}
         <View style={styles.balanceCard}>
           {/* Hàng trên: Tiêu đề ví & Nút làm mới */}
           <View style={styles.balanceHeader}>
@@ -303,7 +248,7 @@ export default function WalletScreen() {
 
             <Pressable
               style={({ pressed }) => [styles.refreshBtn, pressed && { opacity: 0.75 }]}
-              onPress={fetchWallet}
+              onPress={handleManualRefresh}
               hitSlop={8}
               disabled={refreshing}
             >
@@ -317,23 +262,41 @@ export default function WalletScreen() {
           </View>
 
           {/* Hàng giữa: Credit khả dụng & Đang tạm giữ */}
-          <View style={styles.balanceBody}>
-            <View style={styles.availableCol}>
-              <Text style={styles.availableLabel}>CREDIT KHẢ DỤNG</Text>
-              <View style={styles.availableValueRow}>
-                <Text style={styles.availableNumber}>{availableCredits.toLocaleString()}</Text>
-                <Text style={styles.availableUnit}>credit</Text>
-              </View>
+          {loadingWallet ? (
+            <View style={styles.loadingWalletWrap}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Text style={styles.loadingWalletText}>Đang đồng bộ số dư từ máy chủ...</Text>
             </View>
+          ) : walletError ? (
+            <View style={styles.errorWalletWrap}>
+              <Text style={styles.errorWalletText}>{walletError}</Text>
+              <Pressable style={styles.retryBtn} onPress={fetchWalletData}>
+                <Text style={styles.retryBtnText}>Thử lại</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.balanceBody}>
+              <View style={styles.availableCol}>
+                <Text style={styles.availableLabel}>CREDIT KHẢ DỤNG</Text>
+                <View style={styles.availableValueRow}>
+                  <Text style={styles.availableNumber}>
+                    {(wallet?.availableCredits ?? 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.availableUnit}>credit</Text>
+                </View>
+              </View>
 
-            <View style={styles.holdBadge}>
-              <Text style={styles.holdLabel}>ĐANG TẠM GIỮ</Text>
-              <View style={styles.holdValueRow}>
-                <Text style={styles.holdNumber}>{reservedCredits.toLocaleString()}</Text>
-                <Text style={styles.holdUnit}>credit</Text>
+              <View style={styles.holdBadge}>
+                <Text style={styles.holdLabel}>ĐANG TẠM GIỮ</Text>
+                <View style={styles.holdValueRow}>
+                  <Text style={styles.holdNumber}>
+                    {(wallet?.reservedCredits ?? 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.holdUnit}>credit</Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* ================= 2. CARD NẠP CREDIT ================= */}
@@ -347,7 +310,7 @@ export default function WalletScreen() {
           <View style={styles.amountSelectBox}>
             <Text style={styles.subHeading}>Mức nạp nhanh phổ biến:</Text>
             <View style={styles.presetsGrid}>
-              {PRESET_AMOUNTS.map((pkg) => {
+              {DEFAULT_PRESETS.map((pkg) => {
                 const isSelected = selectedAmount === pkg.amount;
                 return (
                   <Pressable
@@ -425,7 +388,7 @@ export default function WalletScreen() {
           </View>
         </View>
 
-        {/* ================= 3. LỊCH SỬ GIAO DỊCH ================= */}
+        {/* ================= 3. LỊCH SỬ GIAO DỊCH TỪ BE ================= */}
         <View style={styles.historyCard}>
           <View style={styles.historyHeader}>
             <View style={styles.historyHeaderLeft}>
@@ -437,7 +400,7 @@ export default function WalletScreen() {
             <View style={styles.filterRow}>
               <Pressable
                 style={[styles.filterPill, filterType === 'ALL' && styles.filterPillActive]}
-                onPress={() => setFilterType('ALL')}
+                onPress={() => handleFilterChange('ALL')}
               >
                 <Text style={[styles.filterText, filterType === 'ALL' && styles.filterTextActive]}>
                   Tất cả
@@ -445,7 +408,7 @@ export default function WalletScreen() {
               </Pressable>
               <Pressable
                 style={[styles.filterPill, filterType === 'SETTLE' && styles.filterPillActive]}
-                onPress={() => setFilterType('SETTLE')}
+                onPress={() => handleFilterChange('SETTLE')}
               >
                 <Text style={[styles.filterText, filterType === 'SETTLE' && styles.filterTextActive]}>
                   Quyết toán
@@ -453,25 +416,49 @@ export default function WalletScreen() {
               </Pressable>
               <Pressable
                 style={[styles.filterPill, filterType === 'RESERVE' && styles.filterPillActive]}
-                onPress={() => setFilterType('RESERVE')}
+                onPress={() => handleFilterChange('RESERVE')}
               >
                 <Text style={[styles.filterText, filterType === 'RESERVE' && styles.filterTextActive]}>
                   Tạm giữ
                 </Text>
               </Pressable>
+              <Pressable
+                style={[styles.filterPill, filterType === 'TOPUP' && styles.filterPillActive]}
+                onPress={() => handleFilterChange('TOPUP')}
+              >
+                <Text style={[styles.filterText, filterType === 'TOPUP' && styles.filterTextActive]}>
+                  Nạp tiền
+                </Text>
+              </Pressable>
             </View>
           </View>
 
-          {filteredTransactions.length === 0 ? (
+          {loadingLedger ? (
+            <View style={styles.loadingLedgerBox}>
+              <ActivityIndicator size="small" color="#0284C7" />
+              <Text style={styles.loadingLedgerText}>Đang tải lịch sử giao dịch từ máy chủ...</Text>
+            </View>
+          ) : !ledgerItems || ledgerItems.length === 0 ? (
             <View style={styles.emptyHistoryBox}>
-              <Text style={styles.emptyHistoryText}>Chưa có giao dịch credit nào.</Text>
+              <Feather name="inbox" size={24} color="#94A3B8" style={{ marginBottom: 6 }} />
+              <Text style={styles.emptyHistoryText}>Chưa có giao dịch credit nào trong mục này.</Text>
             </View>
           ) : (
             <View style={styles.txList}>
-              {filteredTransactions.map((tx) => {
-                const isNegative = tx.amount < 0;
+              {ledgerItems.map((tx, idx) => {
+                const isNegative = tx.availableDelta < 0 || tx.reservedDelta < 0;
+                const deltaNum = tx.availableDelta !== 0 ? tx.availableDelta : tx.reservedDelta;
+                const deltaSign = deltaNum > 0 ? `+${deltaNum}` : `${deltaNum}`;
+
+                let typeLabel = 'Giao dịch AI';
+                if (tx.type === 'SETTLE') typeLabel = 'Quyết toán AI';
+                else if (tx.type === 'RESERVE') typeLabel = 'Tạm giữ AI';
+                else if (tx.type === 'TOPUP') typeLabel = 'Nạp credit';
+                else if (tx.type === 'RELEASE') typeLabel = 'Hoàn trả AI';
+                else if (tx.type === 'ADJUSTMENT') typeLabel = 'Điều chỉnh';
+
                 return (
-                  <View key={tx.id} style={styles.txItem}>
+                  <View key={tx._id || tx.id || `ledger-${idx}`} style={styles.txItem}>
                     {/* Hàng trên: Badge loại & Biến động credit */}
                     <View style={styles.txTopRow}>
                       <View
@@ -490,7 +477,7 @@ export default function WalletScreen() {
                             tx.type === 'TOPUP' && styles.txTypeTextTopup,
                           ]}
                         >
-                          {tx.typeLabel}
+                          {typeLabel}
                         </Text>
                       </View>
 
@@ -500,21 +487,26 @@ export default function WalletScreen() {
                           isNegative ? styles.txDeltaNegative : styles.txDeltaPositive,
                         ]}
                       >
-                        {isNegative ? `${tx.amount}` : `+${tx.amount}`} credit
+                        {deltaSign} credit
                       </Text>
                     </View>
 
-                    {/* Hàng giữa: Ghi chú tác vụ */}
-                    <Text style={styles.txNoteText} numberOfLines={1}>
-                      {tx.note}
+                    {/* Hàng giữa: Ghi chú tác vụ thực tế từ BE */}
+                    <Text style={styles.txNoteText} numberOfLines={2}>
+                      {tx.reason || 'Giao dịch hệ thống AI 3S Gym'}
                     </Text>
 
                     {/* Hàng dưới: Thời gian & Số dư sau giao dịch */}
                     <View style={styles.txBottomRow}>
-                      <Text style={styles.txDateText}>{tx.createdAt}</Text>
-                      <Text style={styles.txBalanceAfterText}>
-                        Số dư sau: <Text style={{ fontWeight: '800', color: '#0F172A' }}>{tx.balanceAfter}</Text>
-                      </Text>
+                      <Text style={styles.txDateText}>{formatDate(tx.createdAt)}</Text>
+                      {typeof tx.availableAfter === 'number' && (
+                        <Text style={styles.txBalanceAfterText}>
+                          Số dư sau:{' '}
+                          <Text style={{ fontWeight: '800', color: '#0F172A' }}>
+                            {tx.availableAfter.toLocaleString()}
+                          </Text>
+                        </Text>
+                      )}
                     </View>
                   </View>
                 );
@@ -524,7 +516,7 @@ export default function WalletScreen() {
         </View>
       </ScrollView>
 
-      {/* Popup thông báo tính năng đang cập nhật (theo đúng yêu cầu của người dùng) */}
+      {/* Popup thông báo tính năng đang cập nhật */}
       <AppAlertModal
         visible={showUnderDevModal}
         type="info"
@@ -617,6 +609,39 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   refreshBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  loadingWalletWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 8,
+  },
+  loadingWalletText: {
+    fontSize: 12,
+    color: '#E0F2FE',
+    fontWeight: '600',
+  },
+  errorWalletWrap: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  errorWalletText: {
+    fontSize: 12,
+    color: '#FEE2E2',
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  retryBtnText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -935,6 +960,26 @@ const styles = StyleSheet.create({
     color: '#0284C7',
     fontWeight: '800',
   },
+  loadingLedgerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  loadingLedgerText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  emptyHistoryBox: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyHistoryText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
   txList: {
     gap: 8,
   },
@@ -1013,14 +1058,5 @@ const styles = StyleSheet.create({
   txBalanceAfterText: {
     fontSize: 10,
     color: '#64748B',
-  },
-  emptyHistoryBox: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyHistoryText: {
-    fontSize: 12,
-    color: '#94A3B8',
   },
 });
