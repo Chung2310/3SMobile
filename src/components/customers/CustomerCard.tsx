@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { radius, spacing } from '@/theme';
 import {
   CustomerListItem,
@@ -206,7 +206,7 @@ export function CustomerCard({
 
         <View style={styles.actionDivider} />
 
-        {/* 2. Mục tiêu (Icon target) */}
+        {/* 2. Mục tiêu (Icon bullseye-arrow đỏ) */}
         {onGoals && (
           <>
             <Pressable
@@ -218,7 +218,7 @@ export function CustomerCard({
               hitSlop={8}
               accessibilityLabel="Mục tiêu của khách hàng"
             >
-              <Feather name="target" size={16} color="#0284C7" />
+              <MaterialCommunityIcons name="bullseye-arrow" size={19} color="#EF4444" />
             </Pressable>
 
             <View style={styles.actionDivider} />

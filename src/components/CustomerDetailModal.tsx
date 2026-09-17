@@ -14,7 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -930,7 +930,7 @@ export function CustomerDetailModal({
                 {/* Thẻ Mục tiêu tập luyện */}
                 <View style={styles.contentCard}>
                   <View style={styles.cardHeaderRow}>
-                    <Feather name="target" size={16} color="#0284C7" />
+                    <MaterialCommunityIcons name="bullseye-arrow" size={18} color="#EF4444" />
                     <Text style={styles.cardTitle}>Mục tiêu tập luyện</Text>
                   </View>
                   <Text style={styles.cardBodyText}>
