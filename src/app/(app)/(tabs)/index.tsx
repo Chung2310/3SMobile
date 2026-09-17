@@ -555,22 +555,6 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={styles.statusTagWrap}>
-                    {/* Nút icon mở nhanh Quét phiếu InBody AI */}
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleOpenQuickOcr(c);
-                      }}
-                      style={({ pressed }) => [
-                        styles.quickScanBtn,
-                        pressed && styles.quickScanBtnPressed,
-                      ]}
-                      hitSlop={8}
-                      accessibilityLabel={`Quét phiếu InBody cho ${c.fullName}`}
-                    >
-                      <Ionicons name="scan-outline" size={17} color={colors.primary} />
-                    </Pressable>
-
                     <View style={[styles.statusTag, { backgroundColor: tagBg }]}>
                       <Text style={[styles.statusTagText, { color: tagColor }]}>{tagLabel}</Text>
                     </View>
@@ -578,22 +562,30 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Dòng tóm tắt chỉ số ngắn */}
-                {c.changes ? (
-                  <View style={styles.deltaRow}>
-                    <Text style={styles.deltaText}>
-                      {c.changes.muscleChange >= 0
-                        ? `+${c.changes.muscleChange}kg cơ`
-                        : `${c.changes.muscleChange}kg cơ`}
-                    </Text>
-                    <Text style={styles.deltaDot}>·</Text>
-                    <Text style={styles.deltaText}>
-                      {c.changes.bodyFatChange > 0
-                        ? `-${c.changes.bodyFatChange}% mỡ`
-                        : `+${Math.abs(c.changes.bodyFatChange)}% mỡ`}
-                    </Text>
-                    <Text style={styles.deltaDot}>·</Text>
-                    <Text style={styles.deltaText}>{c.measurementCount} lần đo</Text>
+                {/* Dòng tóm tắt chỉ số & nút Quét InBody cùng hàng */}
+                <View style={styles.deltaRow}>
+                  <View style={styles.deltaLeftInfo}>
+                    {c.changes ? (
+                      <>
+                        <Text style={styles.deltaText}>
+                          {c.changes.muscleChange >= 0
+                            ? `+${c.changes.muscleChange}kg cơ`
+                            : `${c.changes.muscleChange}kg cơ`}
+                        </Text>
+                        <Text style={styles.deltaDot}>·</Text>
+                        <Text style={styles.deltaText}>
+                          {c.changes.bodyFatChange > 0
+                            ? `-${c.changes.bodyFatChange}% mỡ`
+                            : `+${Math.abs(c.changes.bodyFatChange)}% mỡ`}
+                        </Text>
+                        <Text style={styles.deltaDot}>·</Text>
+                        <Text style={styles.deltaText}>{c.measurementCount} lần đo</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.deltaText}>
+                        {c.measurementCount > 0 ? `${c.measurementCount} lần đo` : 'Chưa có phiếu đo'}
+                      </Text>
+                    )}
 
                     {c.openAlerts > 0 ? (
                       <View style={styles.alertMiniBadge}>
@@ -602,7 +594,24 @@ export default function HomeScreen() {
                       </View>
                     ) : null}
                   </View>
-                ) : null}
+
+                  {/* Nút icon mở nhanh Quét phiếu InBody AI cùng hàng */}
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleOpenQuickOcr(c);
+                    }}
+                    style={({ pressed }) => [
+                      styles.quickScanRowBtn,
+                      pressed && styles.quickScanRowBtnPressed,
+                    ]}
+                    hitSlop={8}
+                    accessibilityLabel={`Quét phiếu InBody cho ${c.fullName}`}
+                  >
+                    <Ionicons name="scan-outline" size={14} color={colors.primary} />
+                    <Text style={styles.quickScanRowText}>Quét</Text>
+                  </Pressable>
+                </View>
               </Pressable>
             );
           })
@@ -913,21 +922,6 @@ const styles = StyleSheet.create({
   searchClearBtn: {
     padding: 4,
   },
-  quickScanBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F0F9FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(2, 132, 199, 0.25)',
-    marginRight: 6,
-  },
-  quickScanBtnPressed: {
-    backgroundColor: '#BAE6FD',
-    transform: [{ scale: 0.92 }],
-  },
   filterScrollView: {
     marginHorizontal: -spacing.lg,
     marginVertical: spacing.xs,
@@ -1010,10 +1004,18 @@ const styles = StyleSheet.create({
   deltaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderColor: '#F3F4F6',
+  },
+  deltaLeftInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    paddingRight: 6,
   },
   deltaText: {
     fontSize: 11,
@@ -1021,19 +1023,40 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   deltaDot: {
-    marginHorizontal: 6,
+    marginHorizontal: 5,
     color: '#D1D5DB',
   },
   alertMiniBadge: {
-    marginLeft: 'auto',
+    marginLeft: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 2,
   },
   alertMiniText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#EF4444',
+  },
+  quickScanRowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(2, 132, 199, 0.22)',
+    gap: 3,
+    marginLeft: 8,
+  },
+  quickScanRowBtnPressed: {
+    backgroundColor: '#BAE6FD',
+    transform: [{ scale: 0.94 }],
+  },
+  quickScanRowText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   emptyWrap: {
     padding: spacing.xl,
