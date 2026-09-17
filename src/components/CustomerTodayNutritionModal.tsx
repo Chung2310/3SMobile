@@ -391,10 +391,10 @@ export function CustomerTodayNutritionModal({
                 </View>
 
                 <Text style={styles.headerTitle} numberOfLines={1}>
-                  Hôm nay ăn gì: <Text style={styles.headerCustomerName}>{customerName || 'Học viên'}</Text>
+                  Hôm nay ăn gì?
                 </Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1}>
-                  Gợi ý thực đơn chuẩn hóa từ HLV cá nhân
+                <Text style={styles.headerCustomerRow} numberOfLines={1}>
+                  Học viên: <Text style={styles.headerCustomerName}>{customerName || 'Học viên'}</Text>
                 </Text>
               </View>
             </View>
@@ -1093,14 +1093,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
   },
+  headerCustomerRow: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
   headerCustomerName: {
     color: '#0284C7',
     fontWeight: '800',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 1,
   },
   closeBtn: {
     width: 36,
