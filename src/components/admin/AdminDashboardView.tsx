@@ -30,7 +30,7 @@ interface AdminDashboardViewProps {
 }
 
 /* ============================================================================
- * SVG VISUAL CHART COMPONENTS (PT UI STYLED)
+ * SVG VISUAL CHART COMPONENTS (GRID LAYOUT STYLED)
  * ============================================================================ */
 
 function AdminDonutChart({
@@ -418,30 +418,28 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       contentContainerStyle={styles.scrollContainer}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
     >
-      {/* 1. SUB-TABS PILLS (PT UI STYLE) */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillTabsScroll}>
-        <View style={styles.pillTabsRow}>
-          <Pressable style={[styles.pillBtn, styles.pillBtnActive]}>
-            <Ionicons name="pie-chart" size={13} color="#FFFFFF" />
-            <Text style={[styles.pillText, styles.pillTextActive]}>Tổng quan</Text>
-          </Pressable>
+      {/* 1. SUB-MODULES NAV (DẠNG LƯỚI 2x2 - KHÔNG DẠNG TRƯỢT) */}
+      <View style={styles.gridModulesContainer}>
+        <Pressable style={[styles.gridModuleCard, styles.gridModuleActive]}>
+          <Ionicons name="pie-chart" size={15} color="#FFFFFF" />
+          <Text style={[styles.gridModuleText, styles.gridModuleTextActive]}>Tổng quan & KPI</Text>
+        </Pressable>
 
-          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/customers')}>
-            <Ionicons name="people-outline" size={13} color="#475569" />
-            <Text style={styles.pillText}>HLV PT ({totalPts})</Text>
-          </Pressable>
+        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/customers')}>
+          <Ionicons name="people-outline" size={15} color="#0284C7" />
+          <Text style={styles.gridModuleText}>HLV PT ({totalPts})</Text>
+        </Pressable>
 
-          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/customers')}>
-            <Ionicons name="cube-outline" size={13} color="#475569" />
-            <Text style={styles.pillText}>Gói mẫu ({activePackages})</Text>
-          </Pressable>
+        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/customers')}>
+          <Ionicons name="cube-outline" size={15} color="#7C3AED" />
+          <Text style={styles.gridModuleText}>Gói mẫu ({activePackages})</Text>
+        </Pressable>
 
-          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/profile')}>
-            <Ionicons name="settings-outline" size={13} color="#475569" />
-            <Text style={styles.pillText}>Hệ thống</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/profile')}>
+          <Ionicons name="settings-outline" size={15} color="#475569" />
+          <Text style={styles.gridModuleText}>Cấu hình hệ thống</Text>
+        </Pressable>
+      </View>
 
       {/* 2. PAGE TITLE & COMPACT FILTER BAR */}
       <View style={styles.titleFilterHeader}>
@@ -553,74 +551,79 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       )}
 
-      {/* 3. QUICK STATS SUMMARY CARD (MATCHES PT UI QUICKSTATSCARD) */}
-      <View style={styles.quickStatsCard}>
-        {/* HLV PT */}
+      {/* 3. 4 METRIC CARDS IN GRID FORMAT (DẠNG LƯỚI 2x2 - KHÔNG TRƯỢT) */}
+      <View style={styles.kpiGrid2x2}>
+        {/* KPI 1: HLV PT */}
         <Pressable
           onPress={() => router.push('/(app)/customers')}
-          style={({ pressed }) => [styles.quickStatCol, pressed && styles.quickStatColPressed]}
+          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
         >
-          <View style={[styles.statIconWrap, { backgroundColor: '#F0F9FF' }]}>
-            <Feather name="users" size={15} color="#0284C7" />
+          <View style={styles.kpiCardTopRow}>
+            <Text style={styles.kpiCardLabel}>HLV PT</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#F0F9FF' }]}>
+              <Ionicons name="people" size={16} color="#0284C7" />
+            </View>
           </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statValue, { color: '#0284C7' }]}>{totalPts}</Text>
-            <Text style={styles.statLabel}>HLV PT</Text>
-          </View>
+          <Text style={[styles.kpiCardVal, { color: '#0284C7' }]}>{totalPts}</Text>
+          <Text style={styles.kpiCardSub}>Đang hoạt động</Text>
         </Pressable>
 
-        <View style={styles.statDivider} />
-
-        {/* Khách hàng */}
+        {/* KPI 2: HỘI VIÊN */}
         <Pressable
           onPress={() => router.push('/(app)/customers')}
-          style={({ pressed }) => [styles.quickStatCol, pressed && styles.quickStatColPressed]}
+          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
         >
-          <View style={[styles.statIconWrap, { backgroundColor: '#F0FDF4' }]}>
-            <Feather name="user-check" size={15} color="#16A34A" />
+          <View style={styles.kpiCardTopRow}>
+            <Text style={styles.kpiCardLabel}>HỘI VIÊN</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="person-add" size={16} color="#16A34A" />
+            </View>
           </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statValue, { color: '#16A34A' }]}>{totalCustomers}</Text>
-            <Text style={styles.statLabel}>Hội viên</Text>
-          </View>
+          <Text style={[styles.kpiCardVal, { color: '#16A34A' }]}>{totalCustomers}</Text>
+          <Text style={styles.kpiCardSub}>{activeCount} Đang tập</Text>
         </Pressable>
 
-        <View style={styles.statDivider} />
+        {/* KPI 3: GÓI MẪU */}
+        <Pressable
+          onPress={() => router.push('/(app)/customers')}
+          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
+        >
+          <View style={styles.kpiCardTopRow}>
+            <Text style={styles.kpiCardLabel}>GÓI MẪU</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="cube" size={16} color="#7C3AED" />
+            </View>
+          </View>
+          <Text style={[styles.kpiCardVal, { color: '#7C3AED' }]}>{activePackages}</Text>
+          <Text style={styles.kpiCardSub}>Toàn hệ thống</Text>
+        </Pressable>
 
-        {/* Gói mẫu */}
-        <View style={styles.quickStatCol}>
-          <View style={[styles.statIconWrap, { backgroundColor: '#F5F3FF' }]}>
-            <Feather name="box" size={15} color="#7C3AED" />
+        {/* KPI 4: CẢNH BÁO */}
+        <Pressable
+          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
+        >
+          <View style={styles.kpiCardTopRow}>
+            <Text style={styles.kpiCardLabel}>CẢNH BÁO</Text>
+            <View
+              style={[
+                styles.kpiIconWrap,
+                { backgroundColor: openAlerts > 0 ? '#FEF2F2' : '#F8FAFC' },
+              ]}
+            >
+              <Ionicons
+                name={openAlerts > 0 ? 'warning' : 'shield-checkmark'}
+                size={16}
+                color={openAlerts > 0 ? '#EF4444' : '#64748B'}
+              />
+            </View>
           </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statValue, { color: '#7C3AED' }]}>{activePackages}</Text>
-            <Text style={styles.statLabel}>Gói mẫu</Text>
-          </View>
-        </View>
-
-        <View style={styles.statDivider} />
-
-        {/* Cảnh báo */}
-        <View style={styles.quickStatCol}>
-          <View
-            style={[
-              styles.statIconWrap,
-              { backgroundColor: openAlerts > 0 ? '#FEF2F2' : '#F8FAFC' },
-            ]}
-          >
-            <Feather
-              name={openAlerts > 0 ? 'alert-triangle' : 'shield-off'}
-              size={15}
-              color={openAlerts > 0 ? '#EF4444' : '#64748B'}
-            />
-          </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statValue, openAlerts > 0 && { color: '#EF4444' }]}>
-              {openAlerts}
-            </Text>
-            <Text style={styles.statLabel}>Cảnh báo</Text>
-          </View>
-        </View>
+          <Text style={[styles.kpiCardVal, openAlerts > 0 && { color: '#EF4444' }]}>
+            {openAlerts}
+          </Text>
+          <Text style={styles.kpiCardSub}>
+            {openAlerts > 0 ? 'Cần xử lý' : 'An toàn'}
+          </Text>
+        </Pressable>
       </View>
 
       {/* 4. VISUAL CHARTS SECTION */}
@@ -823,38 +826,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 
-  /* Sub-tabs Pills */
-  pillTabsScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    marginBottom: 2,
-  },
-  pillTabsRow: {
+  /* Grid Modules Container (Dạng Lưới 2x2) */
+  gridModulesContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    paddingVertical: 4,
+    marginTop: 4,
   },
-  pillBtn: {
+  gridModuleCard: {
+    width: '48.5%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  pillBtnActive: {
+  gridModuleActive: {
     backgroundColor: '#0284C7',
     borderColor: '#0284C7',
   },
-  pillText: {
-    fontSize: 12.5,
+  gridModuleText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#334155',
+    flex: 1,
   },
-  pillTextActive: {
+  gridModuleTextActive: {
     color: '#FFFFFF',
   },
 
@@ -863,7 +864,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 2,
+    marginTop: 4,
   },
   titleLeftRow: {
     flexDirection: 'row',
@@ -1008,55 +1009,54 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
 
-  /* Quick Stats Card (PT UI Style) */
-  quickStatsCard: {
+  /* 2x2 KPI Grid Layout (Dạng Lưới 2x2 - Không trượt) */
+  kpiGrid2x2: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  kpiGridCard: {
+    width: '48.5%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    elevation: 2,
+    gap: 4,
+    elevation: 1,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
   },
-  quickStatCol: {
-    flex: 1,
+  kpiCardTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
   },
-  quickStatColPressed: {
-    opacity: 0.7,
+  kpiCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.4,
   },
-  statIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  kpiIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statInfo: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 17,
+  kpiCardVal: {
+    fontSize: 22,
     fontWeight: '800',
     color: '#0F172A',
+    marginTop: 2,
   },
-  statLabel: {
+  kpiCardSub: {
     fontSize: 11,
-    color: '#64748B',
     fontWeight: '500',
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#F1F5F9',
+    color: '#94A3B8',
   },
 
   /* Section Header Row */
