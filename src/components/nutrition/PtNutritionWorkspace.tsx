@@ -1943,11 +1943,11 @@ export function PtNutritionWorkspace() {
                   <View style={styles.focusedCalcResultBox}>
                     <View style={styles.focusedCalcResultLeft}>
                       <Flame size={20} color="#ea580c" />
-                      <View>
-                        <Text style={styles.focusedCalcBurnedVal}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.focusedCalcBurnedVal} numberOfLines={1}>
                           -{burned} <Text style={{ fontSize: 13, fontWeight: '700' }}>kcal</Text>
                         </Text>
-                        <Text style={styles.focusedCalcBurnedSub}>
+                        <Text style={styles.focusedCalcBurnedSub} numberOfLines={1}>
                           Tốc độ: ~{calPerMin} kcal / phút
                         </Text>
                       </View>
@@ -1963,9 +1963,9 @@ export function PtNutritionWorkspace() {
                       ) : (
                         <>
                           <Plus size={15} color="#ffffff" />
-                          <Text style={styles.focusedRecordBtnText}>
+                          <Text style={styles.focusedRecordBtnText} numberOfLines={1}>
                             {selectedCustomer
-                              ? `Lưu nhật ký cho ${selectedCustomer.fullName?.split(' ').pop()}`
+                              ? `Lưu cho ${selectedCustomer.fullName?.split(' ').pop()}`
                               : 'Lưu vào nhật ký'}
                           </Text>
                         </>
@@ -2386,7 +2386,7 @@ export function PtNutritionWorkspace() {
                           )}
                         </View>
 
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
                           <Text style={styles.cleanLogName} numberOfLines={1}>
                             {item.name}
                           </Text>
@@ -2760,6 +2760,7 @@ const styles = StyleSheet.create({
   },
   customerBriefInfo: {
     flex: 1,
+    minWidth: 0,
   },
   nameLine: {
     flexDirection: 'row',
@@ -2792,6 +2793,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   switchPillBtn: {
     flexDirection: 'row',
@@ -4293,6 +4295,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
   focusedCalcBurnedVal: {
     fontSize: 17,
@@ -4312,6 +4316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flexShrink: 0,
   },
   focusedRecordBtnText: {
     fontSize: 12,
@@ -4327,7 +4332,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   webSummaryCard: {
-    width: '48.5%',
+    flexGrow: 1,
+    flexBasis: '47%',
+    maxWidth: '50%',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
