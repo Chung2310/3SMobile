@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -30,7 +30,7 @@ interface AdminDashboardViewProps {
 }
 
 /* ============================================================================
- * SVG VISUAL CHART COMPONENTS (GRID LAYOUT STYLED)
+ * ANIMATED SVG VISUAL CHART COMPONENTS (60FPS SMOOTH EASE-OUT ANIMATION)
  * ============================================================================ */
 
 function AdminDonutChart({
@@ -52,14 +52,41 @@ function AdminDonutChart({
   const radiusVal = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radiusVal;
 
+  const [fillProgress, setFillProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setFillProgress(0);
+    const startTime = Date.now();
+    const duration = 850;
+
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const p = Math.min(1, elapsed / duration);
+      const eased = 1 - (1 - p) * (1 - p); // Quad ease-out smooth 60fps
+      setFillProgress(eased);
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [active, lead, inactive, total]);
+
   const totalVal = Math.max(1, total || active + lead + inactive);
+  const currentCircumference = fillProgress * circumference;
+
   const activeRatio = active / totalVal;
   const leadRatio = lead / totalVal;
   const inactiveRatio = inactive / totalVal;
 
-  const activeDash = activeRatio * circumference;
-  const leadDash = leadRatio * circumference;
-  const inactiveDash = inactiveRatio * circumference;
+  const activeDash = activeRatio * currentCircumference;
+  const leadDash = leadRatio * currentCircumference;
+  const inactiveDash = inactiveRatio * currentCircumference;
 
   const activeOffset = 0;
   const leadOffset = -activeDash;
@@ -124,7 +151,7 @@ function AdminDonutChart({
           fontWeight="700"
           fill="#0F172A"
         >
-          {total}
+          {Math.round(total * fillProgress)}
         </SvgText>
         <SvgText
           x={center}
@@ -142,6 +169,31 @@ function AdminDonutChart({
 }
 
 function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSessions?: number }) {
+  const [fillProgress, setFillProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setFillProgress(0);
+    const startTime = Date.now();
+    const duration = 850;
+
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const p = Math.min(1, elapsed / duration);
+      const eased = 1 - (1 - p) * (1 - p);
+      setFillProgress(eased);
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [completedSessions]);
+
   const base = Math.max(1, Math.round(completedSessions / 7));
   const rawData = [
     Math.max(1, base - 1),
@@ -167,9 +219,10 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
   const minVal = 0;
 
   const points = rawData.map((val, idx) => {
-    const x = paddingX + (idx / (rawData.length - 1)) * chartW;
-    const y = paddingTop + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
-    return { x, y, val, day: days[idx] };
+    const targetY = paddingTop + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
+    const startY = paddingTop + chartH; // Baseline
+    const y = startY + (targetY - startY) * fillProgress;
+    return { x: paddingX + (idx / (rawData.length - 1)) * chartW, y, val, day: days[idx] };
   });
 
   const pathD = points.reduce((acc, pt, idx) => {
@@ -183,7 +236,7 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="adminLineGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
+            <Stop offset="0%" stopColor="#0284C7" stopOpacity={0.25 * fillProgress} />
             <Stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
           </LinearGradient>
         </Defs>
@@ -217,6 +270,7 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
               fontSize="9"
               fontWeight="700"
               fill="#0369A1"
+              opacity={fillProgress}
             >
               {pt.val}
             </SvgText>
@@ -242,6 +296,31 @@ function AdminPtWorkloadBarChart({
 }: {
   ptWorkload?: Array<{ fullName: string; activeCustomers: number }>;
 }) {
+  const [fillProgress, setFillProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setFillProgress(0);
+    const startTime = Date.now();
+    const duration = 850;
+
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const p = Math.min(1, elapsed / duration);
+      const eased = 1 - (1 - p) * (1 - p);
+      setFillProgress(eased);
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [ptWorkload]);
+
   const items =
     ptWorkload && ptWorkload.length > 0
       ? ptWorkload.slice(0, 5)
@@ -286,7 +365,8 @@ function AdminPtWorkloadBarChart({
           const cx = paddingX + idx * slotW + slotW / 2;
           const x = cx - barWidth / 2;
           const valRatio = item.activeCustomers / maxVal;
-          const barH = Math.max(6, valRatio * chartH);
+          const fullBarH = Math.max(6, valRatio * chartH);
+          const barH = fullBarH * fillProgress;
           const y = height - paddingBottom - barH;
           const shortName = item.fullName.replace(/HLV\s+/i, '').trim();
 
@@ -308,6 +388,7 @@ function AdminPtWorkloadBarChart({
                 fontSize="9"
                 fontWeight="700"
                 fill="#0369A1"
+                opacity={fillProgress}
               >
                 {item.activeCustomers}
               </SvgText>
@@ -418,45 +499,80 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       contentContainerStyle={styles.scrollContainer}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
     >
-      {/* 1. TOP MODULE NAVIGATION IN 1 SINGLE CARD */}
+      {/* 1. TOP MODULE NAVIGATION IN 1 SINGLE CARD (6 FEATURE ICONS IN 3x2 GRID) */}
       <View style={styles.topNavModuleCard}>
-        <View style={styles.topNavGridRow}>
-          {/* HLV */}
-          <Pressable
-            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-            onPress={() => router.push('/(app)/customers')}
-          >
-            <View style={[styles.topNavIconCircle, { backgroundColor: '#F0F9FF' }]}>
-              <Ionicons name="people" size={18} color="#0284C7" />
-            </View>
-            <Text style={styles.topNavBtnText}>HLV</Text>
-          </Pressable>
+        <View style={styles.topNavGridMatrix}>
+          {/* Row 1: HLV, Khách hàng, Gói tập */}
+          <View style={styles.topNavRow}>
+            {/* 1. HLV */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/customers')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#F0F9FF' }]}>
+                <Ionicons name="people-outline" size={18} color="#0284C7" />
+              </View>
+              <Text style={styles.topNavBtnText}>HLV</Text>
+            </Pressable>
 
-          <View style={styles.topNavDivider} />
+            {/* 2. Khách hàng */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/customers')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#F0FDF4' }]}>
+                <Ionicons name="person-add-outline" size={18} color="#16A34A" />
+              </View>
+              <Text style={styles.topNavBtnText}>Khách hàng</Text>
+            </Pressable>
 
-          {/* Gói tập */}
-          <Pressable
-            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-            onPress={() => router.push('/(app)/customers')}
-          >
-            <View style={[styles.topNavIconCircle, { backgroundColor: '#F5F3FF' }]}>
-              <Ionicons name="cube" size={18} color="#7C3AED" />
-            </View>
-            <Text style={styles.topNavBtnText}>Gói tập</Text>
-          </Pressable>
+            {/* 3. Gói tập */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/customers')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#F5F3FF' }]}>
+                <Ionicons name="cube-outline" size={18} color="#7C3AED" />
+              </View>
+              <Text style={styles.topNavBtnText}>Gói tập</Text>
+            </Pressable>
+          </View>
 
-          <View style={styles.topNavDivider} />
+          {/* Row 2: Ví credit, Kho tri thức, Cài đặt */}
+          <View style={styles.topNavRow}>
+            {/* 4. Ví credit */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/wallet')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="wallet-outline" size={18} color="#D97706" />
+              </View>
+              <Text style={styles.topNavBtnText}>Ví credit</Text>
+            </Pressable>
 
-          {/* Cài đặt */}
-          <Pressable
-            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-            onPress={() => router.push('/(app)/profile')}
-          >
-            <View style={[styles.topNavIconCircle, { backgroundColor: '#F8FAFC' }]}>
-              <Ionicons name="settings-sharp" size={18} color="#475569" />
-            </View>
-            <Text style={styles.topNavBtnText}>Cài đặt</Text>
-          </Pressable>
+            {/* 5. Kho tri thức */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/exercises')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="book-outline" size={18} color="#2563EB" />
+              </View>
+              <Text style={styles.topNavBtnText}>Kho tri thức</Text>
+            </Pressable>
+
+            {/* 6. Cài đặt */}
+            <Pressable
+              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+              onPress={() => router.push('/(app)/profile')}
+            >
+              <View style={[styles.topNavIconCircle, { backgroundColor: '#F8FAFC' }]}>
+                <Ionicons name="settings-outline" size={18} color="#475569" />
+              </View>
+              <Text style={styles.topNavBtnText}>Cài đặt</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -645,7 +761,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </Pressable>
       </View>
 
-      {/* 4. VISUAL CHARTS SECTION */}
+      {/* 4. VISUAL CHARTS SECTION WITH ANIMATION */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionHeaderTitle}>TỶ LỆ TƯƠNG TÁC & HOẠT ĐỘNG</Text>
         <Text style={styles.sectionMetaText}>Cập nhật trực tiếp</Text>
@@ -661,7 +777,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
 
         <View style={styles.donutRowLayout}>
-          {/* Donut SVG Ring */}
+          {/* Animated Donut SVG Ring */}
           <AdminDonutChart
             active={activeCount}
             lead={leadCount}
@@ -709,7 +825,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       </View>
 
-      {/* Chart Card 2: 7-Day Line Chart */}
+      {/* Chart Card 2: 7-Day Line Chart with Animation */}
       <View style={styles.cleanCard}>
         <View style={styles.cardHeader}>
           <View>
@@ -735,7 +851,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </Pressable>
       </View>
 
-      {/* Bar Chart & PT Workload Card */}
+      {/* Bar Chart & PT Workload Card with Animation */}
       <View style={styles.cleanCard}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Biểu đồ Cột Tải công việc</Text>
@@ -845,12 +961,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 
-  /* Single Card Top Nav Modules */
+  /* Single Card Top Nav Modules (6 Icons in 3x2 Grid) */
   topNavModuleCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     marginTop: 4,
@@ -860,7 +976,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
   },
-  topNavGridRow: {
+  topNavGridMatrix: {
+    gap: 14,
+  },
+  topNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -878,14 +997,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topNavBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#334155',
-  },
-  topNavDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#F1F5F9',
+    textAlign: 'center',
   },
 
   /* Header Row */
