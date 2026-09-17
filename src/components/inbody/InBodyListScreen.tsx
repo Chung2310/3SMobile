@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -19,6 +18,7 @@ import { fetchCustomersList } from '@/services/customerService';
 import { inbodyService } from '@/services/inbodyService';
 import { analyzeInBody } from '@/services/inbodyAnalytics';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodySummaryBanner } from './InBodySummaryBanner';
 import { InBodyEvolutionChart } from './InBodyEvolutionChart';
@@ -49,6 +49,7 @@ export function InBodyListScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { alertConfig, showError } = useAppAlert();
 
   const [records, setRecords] = useState<InBodyRecordData[]>([]);
   const [customers, setCustomers] = useState<CustomerProfile[]>([]);
@@ -202,7 +203,7 @@ export function InBodyListScreen() {
       setDeletingRecord(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể xóa phiếu.';
-      Alert.alert('Lỗi', msg);
+      showError(msg);
     } finally {
       setDeletingLoading(false);
     }
@@ -487,6 +488,8 @@ export function InBodyListScreen() {
         onClose={() => setShowCustomerPicker(false)}
         onSelect={(id) => setSelectedCustomerId(id)}
       />
+
+      <AppAlertModal {...alertConfig} />
     </View>
   );
 }

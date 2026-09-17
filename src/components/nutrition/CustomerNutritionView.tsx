@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -390,7 +389,7 @@ export function CustomerNutritionView() {
                   }}
                   style={styles.backToTodayBtn}
                 >
-                  <Text style={styles.backToTodayText}>↩ Về hôm nay</Text>
+                  <Text style={styles.backToTodayText}>Về hôm nay</Text>
                 </Pressable>
               )}
             </View>
@@ -461,7 +460,7 @@ export function CustomerNutritionView() {
                   }}
                   style={styles.backToTodayBtn}
                 >
-                  <Text style={styles.backToTodayText}>↩ Về hôm nay</Text>
+                  <Text style={styles.backToTodayText}>Về hôm nay</Text>
                 </Pressable>
               )}
             </View>

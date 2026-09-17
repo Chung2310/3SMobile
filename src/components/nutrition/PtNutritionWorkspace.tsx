@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   RefreshControl,
@@ -23,6 +22,7 @@ import {
   Eye,
   FileText,
   Flame,
+  Lightbulb,
   Pencil,
   Plus,
   RotateCcw,
@@ -58,6 +58,7 @@ import {
   subscribeToFoodDatabaseUpdates,
 } from '@/services/foodDatabase';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import { CustomerSelectModal } from '../CustomerSelectModal';
 import { PaginationBar } from '../PaginationBar';
 import { MealPlannerModal } from './MealPlannerModal';
@@ -274,7 +275,7 @@ function PlanNotesCollapsible({ notes }: { notes: string }) {
     >
       <View style={styles.planNotesHeader}>
         <View style={styles.planNotesTitleRow}>
-          <Text style={styles.planNotesIcon}>💡</Text>
+          <Lightbulb size={13} color="#d97706" />
           <Text style={styles.planNotesTitle} numberOfLines={expanded ? undefined : 1}>
             {title}
           </Text>
@@ -315,6 +316,7 @@ function PlanNotesCollapsible({ notes }: { notes: string }) {
 export function PtNutritionWorkspace() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { alertConfig, showAlert, showSuccess, showError, showConfirm } = useAppAlert();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<NutritionWorkspaceTab>('macro_calculator');
@@ -620,10 +622,14 @@ export function PtNutritionWorkspace() {
   // Tab 2 Actions: Plan Management
   const handleOpenNewPlan = () => {
     if (!selectedCustomer) {
-      Alert.alert('Chọn học viên', 'Vui lòng chọn học viên trước khi lập thực đơn.', [
-        { text: 'Chọn học viên', onPress: () => setCustomerModalVisible(true) },
-        { text: 'Đóng', style: 'cancel' },
-      ]);
+      showAlert({
+        type: 'info',
+        title: 'Chọn học viên',
+        message: 'Vui lòng chọn học viên trước khi lập thực đơn.',
+        confirmLabel: 'Chọn học viên',
+        cancelLabel: 'Đóng',
+        onConfirm: () => setCustomerModalVisible(true),
+      });
       return;
     }
     setEditingPlan(null);
@@ -650,7 +656,7 @@ export function PtNutritionWorkspace() {
       const updated = await nutritionService.updatePlan(planId, { status: newStatus });
       setPlans((prev) => prev.map((p) => ((p._id || p.id) === planId ? updated : p)));
     } catch {
-      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái thực đơn.');
+      showError('Không thể cập nhật trạng thái thực đơn.', 'Lỗi');
     }
   };
 
@@ -670,7 +676,7 @@ export function PtNutritionWorkspace() {
       setDeleteModalVisible(false);
       setDeletingPlan(null);
     } catch {
-      Alert.alert('Lỗi', 'Không thể xóa thực đơn này.');
+      showError('Không thể xóa thực đơn này.', 'Lỗi');
     } finally {
       setDeleting(false);
     }
@@ -688,50 +694,42 @@ export function PtNutritionWorkspace() {
   };
 
   const handleDeleteFood = (food: FoodItem) => {
-    Alert.alert(
+    showConfirm(
       'Xác nhận xóa món',
       `Bạn có chắc chắn muốn xóa món "${food.name}" khỏi kho dữ liệu?`,
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteCustomFood(food.id);
-            if (inspectedFood?.id === food.id) {
-              setInspectedFood(null);
-            }
-          },
-        },
-      ]
+      async () => {
+        await deleteCustomFood(food.id);
+        if (inspectedFood?.id === food.id) {
+          setInspectedFood(null);
+        }
+      },
+      { confirmLabel: 'Xóa', cancelLabel: 'Hủy', type: 'error' }
     );
   };
 
   const handleResetFoods = () => {
-    Alert.alert(
+    showConfirm(
       'Khôi phục kho món ăn',
       'Bạn có chắc muốn khôi phục kho món ăn về danh sách chuẩn ban đầu của 3S Gym?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Khôi phục',
-          style: 'destructive',
-          onPress: async () => {
-            await resetCustomFoods();
-            setInspectedFood(null);
-          },
-        },
-      ]
+      async () => {
+        await resetCustomFoods();
+        setInspectedFood(null);
+      },
+      { confirmLabel: 'Khôi phục', cancelLabel: 'Hủy', type: 'warning' }
     );
   };
 
   // Tab 4 Action: Activity Logging
   const handleLogActivity = async (activity: ActivityItem) => {
     if (!selectedCustomerId) {
-      Alert.alert('Chọn học viên', 'Vui lòng chọn học viên trước khi ghi nhật ký vận động.', [
-        { text: 'Chọn học viên', onPress: () => setCustomerModalVisible(true) },
-        { text: 'Đóng', style: 'cancel' },
-      ]);
+      showAlert({
+        type: 'info',
+        title: 'Chọn học viên',
+        message: 'Vui lòng chọn học viên trước khi ghi nhật ký vận động.',
+        confirmLabel: 'Chọn học viên',
+        cancelLabel: 'Đóng',
+        onConfirm: () => setCustomerModalVisible(true),
+      });
       return;
     }
 
@@ -750,9 +748,9 @@ export function PtNutritionWorkspace() {
         notes: `MET ${activity.met} • ${duration}p (${weight}kg)`,
       });
       await loadCustomerNutrition(selectedCustomerId);
-      Alert.alert('Đã ghi nhận', `-${burned} kcal cho ${activity.name}`);
+      showSuccess(`-${burned} kcal cho ${activity.name}`, 'Đã ghi nhận');
     } catch {
-      Alert.alert('Lỗi', 'Không thể ghi nhận nhật ký vận động.');
+      showError('Không thể ghi nhận nhật ký vận động.', 'Lỗi');
     } finally {
       setSavingActivityId(null);
     }
@@ -770,48 +768,41 @@ export function PtNutritionWorkspace() {
   };
 
   const handleDeleteActivity = (activity: ActivityItem) => {
-    Alert.alert(
+    showConfirm(
       'Xác nhận xóa',
       `Bạn có chắc chắn muốn xóa bộ môn "${activity.name}" khỏi kho vận động?`,
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteCustomActivity(activity.id);
-            if (focusedActivity?.id === activity.id) {
-              setFocusedActivity(null);
-            }
-          },
-        },
-      ]
+      async () => {
+        await deleteCustomActivity(activity.id);
+        if (focusedActivity?.id === activity.id) {
+          setFocusedActivity(null);
+        }
+      },
+      { confirmLabel: 'Xóa', cancelLabel: 'Hủy', type: 'error' }
     );
   };
 
   const handleResetActivities = () => {
-    Alert.alert(
+    showConfirm(
       'Khôi phục danh mục chuẩn',
       'Bạn có muốn khôi phục toàn bộ danh sách bộ môn vận động chuẩn của 3S Gym?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Khôi phục',
-          onPress: async () => {
-            await resetCustomActivities();
-          },
-        },
-      ]
+      async () => {
+        await resetCustomActivities();
+      },
+      { confirmLabel: 'Khôi phục', cancelLabel: 'Hủy', type: 'warning' }
     );
   };
 
   // Tab 5 Actions: Daily Log Management (CRUD Logs)
   const handleOpenCreateLog = () => {
     if (!selectedCustomer) {
-      Alert.alert('Chọn học viên', 'Vui lòng chọn học viên trước khi ghi nhật ký.', [
-        { text: 'Chọn học viên', onPress: () => setCustomerModalVisible(true) },
-        { text: 'Đóng', style: 'cancel' },
-      ]);
+      showAlert({
+        type: 'info',
+        title: 'Chọn học viên',
+        message: 'Vui lòng chọn học viên trước khi ghi nhật ký.',
+        confirmLabel: 'Chọn học viên',
+        cancelLabel: 'Đóng',
+        onConfirm: () => setCustomerModalVisible(true),
+      });
       return;
     }
     setEditingLog(null);
@@ -824,23 +815,21 @@ export function PtNutritionWorkspace() {
   };
 
   const handleDeleteLog = async (logId: string) => {
-    Alert.alert('Xóa nhật ký', 'Bạn có chắc chắn muốn xóa bản ghi này?', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await nutritionService.deleteLog(logId);
-            if (selectedCustomerId) {
-              loadCustomerNutrition(selectedCustomerId);
-            }
-          } catch {
-            Alert.alert('Lỗi', 'Không thể xóa nhật ký.');
+    showConfirm(
+      'Xác nhận xóa',
+      'Bạn có chắc chắn muốn xóa bản ghi này?',
+      async () => {
+        try {
+          await nutritionService.deleteLog(logId);
+          if (selectedCustomerId) {
+            loadCustomerNutrition(selectedCustomerId);
           }
-        },
+        } catch {
+          showError('Không thể xóa nhật ký.', 'Lỗi');
+        }
       },
-    ]);
+      { confirmLabel: 'Xóa', cancelLabel: 'Hủy', type: 'error' }
+    );
   };
 
   // Food Library Quick Metrics (Tab 3)
@@ -1052,7 +1041,7 @@ export function PtNutritionWorkspace() {
                       macroGender === 'MALE' && styles.segmentBtnTextActive,
                     ]}
                   >
-                    Nam 👨
+                    Nam
                   </Text>
                 </Pressable>
                 <Pressable
@@ -1065,7 +1054,7 @@ export function PtNutritionWorkspace() {
                       macroGender === 'FEMALE' && styles.segmentBtnTextActive,
                     ]}
                   >
-                    Nữ 👩
+                    Nữ
                   </Text>
                 </Pressable>
               </View>
@@ -1121,7 +1110,7 @@ export function PtNutritionWorkspace() {
               {/* Activity Level Scroll */}
               <View style={styles.miniSectionGroup}>
                 <Text style={styles.miniSectionLabel}>Cường độ vận động (PAL)</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillScroll}>
                   {[
                     { factor: 1.2, label: 'Ít vận động (x1.2)' },
                     { factor: 1.375, label: 'Nhẹ 1-3 buổi (x1.375)' },
@@ -1148,7 +1137,7 @@ export function PtNutritionWorkspace() {
               {/* Goal Presets Scroll */}
               <View style={styles.miniSectionGroup}>
                 <Text style={styles.miniSectionLabel}>Mục tiêu thể hình</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillScroll}>
                   {[
                     { id: 'FAT_LOSS_FAST', label: 'Giảm mỡ nhanh (-20%)', color: colors.warning },
                     { id: 'FAT_LOSS_STANDARD', label: 'Giảm mỡ chuẩn (-15%)', color: colors.success },
@@ -1187,17 +1176,17 @@ export function PtNutritionWorkspace() {
             {/* Calculated Hero Card with Clean Macro Panel */}
             <View style={styles.cleanPlanCard}>
               <View style={styles.macroHeroHeader}>
-                <View>
-                  <Text style={styles.macroHeroSubtitle}>KẾT QUẢ TÍNH TOÁN DỰA TRÊN THỂ TRẠNG</Text>
-                  <Text style={styles.macroHeroSubline}>
-                    BMR: {calculatedNutrition.bmr} kcal • TDEE: {calculatedNutrition.tdee} kcal • Nước: ~{calculatedNutrition.waterLiters}L/ngày
-                  </Text>
+                <View style={styles.macroHeroTopRow}>
+                  <Text style={styles.macroHeroSubtitle}>KẾT QUẢ THEO THỂ TRẠNG</Text>
+                  <View style={styles.macroHeroGoalBadge}>
+                    <Text style={styles.macroHeroGoalText} numberOfLines={1}>
+                      {calculatedNutrition.goalLabel}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.macroHeroGoalBadge}>
-                  <Text style={styles.macroHeroGoalText}>
-                    {calculatedNutrition.goalLabel}
-                  </Text>
-                </View>
+                <Text style={styles.macroHeroSubline}>
+                  BMR: {calculatedNutrition.bmr} kcal • TDEE: {calculatedNutrition.tdee} kcal • Nước: ~{calculatedNutrition.waterLiters}L/ngày
+                </Text>
               </View>
 
               {/* Clean Macro Panel */}
@@ -1221,7 +1210,14 @@ export function PtNutritionWorkspace() {
                 style={styles.cleanAiBtn}
                 onPress={() => {
                   if (!selectedCustomer) {
-                    Alert.alert('Chọn học viên', 'Vui lòng chọn học viên trước khi tạo thực đơn AI.');
+                    showAlert({
+                      type: 'info',
+                      title: 'Chọn học viên',
+                      message: 'Vui lòng chọn học viên trước khi tạo thực đơn AI.',
+                      confirmLabel: 'Chọn học viên',
+                      cancelLabel: 'Đóng',
+                      onConfirm: () => setCustomerModalVisible(true),
+                    });
                     return;
                   }
                   setAiDraftModalVisible(true);
@@ -1247,7 +1243,14 @@ export function PtNutritionWorkspace() {
                 style={styles.aiActionBtn}
                 onPress={() => {
                   if (!selectedCustomer) {
-                    Alert.alert('Chọn học viên', 'Vui lòng chọn học viên trước khi tạo thực đơn AI.');
+                    showAlert({
+                      type: 'info',
+                      title: 'Chọn học viên',
+                      message: 'Vui lòng chọn học viên trước khi tạo thực đơn AI.',
+                      confirmLabel: 'Chọn học viên',
+                      cancelLabel: 'Đóng',
+                      onConfirm: () => setCustomerModalVisible(true),
+                    });
                     return;
                   }
                   setAiDraftModalVisible(true);
@@ -1605,7 +1608,7 @@ export function PtNutritionWorkspace() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.pillScroll}
+              contentContainerStyle={styles.pillScroll}
             >
               {(
                 [
@@ -1841,7 +1844,7 @@ export function PtNutritionWorkspace() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={styles.activityPresetsScroll}
+                contentContainerStyle={styles.activityPresetsScroll}
               >
                 {[
                   { label: 'Gym 1h', id: 'gym_hiit', duration: '60' },
@@ -2005,7 +2008,7 @@ export function PtNutritionWorkspace() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.metricsRowScroll}
+              contentContainerStyle={styles.metricsRowScroll}
             >
               {[
                 { id: 'ALL', label: 'TẤT CẢ', count: countAllAct },
@@ -2068,7 +2071,7 @@ export function PtNutritionWorkspace() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.sortBarScroll}
+              contentContainerStyle={styles.sortBarScroll}
             >
               <Text style={styles.sortBarLabel}>Sắp xếp:</Text>
               {[
@@ -2536,7 +2539,7 @@ export function PtNutritionWorkspace() {
               {/* Prep Tip */}
               {inspectedFood.prepTip ? (
                 <View style={styles.foodDetailTipBox}>
-                  <Text style={styles.foodDetailTipTitle}>💡 Mẹo chế biến lành mạnh:</Text>
+                  <Text style={styles.foodDetailTipTitle}>Mẹo chế biến lành mạnh:</Text>
                   <Text style={styles.foodDetailTipDesc}>{inspectedFood.prepTip}</Text>
                 </View>
               ) : null}
@@ -2718,6 +2721,8 @@ export function PtNutritionWorkspace() {
           }
         }}
       />
+
+      <AppAlertModal {...alertConfig} />
     </View>
   );
 }
@@ -2949,6 +2954,7 @@ const styles = StyleSheet.create({
   },
   pillScroll: {
     flexDirection: 'row',
+    paddingRight: 12,
   },
   compactPill: {
     paddingHorizontal: 10,
@@ -2975,27 +2981,32 @@ const styles = StyleSheet.create({
 
   /* Macro Hero Card (Tab 1) */
   macroHeroHeader: {
+    marginBottom: 6,
+  },
+  macroHeroTopRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    gap: 8,
   },
   macroHeroSubtitle: {
-    fontSize: 9.5,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: colors.textMuted,
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   macroHeroSubline: {
     fontSize: 10.5,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   macroHeroGoalBadge: {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    flexShrink: 0,
   },
   macroHeroGoalText: {
     fontSize: 10.5,

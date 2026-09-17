@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,6 +21,7 @@ import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodySegmentalInput } from './InBodySegmentalInput';
 import { InBodyMetricsFormFields, InBodyMetricsFormValues } from './InBodyMetricsFormFields';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 
 interface InBodyManualFormProps {
   visible: boolean;
@@ -45,6 +45,7 @@ export function InBodyManualForm({
   onCustomerCreated,
 }: InBodyManualFormProps) {
   const [submitting, setSubmitting] = useState(false);
+  const { alertConfig, showError, showWarning } = useAppAlert();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showSegmental, setShowSegmental] = useState(false);
@@ -265,12 +266,12 @@ export function InBodyManualForm({
 
   const handleSubmit = async () => {
     if (!customerId) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng chọn học viên.');
+      showWarning('Vui lòng chọn học viên.', 'Thiếu thông tin');
       return;
     }
     const w = numVal(weight);
     if (!w || w <= 0) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập cân nặng hợp lệ (> 0 kg).');
+      showWarning('Vui lòng nhập cân nặng hợp lệ (> 0 kg).', 'Thiếu thông tin');
       return;
     }
 
@@ -328,7 +329,7 @@ export function InBodyManualForm({
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể lưu phiếu InBody.';
-      Alert.alert('Lỗi', msg);
+      showError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -517,6 +518,8 @@ export function InBodyManualForm({
         onClose={() => setShowQuickAddCustomer(false)}
         onCreated={handleCustomerCreated}
       />
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

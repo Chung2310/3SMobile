@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import type { CustomerGoalData, InBodyRecordData } from '@/types/inbody';
 import { api } from '@/services/api/client';
 import { analyzeInBody } from '@/services/inbodyAnalytics';
@@ -54,7 +54,9 @@ export function InBodyDetailSheet({
   onDelete,
   onStatusChanged,
 }: InBodyDetailSheetProps) {
+  const [goals, setGoals] = useState<CustomerGoalData[]>([]);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const { alertConfig, showError } = useAppAlert();
   const [customerGoal, setCustomerGoal] = useState<CustomerGoalData | null>(null);
   const [customerHistory, setCustomerHistory] = useState<InBodyRecordData[]>(historyRecords || []);
 
@@ -167,7 +169,7 @@ export function InBodyDetailSheet({
       onStatusChanged?.(updated);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
-      Alert.alert('Lỗi', msg);
+      showError(msg);
     } finally {
       setTogglingStatus(false);
     }
@@ -395,6 +397,8 @@ export function InBodyDetailSheet({
           </ScrollView>
         </View>
       </View>
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

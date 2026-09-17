@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -11,8 +11,106 @@ export interface AppAlertModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onCancel?: () => void;
+}
+
+export interface ShowAlertOptions {
+  type?: AlertModalType;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
+
+export function useAppAlert() {
+  const [alertConfig, setAlertConfig] = useState<AppAlertModalProps>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const showAlert = useCallback((options: ShowAlertOptions) => {
+    setAlertConfig({
+      visible: true,
+      type: options.type || 'info',
+      title: options.title,
+      message: options.message,
+      confirmLabel: options.confirmLabel || (options.cancelLabel ? 'Xác nhận' : 'Đã hiểu'),
+      cancelLabel: options.cancelLabel,
+      onConfirm: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        options.onConfirm?.();
+      },
+      onCancel: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        options.onCancel?.();
+      },
+    });
+  }, []);
+
+  const hideAlert = useCallback(() => {
+    setAlertConfig((prev) => ({ ...prev, visible: false }));
+  }, []);
+
+  const showSuccess = useCallback(
+    (message: string, title = 'Thành công', onConfirm?: () => void) => {
+      showAlert({ type: 'success', title, message, onConfirm });
+    },
+    [showAlert]
+  );
+
+  const showError = useCallback(
+    (message: string, title = 'Lỗi', onConfirm?: () => void) => {
+      showAlert({ type: 'error', title, message, onConfirm });
+    },
+    [showAlert]
+  );
+
+  const showWarning = useCallback(
+    (message: string, title = 'Cảnh báo', onConfirm?: () => void) => {
+      showAlert({ type: 'warning', title, message, onConfirm });
+    },
+    [showAlert]
+  );
+
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void,
+      options?: {
+        confirmLabel?: string;
+        cancelLabel?: string;
+        type?: AlertModalType;
+        onCancel?: () => void;
+      }
+    ) => {
+      showAlert({
+        type: options?.type || 'warning',
+        title,
+        message,
+        confirmLabel: options?.confirmLabel || 'Xác nhận',
+        cancelLabel: options?.cancelLabel || 'Hủy',
+        onConfirm,
+        onCancel: options?.onCancel,
+      });
+    },
+    [showAlert]
+  );
+
+  return {
+    alertConfig,
+    showAlert,
+    hideAlert,
+    showSuccess,
+    showError,
+    showWarning,
+    showConfirm,
+  };
 }
 
 export function AppAlertModal({
@@ -47,7 +145,7 @@ export function AppAlertModal({
       onCancel();
     } else if (!hasCancel) {
       // Pure informational dialog with single button (e.g. "Đã hiểu")
-      onConfirm();
+      onConfirm?.();
     }
   };
 

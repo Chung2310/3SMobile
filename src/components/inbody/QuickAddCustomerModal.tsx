@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import { createCustomer } from '@/services/customerService';
 
@@ -43,6 +43,7 @@ export function QuickAddCustomerModal({
   const [initialWeight, setInitialWeight] = useState('');
   const [initialGoal, setInitialGoal] = useState('');
   const [loading, setLoading] = useState(false);
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   useEffect(() => {
     if (visible) {
@@ -58,30 +59,30 @@ export function QuickAddCustomerModal({
   const handleSave = async () => {
     const cleanName = fullName.trim();
     if (!cleanName || cleanName.length < 2) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ và tên học viên (tối thiểu 2 ký tự).');
+      showWarning('Vui lòng nhập họ và tên học viên (tối thiểu 2 ký tự).', 'Thiếu thông tin');
       return;
     }
 
     const cleanPhone = phone.trim();
     if (!cleanPhone) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập số điện thoại học viên.');
+      showWarning('Vui lòng nhập số điện thoại học viên.', 'Thiếu thông tin');
       return;
     }
 
     if (!/^[0-9+]{9,15}$/.test(cleanPhone)) {
-      Alert.alert('Sai số điện thoại', 'Số điện thoại phải từ 9 đến 15 chữ số.');
+      showWarning('Số điện thoại phải từ 9 đến 15 chữ số.', 'Sai số điện thoại');
       return;
     }
 
     const hNum = height.trim() ? Number(height) : undefined;
     if (hNum != null && (isNaN(hNum) || hNum <= 0)) {
-      Alert.alert('Sai chiều cao', 'Chiều cao phải là số dương.');
+      showWarning('Chiều cao phải là số dương.', 'Sai chiều cao');
       return;
     }
 
     const wNum = initialWeight.trim() ? Number(initialWeight) : undefined;
     if (wNum != null && (isNaN(wNum) || wNum <= 0)) {
-      Alert.alert('Sai cân nặng', 'Cân nặng phải là số dương.');
+      showWarning('Cân nặng phải là số dương.', 'Sai cân nặng');
       return;
     }
 
@@ -100,12 +101,13 @@ export function QuickAddCustomerModal({
       };
 
       const created = await createCustomer(payload);
-      Alert.alert('Thành công', `Đã thêm học viên "${created.fullName}" vào hệ thống!`);
-      onCreated(created);
-      onClose();
+      showSuccess(`Đã thêm học viên "${created.fullName}" vào hệ thống!`, 'Thành công', () => {
+        onCreated(created);
+        onClose();
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tạo học viên mới.';
-      Alert.alert('Lỗi tạo học viên', msg);
+      showError(msg, 'Lỗi tạo học viên');
     } finally {
       setLoading(false);
     }
@@ -282,6 +284,8 @@ export function QuickAddCustomerModal({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

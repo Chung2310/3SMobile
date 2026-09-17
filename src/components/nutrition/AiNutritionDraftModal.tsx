@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -28,6 +27,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import type { DayMenuPlan, MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
@@ -47,27 +47,27 @@ interface AiNutritionDraftModalProps {
 
 const AI_PRESET_PROMPTS = [
   {
-    label: '🔥 Giảm mỡ (4 bữa)',
+    label: 'Giảm mỡ (4 bữa)',
     prompt:
       'Thực đơn 4 bữa/ngày (Sáng, Trưa, Phụ, Tối), tập trung thâm hụt calo giảm mỡ an toàn, giữ cơ bắp, ưu tiên món cơm Việt dễ nấu (ức gà, cá, trứng, khoai lang, rau muống luộc).',
   },
   {
-    label: '💪 Tăng cơ nạc (5 bữa)',
+    label: 'Tăng cơ nạc (5 bữa)',
     prompt:
       'Thực đơn 5 bữa/ngày, giàu đạm Protein (2.2g/kg), bổ sung tinh bột hấp thu chậm trước tập, ưu tiên thịt bò thăn, ức gà, trứng luộc, chuối và sữa chua.',
   },
   {
-    label: '🍚 Eat Clean cơm Việt',
+    label: 'Eat Clean cơm Việt',
     prompt:
       'Thực đơn 3 bữa chính + 1 bữa phụ, chế biến ít dầu mỡ, nhiều chất xơ rau củ theo mùa, gia vị tự nhiên (tỏi, gừng, chanh), hạn chế đồ chiên ngập dầu.',
   },
   {
-    label: '🥦 Ăn chay thể hình',
+    label: 'Ăn chay thể hình',
     prompt:
       'Thực đơn thuần chay hoặc chay có trứng sữa, đảm bảo đủ đạm từ đậu hũ, nấm, trứng, các loại hạt đậu, bột yến mạch và sữa hạt.',
   },
   {
-    label: '⚡ Nhanh gọn cho người bận',
+    label: 'Nhanh gọn cho người bận',
     prompt:
       'Thực đơn tối ưu thời gian nấu nướng dưới 20 phút mỗi bữa, nguyên liệu dễ mua tại siêu thị, tiện chia phần chuẩn bị từ tối hôm trước.',
   },
@@ -94,7 +94,8 @@ export function AiNutritionDraftModal({
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState<NutritionPlanData | null>(null);
-  const [adviceExpanded, setAdviceExpanded] = useState(false);
+  const [adviceExpanded, setAdviceExpanded] = useState(true);
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
 
@@ -135,7 +136,7 @@ export function AiNutritionDraftModal({
   const handleGenerate = async () => {
     const customerId = customer?._id || (customer as any)?.id;
     if (!customerId) {
-      Alert.alert('Chưa chọn học viên', 'Vui lòng chọn học viên trước khi tạo thực đơn AI.');
+      showWarning('Vui lòng chọn học viên trước khi tạo thực đơn AI.', 'Chưa chọn học viên');
       return;
     }
 
@@ -148,9 +149,9 @@ export function AiNutritionDraftModal({
       setSelectedWeekIdx(0);
       setSelectedDayIdx(0);
     } catch (err: any) {
-      Alert.alert(
-        'Lỗi tạo thực đơn AI',
-        err?.message || 'Không thể tạo thực đơn AI lúc này. Vui lòng thử lại sau.'
+      showError(
+        err?.message || 'Không thể tạo thực đơn AI lúc này. Vui lòng thử lại sau.',
+        'Lỗi tạo thực đơn AI'
       );
     } finally {
       setLoading(false);
@@ -215,11 +216,12 @@ export function AiNutritionDraftModal({
         menu: menuPayload,
         dailyPlans: dailyPlansPayload,
       });
-      Alert.alert('Thành công', 'Đã lưu thực đơn do AI tạo vào danh sách thực đơn!');
-      onPlanCreated(saved);
-      onClose();
+      showSuccess('Đã lưu thực đơn do AI tạo vào danh sách thực đơn!', 'Thành công', () => {
+        onPlanCreated(saved);
+        onClose();
+      });
     } catch (err: any) {
-      Alert.alert('Lỗi lưu', err?.message || 'Không thể lưu thực đơn.');
+      showError(err?.message || 'Không thể lưu thực đơn.', 'Lỗi lưu');
     } finally {
       setSaving(false);
     }
@@ -366,7 +368,7 @@ export function AiNutritionDraftModal({
                   ) : (
                     <View style={styles.btnContentRow}>
                       <Sparkles size={16} color="#fff" />
-                      <Text style={styles.generateBtnText}>Bắt Đầu Tạo Thực Đơn AI ✨</Text>
+                      <Text style={styles.generateBtnText}>Bắt Đầu Tạo Thực Đơn AI</Text>
                     </View>
                   )}
                 </Pressable>
@@ -384,7 +386,7 @@ export function AiNutritionDraftModal({
                       </Text>
                     </View>
                     <Text style={styles.resultCalText}>
-                      🔥 {generatedDraft.targetCalories} kcal / ngày
+                      {generatedDraft.targetCalories} kcal / ngày
                     </Text>
                   </View>
 
@@ -414,7 +416,7 @@ export function AiNutritionDraftModal({
                     onPress={() => setAdviceExpanded((p) => !p)}
                   >
                     <View style={styles.adviceHeaderRow}>
-                      <Text style={styles.adviceTitle}>💡 Lời khuyên dinh dưỡng từ AI:</Text>
+                      <Text style={styles.adviceTitle}>Lời khuyên dinh dưỡng từ AI:</Text>
                       <Text style={styles.adviceToggleText}>
                         {adviceExpanded ? 'Thu gọn ▴' : 'Xem thêm ▾'}
                       </Text>
@@ -605,6 +607,8 @@ export function AiNutritionDraftModal({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

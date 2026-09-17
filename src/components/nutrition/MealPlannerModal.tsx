@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -33,6 +32,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import type {
   CalculatedNutrition,
@@ -93,11 +93,12 @@ export function MealPlannerModal({
   const [weeks, setWeeks] = useState<WeekMenuPlan[]>(() => buildWeeksSchedule(getTodayYmd(), 7));
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   // Sub-modal for selecting foods
   const [activeMealIndex, setActiveMealIndex] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   // Active items helpers
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
@@ -230,7 +231,7 @@ export function MealPlannerModal({
   // Copy active day meals to all days in current week
   const handleCopyDayToCurrentWeek = () => {
     if (!activeDay || activeMeals.length === 0 || activeMeals.every((m) => m.items.length === 0)) {
-      Alert.alert('Chưa có món', 'Vui lòng thêm món ăn vào ngày này trước khi sao chép.');
+      showWarning('Vui lòng thêm món ăn vào ngày này trước khi sao chép.', 'Chưa có món');
       return;
     }
     setWeeks((prev) => {
@@ -250,16 +251,16 @@ export function MealPlannerModal({
       clone[selectedWeekIdx] = curWeek;
       return clone;
     });
-    Alert.alert(
-      'Sao chép thành công',
-      `Đã áp dụng toàn bộ món ăn của ${activeDay.dayOfWeek} sang cả ${activeWeek?.name}!`
+    showSuccess(
+      `Đã áp dụng toàn bộ món ăn của ${activeDay.dayOfWeek} sang cả ${activeWeek?.name}!`,
+      'Sao chép thành công'
     );
   };
 
   // Copy active day meals to ALL weeks (full duration)
   const handleCopyDayToAllWeeks = () => {
     if (!activeDay || activeMeals.length === 0 || activeMeals.every((m) => m.items.length === 0)) {
-      Alert.alert('Chưa có món', 'Vui lòng thêm món ăn vào ngày này trước khi sao chép.');
+      showWarning('Vui lòng thêm món ăn vào ngày này trước khi sao chép.', 'Chưa có món');
       return;
     }
     setWeeks((prev) => {
@@ -278,9 +279,9 @@ export function MealPlannerModal({
         }),
       }));
     });
-    Alert.alert(
-      'Sao chép thành công',
-      `Đã áp dụng món ăn của ${activeDay.dayOfWeek} sang toàn bộ ${durationDays} ngày!`
+    showSuccess(
+      `Đã áp dụng món ăn của ${activeDay.dayOfWeek} sang toàn bộ ${durationDays} ngày!`,
+      'Sao chép thành công'
     );
   };
 
@@ -288,7 +289,7 @@ export function MealPlannerModal({
   const handleAiAutoFill = async () => {
     const cId = customer?._id || (customer as any)?.id;
     if (!cId) {
-      Alert.alert('Chưa chọn học viên', 'Vui lòng chọn học viên để AI phân tích thể trạng.');
+      showWarning('Vui lòng chọn học viên để AI phân tích thể trạng.', 'Chưa chọn học viên');
       return;
     }
     try {
@@ -306,9 +307,9 @@ export function MealPlannerModal({
       }
       if (draft.title) setTitle(draft.title);
       if (draft.notes) setNotes(draft.notes);
-      Alert.alert('Hoàn thành', `AI đã tự động sinh thực đơn chi tiết cho ${durationDays} ngày!`);
+      showSuccess(`AI đã tự động sinh thực đơn chi tiết cho ${durationDays} ngày!`, 'Hoàn thành');
     } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không thể tạo bằng AI.');
+      showError(err?.message || 'Không thể tạo bằng AI.', 'Lỗi');
     } finally {
       setGeneratingAi(false);
     }
@@ -332,12 +333,12 @@ export function MealPlannerModal({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên thực đơn.');
+      showWarning('Vui lòng nhập tên thực đơn.', 'Thiếu thông tin');
       return;
     }
     const cId = customer?._id || (customer as any)?.id;
     if (!cId) {
-      Alert.alert('Chưa chọn học viên', 'Vui lòng chọn học viên trước khi lưu thực đơn.');
+      showWarning('Vui lòng chọn học viên trước khi lưu thực đơn.', 'Chưa chọn học viên');
       return;
     }
 
@@ -409,7 +410,7 @@ export function MealPlannerModal({
       onSaved(saved);
       onClose();
     } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không thể lưu thực đơn. Vui lòng thử lại.');
+      showError(err?.message || 'Không thể lưu thực đơn. Vui lòng thử lại.', 'Lỗi');
     } finally {
       setSubmitting(false);
     }
@@ -882,6 +883,8 @@ export function MealPlannerModal({
         onClose={() => setActiveMealIndex(null)}
         onSelectFood={handleSelectFood}
       />
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }
