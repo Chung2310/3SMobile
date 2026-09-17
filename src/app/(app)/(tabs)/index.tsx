@@ -83,7 +83,7 @@ const QUICK_FEATURES: QuickFeature[] = [
   },
   {
     id: 'wallet',
-    title: 'Ví thu nhập',
+    title: 'Ví Credit',
     iconName: 'wallet-outline',
     route: '/(app)/wallet',
   },
