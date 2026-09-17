@@ -12,12 +12,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
+import { CustomerTodayNutritionModal } from '@/components/CustomerTodayNutritionModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { MetricChart } from '@/components/progress/ProgressVisuals';
 import { api } from '@/services/api/client';
@@ -174,6 +175,10 @@ export function CustomerDetailModal({
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
   const [viewingPlanDetail, setViewingPlanDetail] = useState<JsonRecord | null>(null);
 
+  // Nutrition plans state & realtime modal
+  const [extraNutritionPlans, setExtraNutritionPlans] = useState<any[] | null>(null);
+  const [selectedRealtimePlan, setSelectedRealtimePlan] = useState<any | null>(null);
+
   const reloadWorkoutPlans = useCallback(async (customerId: string) => {
     setWorkoutPlansState((prev) => ({ ...prev, loading: true, error: null }));
     try {
@@ -230,6 +235,18 @@ export function CustomerDetailModal({
         setExtraConsultations(list);
       })
       .catch(() => setExtraConsultations(null));
+
+    // Fetch nutrition plans
+    api
+      .get<any>(`/api/nutrition-plans?customerId=${encodeURIComponent(targetId)}&limit=50`)
+      .then((res) => {
+        const list = Array.isArray(res) ? res : res?.data || res?.items || [];
+        setExtraNutritionPlans(list);
+      })
+      .catch((err) => {
+        console.warn('Fetch nutrition plans error:', err);
+        setExtraNutritionPlans(null);
+      });
 
     // Fetch workout plans
     reloadWorkoutPlans(targetId);
@@ -302,8 +319,15 @@ export function CustomerDetailModal({
   }, [workoutPlansState.history, journey?.plans]);
 
   const nutritionPlans = useMemo(() => {
-    return asRecords(journey?.nutritionPlans);
-  }, [journey?.nutritionPlans]);
+    if (extraNutritionPlans && extraNutritionPlans.length > 0) return extraNutritionPlans;
+    const jPlans = asRecords(journey?.nutritionPlans);
+    if (jPlans.length > 0) return jPlans;
+    return Array.isArray(extraNutritionPlans) ? extraNutritionPlans : [];
+  }, [extraNutritionPlans, journey?.nutritionPlans]);
+
+  const publishedNutritionPlans = useMemo(() => {
+    return nutritionPlans.filter((p: any) => p.status === 'PUBLISHED');
+  }, [nutritionPlans]);
 
   // Merge consultations
   const consultations = useMemo(() => {
@@ -634,7 +658,7 @@ export function CustomerDetailModal({
       key: 'nutrition',
       label: 'Thực đơn Dinh dưỡng',
       icon: 'coffee',
-      count: nutritionPlans.length,
+      count: publishedNutritionPlans.length,
     },
     {
       key: 'consultations',
@@ -1661,24 +1685,99 @@ export function CustomerDetailModal({
             {/* 6. TAB: THỰC ĐƠN DINH DƯỠNG */}
             {activeTab === 'nutrition' && (
               <View style={styles.sectionWrap}>
-                {nutritionPlans.length > 0 ? (
-                  nutritionPlans.map((plan, idx) => (
-                    <View key={readText(plan, ['id', 'uuid'], String(idx))} style={styles.contentCard}>
-                      <View style={styles.cardHeaderRow}>
-                        <Feather name="coffee" size={18} color="#0284C7" />
-                        <Text style={styles.cardTitle}>
-                          {readText(plan, ['name', 'title'], `Thực đơn ${idx + 1}`)}
-                        </Text>
-                      </View>
-                      <Text style={styles.cardBodyText}>
-                        {readText(
-                          plan,
-                          ['description'],
-                          'Kế hoạch dinh dưỡng theo mục tiêu tăng cơ / giảm mỡ.'
-                        )}
-                      </Text>
-                    </View>
-                  ))
+                <View style={styles.nutritionTabHeader}>
+                  <Text style={styles.tabSectionTitle}>
+                    Kế hoạch Thực đơn Dinh dưỡng ({publishedNutritionPlans.length})
+                  </Text>
+                  {publishedNutritionPlans.length > 0 && (
+                    <Pressable
+                      style={styles.realtimeTopBtn}
+                      onPress={() => setSelectedRealtimePlan(publishedNutritionPlans[0])}
+                    >
+                      <Ionicons name="restaurant-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.realtimeTopBtnText}>Xem Hôm Nay Ăn Gì</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {publishedNutritionPlans.length > 0 ? (
+                  publishedNutritionPlans.map((plan: any, idx: number) => {
+                    const planId = plan._id || plan.id || String(idx);
+                    const targetCalories = Number(plan.targetCalories) || 0;
+                    const macros = plan.macros || {};
+                    const createdAt = plan.createdAt;
+                    let formattedDate = '—';
+                    if (createdAt) {
+                      const d = new Date(createdAt);
+                      if (!isNaN(d.getTime())) {
+                        formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                      }
+                    }
+
+                    return (
+                      <Pressable
+                        key={planId}
+                        style={styles.nutritionPlanCard}
+                        onPress={() => setSelectedRealtimePlan(plan)}
+                      >
+                        <View style={styles.nutritionCardHeaderRow}>
+                          <Text style={styles.nutritionPlanTitle} numberOfLines={1}>
+                            {plan.title || 'Thực đơn Dinh dưỡng'}
+                          </Text>
+                          <View style={styles.publishedBadge}>
+                            <Text style={styles.publishedBadgeText}>Đã công bố</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.nutritionMetaRow}>
+                          {targetCalories > 0 && (
+                            <View style={styles.caloriesBadge}>
+                              <Ionicons name="flame" size={14} color="#E11D48" style={{ marginRight: 3 }} />
+                              <Text style={styles.caloriesBadgeText}>
+                                {targetCalories.toLocaleString()} kcal/ngày
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.protein != null && (
+                            <View style={styles.macroPillProtein}>
+                              <Text style={styles.macroPillProteinText}>
+                                Protein: {macros.protein}g
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.carbs != null && (
+                            <View style={styles.macroPillCarbs}>
+                              <Text style={styles.macroPillCarbsText}>
+                                Carbs: {macros.carbs}g
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.fat != null && (
+                            <View style={styles.macroPillFat}>
+                              <Text style={styles.macroPillFatText}>
+                                Fat: {macros.fat}g
+                              </Text>
+                            </View>
+                          )}
+
+                          <Text style={styles.nutritionCreatedDate}>Tạo: {formattedDate}</Text>
+                        </View>
+
+                        <View style={styles.nutritionCardFooter}>
+                          <Pressable
+                            style={styles.realtimeCardBtn}
+                            onPress={() => setSelectedRealtimePlan(plan)}
+                          >
+                            <Ionicons name="restaurant-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                            <Text style={styles.realtimeCardBtnText}>Xem Hôm Nay Ăn Gì</Text>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    );
+                  })
                 ) : (
                   <View style={styles.emptyCard}>
                     <Image
@@ -1687,7 +1786,9 @@ export function CustomerDetailModal({
                       resizeMode="contain"
                     />
                     <Text style={styles.emptyTitle}>Chưa có thực đơn</Text>
-                    <Text style={styles.emptyDesc}>Thực đơn dinh dưỡng sẽ hiển thị tại đây.</Text>
+                    <Text style={styles.emptyDesc}>
+                      Học viên chưa có thực đơn dinh dưỡng nào được công bố áp dụng.
+                    </Text>
                     <Pressable
                       style={styles.primaryActionBtn}
                       onPress={() => {
@@ -2039,6 +2140,16 @@ export function CustomerDetailModal({
           </View>
         </Modal>
 
+        {/* MODAL THỰC ĐƠN DINH DƯỠNG THỜI GIAN THỰC */}
+        {selectedRealtimePlan && (
+          <CustomerTodayNutritionModal
+            visible={Boolean(selectedRealtimePlan)}
+            plan={selectedRealtimePlan}
+            customerName={customer?.fullName || 'Học viên'}
+            onClose={() => setSelectedRealtimePlan(null)}
+          />
+        )}
+
         {/* CUSTOM ALERT MODAL BO GÓC 24PX */}
         <AppAlertModal
           visible={alertConfig.visible}
@@ -2062,6 +2173,139 @@ const styles = StyleSheet.create({
   },
   btnPressed: {
     opacity: 0.7,
+  },
+
+  /* NUTRITION TAB STYLES */
+  nutritionTabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  realtimeTopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  realtimeTopBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  nutritionPlanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  nutritionCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+  },
+  nutritionPlanTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    flex: 1,
+  },
+  publishedBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  publishedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  nutritionMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  caloriesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  caloriesBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E11D48',
+  },
+  macroPillProtein: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillProteinText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  macroPillCarbs: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillCarbsText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  macroPillFat: {
+    backgroundColor: '#FCE7F3',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillFatText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9D174D',
+  },
+  nutritionCreatedDate: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  nutritionCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  realtimeCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  realtimeCardBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   /* TOP HEADER */
