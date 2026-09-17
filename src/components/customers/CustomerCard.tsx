@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radius, spacing } from '@/theme';
 import {
@@ -7,6 +7,8 @@ import {
   getBadgeColor,
   getCategoryText,
 } from './types';
+
+const ICON_ZALO = require('../../../assets/public/zalo-icon.png');
 
 interface CustomerCardProps {
   item: CustomerListItem;
@@ -158,7 +160,7 @@ export function CustomerCard({
                     accessibilityRole="button"
                     accessibilityLabel={`Nhắn Zalo cho ${item.fullName}`}
                   >
-                    <Text style={styles.zaloBtnText}>Zalo</Text>
+                    <Image source={ICON_ZALO} style={styles.zaloCardIcon} resizeMode="contain" />
                   </Pressable>
                 </View>
               </View>
@@ -371,14 +373,15 @@ const styles = StyleSheet.create({
     borderColor: '#BBF7D0',
   },
   zaloBtn: {
-    paddingHorizontal: 7,
-    backgroundColor: '#0068FF',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  zaloBtnText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
+  zaloCardIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   phoneTextCompact: {
     fontSize: 12,

@@ -53,6 +53,8 @@ import type {
 
 const MASCOT_COACH = require('../../assets/public/3s-coach.png');
 const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
+const ICON_GMAIL = require('../../assets/public/gmail-icon.png');
+const ICON_ZALO = require('../../assets/public/zalo-icon.png');
 
 type DetailTabKey =
   | 'overview'
@@ -104,6 +106,15 @@ const handleZalo = (phone?: string) => {
   if (!cleanPhone) return;
   Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
     Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
+  });
+};
+
+const handleEmail = (email?: string) => {
+  if (!email) return;
+  const cleanEmail = email.trim();
+  if (!cleanEmail) return;
+  Linking.openURL(`mailto:${cleanEmail}`).catch(() => {
+    Alert.alert('Không thể mở ứng dụng Email', `Thiết bị không thể mở ứng dụng soạn email cho: ${cleanEmail}`);
   });
 };
 
@@ -797,7 +808,7 @@ export function CustomerDetailModal({
                         accessibilityRole="button"
                         accessibilityLabel="Mở Zalo"
                       >
-                        <Text style={styles.headerZaloText}>Zalo</Text>
+                        <Image source={ICON_ZALO} style={styles.headerZaloIcon} resizeMode="contain" />
                       </Pressable>
                     </View>
                   ) : null}
@@ -1043,7 +1054,7 @@ export function CustomerDetailModal({
                             accessibilityRole="button"
                             accessibilityLabel="Mở Zalo"
                           >
-                            <Text style={styles.overviewZaloText}>Zalo</Text>
+                            <Image source={ICON_ZALO} style={styles.overviewZaloIcon} resizeMode="contain" />
                           </Pressable>
                         </View>
                       ) : null}
@@ -1051,9 +1062,38 @@ export function CustomerDetailModal({
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Email:</Text>
-                    <Text style={styles.infoVal}>
-                      {customer.email || profile?.email || 'Chưa cập nhật'}
-                    </Text>
+                    {(() => {
+                      const emailVal = (customer.email || profile?.email || '').trim();
+                      const hasEmail = Boolean(emailVal && emailVal.includes('@'));
+                      return (
+                        <View style={styles.infoEmailWrap}>
+                          <Text
+                            style={[
+                              styles.infoVal,
+                              !hasEmail && styles.infoValMuted,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {emailVal || 'Chưa cập nhật'}
+                          </Text>
+                          {hasEmail ? (
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.emailSendBtn,
+                                pressed && styles.emailSendBtnPressed,
+                              ]}
+                              onPress={() => handleEmail(emailVal)}
+                              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Gửi email cho ${emailVal}`}
+                            >
+                              <Image source={ICON_GMAIL} style={styles.gmailBtnIcon} resizeMode="contain" />
+                              <Text style={styles.emailSendBtnText}>Gửi Gmail</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      );
+                    })()}
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Ngày sinh:</Text>
@@ -2467,17 +2507,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerZaloBtn: {
-    paddingHorizontal: 5,
+    width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#0068FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  headerZaloText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  headerZaloIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   metaText: {
     fontSize: 12,
@@ -2738,17 +2776,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overviewZaloBtn: {
-    paddingHorizontal: 8,
+    width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#0068FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  overviewZaloText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  overviewZaloIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+  },
+  infoEmailWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  infoValMuted: {
+    color: '#94A3B8',
+  },
+  gmailBtnIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 5,
+  },
+  emailSendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    minHeight: 28,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emailSendBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+  emailSendBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
   },
 
   /* INBODY TAB */
