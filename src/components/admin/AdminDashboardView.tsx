@@ -418,27 +418,46 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       contentContainerStyle={styles.scrollContainer}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
     >
-      {/* 1. SUB-MODULES NAV (DẠNG LƯỚI 2x2 - KHÔNG DẠNG TRƯỢT) */}
-      <View style={styles.gridModulesContainer}>
-        <Pressable style={[styles.gridModuleCard, styles.gridModuleActive]}>
-          <Ionicons name="pie-chart" size={15} color="#FFFFFF" />
-          <Text style={[styles.gridModuleText, styles.gridModuleTextActive]}>Tổng quan & KPI</Text>
-        </Pressable>
+      {/* 1. TOP MODULE NAVIGATION IN 1 SINGLE CARD */}
+      <View style={styles.topNavModuleCard}>
+        <View style={styles.topNavGridRow}>
+          {/* HLV */}
+          <Pressable
+            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+            onPress={() => router.push('/(app)/customers')}
+          >
+            <View style={[styles.topNavIconCircle, { backgroundColor: '#F0F9FF' }]}>
+              <Ionicons name="people" size={18} color="#0284C7" />
+            </View>
+            <Text style={styles.topNavBtnText}>HLV</Text>
+          </Pressable>
 
-        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/customers')}>
-          <Ionicons name="people-outline" size={15} color="#0284C7" />
-          <Text style={styles.gridModuleText}>HLV PT ({totalPts})</Text>
-        </Pressable>
+          <View style={styles.topNavDivider} />
 
-        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/customers')}>
-          <Ionicons name="cube-outline" size={15} color="#7C3AED" />
-          <Text style={styles.gridModuleText}>Gói mẫu ({activePackages})</Text>
-        </Pressable>
+          {/* Gói tập */}
+          <Pressable
+            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+            onPress={() => router.push('/(app)/customers')}
+          >
+            <View style={[styles.topNavIconCircle, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="cube" size={18} color="#7C3AED" />
+            </View>
+            <Text style={styles.topNavBtnText}>Gói tập</Text>
+          </Pressable>
 
-        <Pressable style={styles.gridModuleCard} onPress={() => router.push('/(app)/profile')}>
-          <Ionicons name="settings-outline" size={15} color="#475569" />
-          <Text style={styles.gridModuleText}>Cấu hình hệ thống</Text>
-        </Pressable>
+          <View style={styles.topNavDivider} />
+
+          {/* Cấu hình */}
+          <Pressable
+            style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
+            onPress={() => router.push('/(app)/profile')}
+          >
+            <View style={[styles.topNavIconCircle, { backgroundColor: '#F8FAFC' }]}>
+              <Ionicons name="settings-sharp" size={18} color="#475569" />
+            </View>
+            <Text style={styles.topNavBtnText}>Cấu hình</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* 2. PAGE TITLE & COMPACT FILTER BAR */}
@@ -826,37 +845,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 
-  /* Grid Modules Container (Dạng Lưới 2x2) */
-  gridModulesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  /* Single Card Top Nav Modules */
+  topNavModuleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     marginTop: 4,
+    elevation: 1,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
   },
-  gridModuleCard: {
-    width: '48.5%',
+  topNavGridRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    justifyContent: 'space-around',
   },
-  gridModuleActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
-  },
-  gridModuleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
+  topNavBtnItem: {
     flex: 1,
+    alignItems: 'center',
+    gap: 5,
   },
-  gridModuleTextActive: {
-    color: '#FFFFFF',
+  topNavIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topNavBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  topNavDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#F1F5F9',
   },
 
   /* Header Row */
