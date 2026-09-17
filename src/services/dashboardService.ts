@@ -92,3 +92,68 @@ export async function fetchPtDashboard(): Promise<PtDashboardData> {
     return EMPTY_PT_DASHBOARD;
   }
 }
+
+export interface AdminDashboardData {
+  totalPts: number;
+  totalCustomers: number;
+  openAlerts: number;
+  activePackages: number;
+  customerStats: {
+    active: number;
+    lead: number;
+    inactive: number;
+  };
+  packageStats: {
+    totalSessions: number;
+    completedSessions: number;
+    remainingSessions: number;
+  };
+  ptWorkload: Array<{
+    ptId: string;
+    fullName: string;
+    username: string;
+    activeCustomers: number;
+    totalCustomers: number;
+    activePackages: number;
+  }>;
+  recentAlerts: Array<{
+    _id: string;
+    title: string;
+    reason: string;
+    ruleKey: string;
+    dueAt: string;
+    customerName: string;
+    ptName: string;
+  }>;
+  recentEvents: Array<{
+    _id: string;
+    title: string;
+    startsAt: string;
+    endsAt: string;
+    status: string;
+    customerName: string;
+  }>;
+  filters?: Record<string, unknown>;
+}
+
+export async function fetchAdminDashboard(params?: {
+  ptId?: string;
+  customerStatus?: string;
+  fromDate?: string;
+  toDate?: string;
+}): Promise<AdminDashboardData | null> {
+  try {
+    const query = new URLSearchParams();
+    if (params?.ptId && params.ptId !== 'ALL') query.set('ptId', params.ptId);
+    if (params?.customerStatus && params.customerStatus !== 'ALL') query.set('customerStatus', params.customerStatus);
+    if (params?.fromDate) query.set('fromDate', params.fromDate);
+    if (params?.toDate) query.set('toDate', params.toDate);
+
+    const qs = query.toString();
+    const endpoint = `/api/dashboard/admin${qs ? `?${qs}` : ''}`;
+    const data = await api.get<AdminDashboardData>(endpoint);
+    return data || null;
+  } catch {
+    return null;
+  }
+}
