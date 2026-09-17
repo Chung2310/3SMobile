@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -31,7 +30,7 @@ interface AdminDashboardViewProps {
 }
 
 /* ============================================================================
- * SVG VISUAL CHART COMPONENTS
+ * SVG VISUAL CHART COMPONENTS (PT UI STYLED)
  * ============================================================================ */
 
 function AdminDonutChart({
@@ -39,8 +38,8 @@ function AdminDonutChart({
   lead,
   inactive,
   total,
-  size = 135,
-  strokeWidth = 16,
+  size = 110,
+  strokeWidth = 14,
 }: {
   active: number;
   lead: number;
@@ -119,9 +118,9 @@ function AdminDonutChart({
         </G>
         <SvgText
           x={center}
-          y={center - 3}
+          y={center - 2}
           textAnchor="middle"
-          fontSize="20"
+          fontSize="18"
           fontWeight="700"
           fill="#0F172A"
         >
@@ -129,9 +128,9 @@ function AdminDonutChart({
         </SvgText>
         <SvgText
           x={center}
-          y={center + 14}
+          y={center + 13}
           textAnchor="middle"
-          fontSize="10"
+          fontSize="9.5"
           fontWeight="600"
           fill="#64748B"
         >
@@ -156,10 +155,10 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
   const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
 
   const width = 300;
-  const height = 135;
-  const paddingX = 24;
-  const paddingTop = 20;
-  const paddingBottom = 24;
+  const height = 120;
+  const paddingX = 20;
+  const paddingTop = 18;
+  const paddingBottom = 22;
 
   const chartW = width - paddingX * 2;
   const chartH = height - paddingTop - paddingBottom;
@@ -184,7 +183,7 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="adminLineGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#0284C7" stopOpacity="0.35" />
+            <Stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
             <Stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
           </LinearGradient>
         </Defs>
@@ -198,8 +197,8 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
               y1={y}
               x2={width - paddingX}
               y2={y}
-              stroke="#E2E8F0"
-              strokeDasharray="4 4"
+              stroke="#F1F5F9"
+              strokeDasharray="3 3"
               strokeWidth="1"
             />
           );
@@ -210,12 +209,12 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
 
         {points.map((pt, i) => (
           <G key={`pt-${i}`}>
-            <Circle cx={pt.x} cy={pt.y} r="4" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
+            <Circle cx={pt.x} cy={pt.y} r="3.5" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
             <SvgText
               x={pt.x}
-              y={pt.y - 7}
+              y={pt.y - 6}
               textAnchor="middle"
-              fontSize="9.5"
+              fontSize="9"
               fontWeight="700"
               fill="#0369A1"
             >
@@ -223,9 +222,9 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
             </SvgText>
             <SvgText
               x={pt.x}
-              y={height - 7}
+              y={height - 6}
               textAnchor="middle"
-              fontSize="10"
+              fontSize="9.5"
               fontWeight="500"
               fill="#64748B"
             >
@@ -255,13 +254,13 @@ function AdminPtWorkloadBarChart({
 
   const maxVal = Math.max(...items.map((i) => i.activeCustomers), 1);
   const width = 300;
-  const height = 135;
-  const paddingTop = 20;
-  const paddingBottom = 24;
+  const height = 120;
+  const paddingTop = 18;
+  const paddingBottom = 22;
   const paddingX = 16;
   const chartH = height - paddingTop - paddingBottom;
   const chartW = width - paddingX * 2;
-  const barWidth = Math.min(28, (chartW / items.length) * 0.48);
+  const barWidth = Math.min(24, (chartW / items.length) * 0.45);
 
   return (
     <View style={{ width: '100%', alignItems: 'center' }}>
@@ -278,7 +277,7 @@ function AdminPtWorkloadBarChart({
           y1={height - paddingBottom}
           x2={width - paddingX}
           y2={height - paddingBottom}
-          stroke="#CBD5E1"
+          stroke="#E2E8F0"
           strokeWidth="1"
         />
 
@@ -304,9 +303,9 @@ function AdminPtWorkloadBarChart({
               />
               <SvgText
                 x={cx}
-                y={y - 5}
+                y={y - 4}
                 textAnchor="middle"
-                fontSize="9.5"
+                fontSize="9"
                 fontWeight="700"
                 fill="#0369A1"
               >
@@ -314,13 +313,13 @@ function AdminPtWorkloadBarChart({
               </SvgText>
               <SvgText
                 x={cx}
-                y={height - 7}
+                y={height - 6}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="9.5"
                 fontWeight="600"
-                fill="#475569"
+                fill="#64748B"
               >
-                {shortName.length > 7 ? `${shortName.slice(0, 6)}..` : shortName}
+                {shortName.length > 6 ? `${shortName.slice(0, 5)}..` : shortName}
               </SvgText>
             </G>
           );
@@ -335,17 +334,18 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filters state
+  // Filter state
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [selectedPtId, setSelectedPtId] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
 
-  // Date picker modals
+  // Date pickers
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  // Dropdown list PTs
+  // PT List dropdown
   const [ptsList, setPtsList] = useState<Array<{ ptId: string; fullName: string }>>([]);
 
   const loadAdminDashboard = useCallback(async () => {
@@ -394,8 +394,6 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   const remainingSessions = data?.packageStats?.remainingSessions ?? 0;
 
   const pctCompleted = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
-  const pctRemaining = Math.max(0, 100 - pctCompleted);
-
   const pctActive = totalCustomers > 0 ? Math.round((activeCount / totalCustomers) * 100) : 0;
   const pctLead = totalCustomers > 0 ? Math.round((leadCount / totalCustomers) * 100) : 0;
   const pctInactive = totalCustomers > 0 ? Math.round((inactiveCount / totalCustomers) * 100) : 0;
@@ -405,452 +403,391 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
     return Math.max(...data.ptWorkload.map((p) => p.activeCustomers || p.totalCustomers || 1));
   }, [data]);
 
+  const hasActiveFilters = selectedPtId !== 'ALL' || selectedStatus !== 'ALL' || Boolean(fromDate) || Boolean(toDate);
+
+  const resetFilters = () => {
+    setSelectedPtId('ALL');
+    setSelectedStatus('ALL');
+    setFromDate('');
+    setToDate('');
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContainer}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
     >
-      {/* 1. NAVIGATION TABS */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.topTabsScroll}>
-        <View style={styles.topTabsRow}>
-          <Pressable style={[styles.topTabBtn, styles.topTabBtnActive]}>
-            <Ionicons name="grid-outline" size={14} color="#0284C7" />
-            <Text style={[styles.topTabText, styles.topTabTextActive]}>Tổng quan & KPI</Text>
+      {/* 1. SUB-TABS PILLS (PT UI STYLE) */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillTabsScroll}>
+        <View style={styles.pillTabsRow}>
+          <Pressable style={[styles.pillBtn, styles.pillBtnActive]}>
+            <Ionicons name="pie-chart" size={13} color="#FFFFFF" />
+            <Text style={[styles.pillText, styles.pillTextActive]}>Tổng quan</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.topTabBtn}
-            onPress={() => router.push('/(app)/customers')}
-          >
-            <Ionicons name="people-outline" size={14} color="#64748B" />
-            <Text style={styles.topTabText}>Huấn luyện viên</Text>
+          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/customers')}>
+            <Ionicons name="people-outline" size={13} color="#475569" />
+            <Text style={styles.pillText}>HLV PT ({totalPts})</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.topTabBtn}
-            onPress={() => router.push('/(app)/customers')}
-          >
-            <Ionicons name="cube-outline" size={14} color="#64748B" />
-            <Text style={styles.topTabText}>Gói tập mẫu</Text>
+          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/customers')}>
+            <Ionicons name="cube-outline" size={13} color="#475569" />
+            <Text style={styles.pillText}>Gói mẫu ({activePackages})</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.topTabBtn}
-            onPress={() => router.push('/(app)/profile')}
-          >
-            <Ionicons name="options-outline" size={14} color="#64748B" />
-            <Text style={styles.topTabText}>Tính năng hệ thống</Text>
+          <Pressable style={styles.pillBtn} onPress={() => router.push('/(app)/profile')}>
+            <Ionicons name="settings-outline" size={13} color="#475569" />
+            <Text style={styles.pillText}>Hệ thống</Text>
           </Pressable>
         </View>
       </ScrollView>
 
-      {/* 2. PAGE HEADER ROW */}
-      <View style={styles.pageHeaderRow}>
-        <View style={styles.pageTitleLeft}>
-          <Text style={styles.pageTitle}>Tổng quan hệ thống</Text>
+      {/* 2. PAGE TITLE & COMPACT FILTER BAR */}
+      <View style={styles.titleFilterHeader}>
+        <View style={styles.titleLeftRow}>
+          <Text style={styles.sectionHeaderTitle}>TỔNG QUAN HỆ THỐNG</Text>
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveBadgeText}>Trực tiếp</Text>
+            <Text style={styles.liveBadgeText}>Live</Text>
           </View>
         </View>
 
+        <View style={styles.headerRightBtns}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterToggleBtn,
+              hasActiveFilters && styles.filterToggleBtnActive,
+              pressed && styles.btnPressed,
+            ]}
+            onPress={() => setIsFilterExpanded(!isFilterExpanded)}
+          >
+            <Ionicons
+              name="funnel-outline"
+              size={13}
+              color={hasActiveFilters ? '#0284C7' : '#475569'}
+            />
+            <Text
+              style={[
+                styles.filterToggleText,
+                hasActiveFilters && { color: '#0284C7', fontWeight: '700' },
+              ]}
+            >
+              Lọc {hasActiveFilters ? '•' : ''}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.iconRefreshBtn, pressed && styles.btnPressed]}
+            onPress={onRefresh}
+            hitSlop={8}
+          >
+            <Feather name="refresh-cw" size={13} color="#0284C7" />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Collapsible Filter Strip */}
+      {isFilterExpanded && (
+        <View style={styles.expandedFilterCard}>
+          <View style={styles.filterCardHeader}>
+            <Text style={styles.filterCardTitle}>Bộ lọc dữ liệu hệ thống</Text>
+            {hasActiveFilters && (
+              <Pressable onPress={resetFilters} hitSlop={6}>
+                <Text style={styles.resetFilterText}>Xóa lọc</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Status Pills Selector */}
+          <Text style={styles.fieldLabel}>Trạng thái hội viên:</Text>
+          <View style={styles.statusPillsRow}>
+            {[
+              { id: 'ALL', label: 'Tất cả' },
+              { id: 'ACTIVE', label: 'Đang tập' },
+              { id: 'LEAD', label: 'Tiềm năng' },
+              { id: 'INACTIVE', label: 'Tạm dừng' },
+            ].map((st) => (
+              <Pressable
+                key={st.id}
+                onPress={() => setSelectedStatus(st.id)}
+                style={[
+                  styles.statusChip,
+                  selectedStatus === st.id && styles.statusChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    selectedStatus === st.id && styles.statusChipTextActive,
+                  ]}
+                >
+                  {st.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Date Pickers */}
+          <View style={styles.dateRowContainer}>
+            <Pressable
+              style={styles.dateChipBtn}
+              onPress={() => setShowFromPicker(true)}
+            >
+              <Feather name="calendar" size={12} color="#0284C7" />
+              <Text style={styles.dateChipText}>
+                {fromDate ? `Từ: ${fromDate}` : 'Từ ngày...'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.dateChipBtn}
+              onPress={() => setShowToPicker(true)}
+            >
+              <Feather name="calendar" size={12} color="#0284C7" />
+              <Text style={styles.dateChipText}>
+                {toDate ? `Đến: ${toDate}` : 'Đến ngày...'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* 3. QUICK STATS SUMMARY CARD (MATCHES PT UI QUICKSTATSCARD) */}
+      <View style={styles.quickStatsCard}>
+        {/* HLV PT */}
         <Pressable
-          style={({ pressed }) => [styles.refreshBtn, pressed && styles.refreshBtnPressed]}
-          onPress={onRefresh}
-          hitSlop={8}
+          onPress={() => router.push('/(app)/customers')}
+          style={({ pressed }) => [styles.quickStatCol, pressed && styles.quickStatColPressed]}
         >
-          <Feather name="refresh-cw" size={13} color="#475569" />
-          <Text style={styles.refreshBtnText}>Làm mới</Text>
+          <View style={[styles.statIconWrap, { backgroundColor: '#F0F9FF' }]}>
+            <Feather name="users" size={15} color="#0284C7" />
+          </View>
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, { color: '#0284C7' }]}>{totalPts}</Text>
+            <Text style={styles.statLabel}>HLV PT</Text>
+          </View>
         </Pressable>
-      </View>
 
-      {/* 3. QUICK FILTER CARD */}
-      <View style={styles.filterCard}>
-        <View style={styles.filterHeader}>
-          <Feather name="filter" size={14} color="#0284C7" />
-          <Text style={styles.filterTitle}>Bộ lọc dữ liệu nhanh:</Text>
-        </View>
+        <View style={styles.statDivider} />
 
-        <View style={styles.filterGrid}>
-          {/* Lựa chọn PT */}
-          <View style={styles.filterField}>
-            <Text style={styles.filterLabel}>Huấn luyện viên</Text>
-            <View style={styles.filterInputFake}>
-              <Text style={styles.filterValueText} numberOfLines={1}>
-                {selectedPtId === 'ALL'
-                  ? 'Tất cả Huấn luyện viên'
-                  : ptsList.find((p) => p.ptId === selectedPtId)?.fullName || selectedPtId}
-              </Text>
-              <Feather name="chevron-down" size={14} color="#64748B" />
-            </View>
+        {/* Khách hàng */}
+        <Pressable
+          onPress={() => router.push('/(app)/customers')}
+          style={({ pressed }) => [styles.quickStatCol, pressed && styles.quickStatColPressed]}
+        >
+          <View style={[styles.statIconWrap, { backgroundColor: '#F0FDF4' }]}>
+            <Feather name="user-check" size={15} color="#16A34A" />
           </View>
-
-          {/* Lựa chọn Trạng thái Hội viên */}
-          <View style={styles.filterField}>
-            <Text style={styles.filterLabel}>Trạng thái Hội viên</Text>
-            <View style={styles.filterInputFake}>
-              <Text style={styles.filterValueText} numberOfLines={1}>
-                {selectedStatus === 'ALL'
-                  ? 'Tất cả trạng thái'
-                  : selectedStatus === 'ACTIVE'
-                    ? 'Đang tập'
-                    : selectedStatus === 'LEAD'
-                      ? 'Tiềm năng'
-                      : 'Tạm dừng'}
-              </Text>
-              <Feather name="chevron-down" size={14} color="#64748B" />
-            </View>
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, { color: '#16A34A' }]}>{totalCustomers}</Text>
+            <Text style={styles.statLabel}>Hội viên</Text>
           </View>
+        </Pressable>
 
-          {/* Lựa chọn Ngày bắt đầu - kết thúc */}
-          <View style={styles.filterRowDates}>
-            <View style={[styles.filterField, { flex: 1 }]}>
-              <Text style={styles.filterLabel}>Từ ngày</Text>
-              <Pressable
-                style={styles.filterInputFake}
-                onPress={() => setShowFromPicker(true)}
-              >
-                <Text style={[styles.filterValueText, !fromDate && styles.filterPlaceholder]}>
-                  {fromDate || 'mm/dd/yyyy'}
-                </Text>
-                <Feather name="calendar" size={13} color="#94A3B8" />
-              </Pressable>
-            </View>
+        <View style={styles.statDivider} />
 
-            <View style={[styles.filterField, { flex: 1 }]}>
-              <Text style={styles.filterLabel}>Đến ngày</Text>
-              <Pressable
-                style={styles.filterInputFake}
-                onPress={() => setShowToPicker(true)}
-              >
-                <Text style={[styles.filterValueText, !toDate && styles.filterPlaceholder]}>
-                  {toDate || 'mm/dd/yyyy'}
-                </Text>
-                <Feather name="calendar" size={13} color="#94A3B8" />
-              </Pressable>
-            </View>
+        {/* Gói mẫu */}
+        <View style={styles.quickStatCol}>
+          <View style={[styles.statIconWrap, { backgroundColor: '#F5F3FF' }]}>
+            <Feather name="box" size={15} color="#7C3AED" />
           </View>
-        </View>
-      </View>
-
-      {/* 4. 4 TOP KPI METRIC CARDS */}
-      <View style={styles.kpiGrid}>
-        {/* Card 1: PT ĐANG HOẠT ĐỘNG */}
-        <View style={[styles.kpiCard, styles.kpiBorderBlue]}>
-          <View style={styles.kpiTop}>
-            <View>
-              <Text style={styles.kpiLabel}>PT ĐANG HOẠT ĐỘNG</Text>
-              <Text style={styles.kpiValue}>{totalPts}</Text>
-            </View>
-            <View style={[styles.kpiIconWrap, styles.kpiIconBlue]}>
-              <Ionicons name="people-outline" size={18} color="#0284C7" />
-            </View>
-          </View>
-          <View style={styles.kpiBadgeBlue}>
-            <Text style={styles.kpiBadgeTextBlue}>100% Đạt chứng chỉ</Text>
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, { color: '#7C3AED' }]}>{activePackages}</Text>
+            <Text style={styles.statLabel}>Gói mẫu</Text>
           </View>
         </View>
 
-        {/* Card 2: KHÁCH HÀNG */}
-        <View style={[styles.kpiCard, styles.kpiBorderGreen]}>
-          <View style={styles.kpiTop}>
-            <View>
-              <Text style={styles.kpiLabel}>KHÁCH HÀNG</Text>
-              <Text style={styles.kpiValue}>{totalCustomers}</Text>
-            </View>
-            <View style={[styles.kpiIconWrap, styles.kpiIconGreen]}>
-              <Ionicons name="person-add-outline" size={18} color="#16A34A" />
-            </View>
-          </View>
-          <View style={styles.kpiBadgeGreen}>
-            <Text style={styles.kpiBadgeTextGreen}>
-              {activeCount} Đang tập • {leadCount} Tiềm năng
-            </Text>
-          </View>
-        </View>
+        <View style={styles.statDivider} />
 
-        {/* Card 3: GÓI TẬP ĐANG HOẠT ĐỘNG */}
-        <View style={[styles.kpiCard, styles.kpiBorderPurple]}>
-          <View style={styles.kpiTop}>
-            <View>
-              <Text style={styles.kpiLabel}>GÓI TẬP ĐANG HOẠT ĐỘNG</Text>
-              <Text style={styles.kpiValue}>{activePackages}</Text>
-            </View>
-            <View style={[styles.kpiIconWrap, styles.kpiIconPurple]}>
-              <Ionicons name="cube-outline" size={18} color="#7C3AED" />
-            </View>
-          </View>
-          <View style={styles.kpiBadgePurple}>
-            <Text style={styles.kpiBadgeTextPurple}>
-              {completedSessions}/{totalSessions} buổi hoàn thành
-            </Text>
-          </View>
-        </View>
-
-        {/* Card 4: CẢNH BÁO ĐANG MỜ */}
-        <View style={[styles.kpiCard, styles.kpiBorderRed]}>
-          <View style={styles.kpiTop}>
-            <View>
-              <Text style={styles.kpiLabel}>CẢNH BÁO ĐANG MỜ</Text>
-              <Text style={styles.kpiValue}>{openAlerts}</Text>
-            </View>
-            <View style={[styles.kpiIconWrap, styles.kpiIconRed]}>
-              <Ionicons name="warning-outline" size={18} color="#DC2626" />
-            </View>
-          </View>
-          <View style={styles.kpiBadgeRed}>
-            <Text style={styles.kpiBadgeTextRed}>
-              {openAlerts === 0 ? 'Hệ thống an toàn' : `${openAlerts} Cảnh báo cần xử lý`}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 5. VISUAL CHARTS COLUMN */}
-      <View style={styles.chartsColumn}>
-        {/* Chart 1: Cơ cấu Trạng thái Hội viên (Biểu đồ Tròn Donut) */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Cơ cấu Trạng thái Hội viên</Text>
-              <Text style={styles.chartSubtitle}>Biểu đồ tròn phân loại tương tác</Text>
-            </View>
-            <View style={styles.chartBadgeWrap}>
-              <Text style={styles.chartBadgeText}>{totalCustomers} Tổng số</Text>
-            </View>
-          </View>
-
-          {/* Biểu đồ Tròn Donut SVG */}
-          <View style={{ alignItems: 'center', marginVertical: 12 }}>
-            <AdminDonutChart
-              active={activeCount}
-              lead={leadCount}
-              inactive={inactiveCount}
-              total={totalCustomers}
+        {/* Cảnh báo */}
+        <View style={styles.quickStatCol}>
+          <View
+            style={[
+              styles.statIconWrap,
+              { backgroundColor: openAlerts > 0 ? '#FEF2F2' : '#F8FAFC' },
+            ]}
+          >
+            <Feather
+              name={openAlerts > 0 ? 'alert-triangle' : 'shield-off'}
+              size={15}
+              color={openAlerts > 0 ? '#EF4444' : '#64748B'}
             />
           </View>
-
-          {/* Progress bar segmented visual */}
-          <View style={styles.progressBarSegmentedWrap}>
-            <View style={[styles.progressSegmentGreen, { flex: Math.max(0.01, pctActive) }]} />
-            <View style={[styles.progressSegmentYellow, { flex: Math.max(0.01, pctLead) }]} />
-            <View style={[styles.progressSegmentGray, { flex: Math.max(0.01, pctInactive) }]} />
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, openAlerts > 0 && { color: '#EF4444' }]}>
+              {openAlerts}
+            </Text>
+            <Text style={styles.statLabel}>Cảnh báo</Text>
           </View>
+        </View>
+      </View>
 
-          {/* 3 Detail columns */}
-          <View style={styles.statusCardsRow}>
+      {/* 4. VISUAL CHARTS SECTION */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionHeaderTitle}>TỶ LỆ TƯƠNG TÁC & HOẠT ĐỘNG</Text>
+        <Text style={styles.sectionMetaText}>Cập nhật trực tiếp</Text>
+      </View>
+
+      {/* Chart Card 1: Donut + Side-by-Side Status Metrics */}
+      <View style={styles.cleanCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Phân bổ Trạng thái Hội viên</Text>
+          <View style={styles.badgePill}>
+            <Text style={styles.badgePillText}>{totalCustomers} tổng số</Text>
+          </View>
+        </View>
+
+        <View style={styles.donutRowLayout}>
+          {/* Donut SVG Ring */}
+          <AdminDonutChart
+            active={activeCount}
+            lead={leadCount}
+            inactive={inactiveCount}
+            total={totalCustomers}
+            size={115}
+            strokeWidth={14}
+          />
+
+          {/* Breakdown Rows */}
+          <View style={styles.donutBreakdownCol}>
             {/* Đang tập */}
-            <View style={[styles.statusMiniCard, styles.statusCardGreen]}>
-              <View style={styles.statusTitleRow}>
-                <View style={[styles.dot, styles.dotGreen]} />
-                <Text style={styles.statusMiniLabel}>Đang tập</Text>
+            <View style={styles.breakdownRowItem}>
+              <View style={styles.breakdownLeft}>
+                <View style={[styles.dotIndicator, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.breakdownLabel}>Đang tập luyện</Text>
               </View>
-              <Text style={[styles.statusMiniVal, { color: '#15803D' }]}>{activeCount}</Text>
-              <Text style={styles.statusMiniSub}>{pctActive}% tổng số</Text>
+              <Text style={[styles.breakdownValue, { color: '#15803D' }]}>
+                {activeCount} <Text style={styles.breakdownSub}>({pctActive}%)</Text>
+              </Text>
             </View>
 
             {/* Tiềm năng */}
-            <View style={[styles.statusMiniCard, styles.statusCardYellow]}>
-              <View style={styles.statusTitleRow}>
-                <View style={[styles.dot, styles.dotYellow]} />
-                <Text style={styles.statusMiniLabel}>Tiềm năng</Text>
+            <View style={styles.breakdownRowItem}>
+              <View style={styles.breakdownLeft}>
+                <View style={[styles.dotIndicator, { backgroundColor: '#F59E0B' }]} />
+                <Text style={styles.breakdownLabel}>Tiềm năng / Mới</Text>
               </View>
-              <Text style={[styles.statusMiniVal, { color: '#B45309' }]}>{leadCount}</Text>
-              <Text style={styles.statusMiniSub}>{pctLead}% tổng số</Text>
+              <Text style={[styles.breakdownValue, { color: '#B45309' }]}>
+                {leadCount} <Text style={styles.breakdownSub}>({pctLead}%)</Text>
+              </Text>
             </View>
 
             {/* Tạm dừng */}
-            <View style={[styles.statusMiniCard, styles.statusCardGray]}>
-              <View style={styles.statusTitleRow}>
-                <View style={[styles.dot, styles.dotGray]} />
-                <Text style={styles.statusMiniLabel}>Tạm dừng</Text>
+            <View style={styles.breakdownRowItem}>
+              <View style={styles.breakdownLeft}>
+                <View style={[styles.dotIndicator, { backgroundColor: '#64748B' }]} />
+                <Text style={styles.breakdownLabel}>Tạm dừng / Nghỉ</Text>
               </View>
-              <Text style={[styles.statusMiniVal, { color: '#475569' }]}>{inactiveCount}</Text>
-              <Text style={styles.statusMiniSub}>{pctInactive}% tổng số</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Chart 2: Xu hướng Tập luyện Hàng tuần (Biểu đồ Đường SVG) */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Xu hướng Hoạt động & Tập luyện</Text>
-              <Text style={styles.chartSubtitle}>Biểu đồ đường lượt tập 7 ngày qua</Text>
-            </View>
-            <View style={[styles.chartBadgeWrap, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="trending-up" size={13} color="#0284C7" style={{ marginRight: 4 }} />
-              <Text style={[styles.chartBadgeText, { color: '#0284C7' }]}>Tăng trưởng</Text>
-            </View>
-          </View>
-
-          <View style={{ marginVertical: 8 }}>
-            <AdminWeeklyTrendLineChart completedSessions={completedSessions} />
-          </View>
-        </View>
-
-        {/* Chart 3: Phân bổ Học viên theo HLV PT (Biểu đồ Cột SVG) */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Biểu đồ Cột - Tải công việc PT</Text>
-              <Text style={styles.chartSubtitle}>So sánh số lượng học viên giữa các PT</Text>
-            </View>
-            <View style={[styles.chartBadgeWrap, { backgroundColor: '#FEF3C7' }]}>
-              <Text style={[styles.chartBadgeText, { color: '#B45309' }]}>{totalPts} PT</Text>
-            </View>
-          </View>
-
-          <View style={{ marginVertical: 8 }}>
-            <AdminPtWorkloadBarChart ptWorkload={data?.ptWorkload} />
-          </View>
-        </View>
-
-        {/* Chart 4: Tiến độ Thực hiện Buổi tập */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Tiến độ Thực hiện Buổi tập</Text>
-              <Text style={styles.chartSubtitle}>Tổng khối lượng buổi tập toàn hệ thống</Text>
-            </View>
-            <View style={[styles.chartBadgeWrap, { backgroundColor: '#E0F2FE' }]}>
-              <Text style={[styles.chartBadgeText, { color: '#0284C7' }]}>{pctCompleted}% Hoàn thành</Text>
-            </View>
-          </View>
-
-          {/* Progress bar visual */}
-          <View style={styles.progressSingleBarWrap}>
-            <View style={[styles.progressSingleBarFill, { width: `${Math.min(100, Math.max(0, pctCompleted))}%` }]} />
-          </View>
-
-          {/* 3 Detail columns */}
-          <View style={styles.statusCardsRow}>
-            {/* Tổng số buổi */}
-            <View style={[styles.statusMiniCard, styles.statusCardWhite]}>
-              <Text style={styles.statusMiniLabel}>Tổng số buổi</Text>
-              <Text style={styles.statusMiniVal}>{totalSessions}</Text>
-              <Text style={styles.statusMiniSub}>Toàn hệ thống</Text>
-            </View>
-
-            {/* Đã tập luyện */}
-            <View style={[styles.statusMiniCard, styles.statusCardBlue]}>
-              <Text style={styles.statusMiniLabel}>Đã tập luyện</Text>
-              <Text style={[styles.statusMiniVal, { color: '#0284C7' }]}>{completedSessions}</Text>
-              <Text style={styles.statusMiniSub}>{pctCompleted}% hoàn tất</Text>
-            </View>
-
-            {/* Buổi còn lại */}
-            <View style={[styles.statusMiniCard, styles.statusCardLightGreen]}>
-              <Text style={styles.statusMiniLabel}>Buổi còn lại</Text>
-              <Text style={[styles.statusMiniVal, { color: '#16A34A' }]}>{remainingSessions}</Text>
-              <Text style={styles.statusMiniSub}>{pctRemaining}% chưa tập</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* 6. LOWER SECTION: PT WORKLOAD RANKING & CARE ALERTS */}
-      <View style={styles.lowerColumn}>
-        {/* Card: Tải công việc Đội ngũ HLV PT */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionCardHeader}>
-            <View style={styles.sectionCardHeaderLeft}>
-              <Ionicons name="medal-outline" size={16} color="#B45309" />
-              <Text style={styles.sectionCardTitle}>Tải công việc Đội ngũ HLV PT</Text>
-            </View>
-            <Pressable onPress={() => router.push('/(app)/customers')} hitSlop={8}>
-              <Text style={styles.seeDetailLink}>Xem chi tiết PT &gt;</Text>
-            </Pressable>
-          </View>
-
-          {data?.ptWorkload && data.ptWorkload.length > 0 ? (
-            <View style={styles.ptList}>
-              {data.ptWorkload.map((pt, idx) => {
-                const ratio = Math.min(1, Math.max(0.05, (pt.activeCustomers || 1) / maxWorkload));
-                return (
-                  <View key={pt.ptId || `pt-${idx}`} style={styles.ptItem}>
-                    <View style={styles.ptTopRow}>
-                      <View style={styles.ptInfoLeft}>
-                        <View style={styles.ptRankBadge}>
-                          <Text style={styles.ptRankText}>{idx + 1}</Text>
-                        </View>
-                        <Text style={styles.ptName} numberOfLines={1}>
-                          {pt.fullName}
-                        </Text>
-                        <Text style={styles.ptUsername} numberOfLines={1}>
-                          @{pt.username}
-                        </Text>
-                      </View>
-
-                      <View style={styles.ptMetricsRight}>
-                        <Text style={styles.ptActiveCust}>
-                          {pt.activeCustomers} Học viên
-                        </Text>
-                        <Text style={styles.ptActivePkg}>
-                          {pt.activePackages} Gói
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Workload relative progress bar */}
-                    <View style={styles.ptWorkloadBarWrap}>
-                      <View style={[styles.ptWorkloadBarFill, { width: `${ratio * 100}%` }]} />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.emptyWrap}>
-              <Feather name="users" size={24} color="#94A3B8" />
-              <Text style={styles.emptyText}>Chưa có thông tin HLV PT nào.</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Card: Cảnh báo Chăm sóc Khách hàng */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionCardHeader}>
-            <View style={styles.sectionCardHeaderLeft}>
-              <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
-              <Text style={styles.sectionCardTitle}>Cảnh báo Chăm sóc Khách hàng</Text>
-            </View>
-            <View style={styles.alertBadgeWrap}>
-              <Text style={styles.alertBadgeText}>{openAlerts} Cần xử lý</Text>
-            </View>
-          </View>
-
-          {openAlerts === 0 ? (
-            <View style={styles.safeBox}>
-              <View style={styles.safeIconWrap}>
-                <Ionicons name="checkmark" size={22} color="#16A34A" />
-              </View>
-              <Text style={styles.safeTitle}>Hệ thống hoạt động an toàn</Text>
-              <Text style={styles.safeSubtitle}>
-                Tất cả hội viên đang được chăm sóc đúng quy trình
+              <Text style={[styles.breakdownValue, { color: '#475569' }]}>
+                {inactiveCount} <Text style={styles.breakdownSub}>({pctInactive}%)</Text>
               </Text>
             </View>
-          ) : (
-            <View style={styles.alertsList}>
-              {(data?.recentAlerts || []).map((alert, idx) => (
-                <View key={alert._id || `alert-${idx}`} style={styles.alertItem}>
-                  <View style={styles.alertIconCol}>
-                    <Ionicons name="warning" size={16} color="#DC2626" />
-                  </View>
-                  <View style={styles.alertContentCol}>
-                    <Text style={styles.alertItemTitle}>{alert.title}</Text>
-                    <Text style={styles.alertItemReason}>{alert.reason}</Text>
-                    <Text style={styles.alertItemMeta}>
-                      Học viên: {alert.customerName} • PT: {alert.ptName}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+          </View>
         </View>
       </View>
+
+      {/* Chart Card 2: 7-Day Line Chart */}
+      <View style={styles.cleanCard}>
+        <View style={styles.cardHeader}>
+          <View>
+            <Text style={styles.cardTitle}>Xu hướng Tập luyện 7 ngày</Text>
+            <Text style={styles.cardSubtitle}>Tổng lượt tập hoàn thành theo tuần</Text>
+          </View>
+          <View style={[styles.badgePill, { backgroundColor: '#E0F2FE' }]}>
+            <Ionicons name="trending-up" size={12} color="#0284C7" style={{ marginRight: 3 }} />
+            <Text style={[styles.badgePillText, { color: '#0284C7' }]}>Ổn định</Text>
+          </View>
+        </View>
+
+        <View style={{ marginVertical: 4 }}>
+          <AdminWeeklyTrendLineChart completedSessions={completedSessions} />
+        </View>
+      </View>
+
+      {/* 5. PT WORKLOAD & LEADERBOARD SECTION */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionHeaderTitle}>HIỆU SUẤT ĐỘI NGŨ HLV PT</Text>
+        <Pressable onPress={() => router.push('/(app)/customers')}>
+          <Text style={styles.linkText}>Chi tiết &gt;</Text>
+        </Pressable>
+      </View>
+
+      {/* Bar Chart & PT Workload Card */}
+      <View style={styles.cleanCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Biểu đồ Cột Tải công việc</Text>
+          <Text style={styles.cardSubtitle}>Phân bổ học viên phụ trách</Text>
+        </View>
+
+        <View style={{ marginVertical: 4 }}>
+          <AdminPtWorkloadBarChart ptWorkload={data?.ptWorkload} />
+        </View>
+
+        {/* Clean PT Ranking List */}
+        {data?.ptWorkload && data.ptWorkload.length > 0 && (
+          <View style={styles.ptRankingList}>
+            {data.ptWorkload.map((pt, idx) => {
+              const ratio = Math.min(1, Math.max(0.05, (pt.activeCustomers || 1) / maxWorkload));
+              return (
+                <View key={pt.ptId || `pt-${idx}`} style={styles.ptRankItem}>
+                  <View style={styles.ptRankTopRow}>
+                    <View style={styles.ptRankLeft}>
+                      <View style={[styles.rankBadgeNum, idx === 0 && styles.rankBadgeGold]}>
+                        <Text style={[styles.rankBadgeText, idx === 0 && styles.rankBadgeTextGold]}>
+                          {idx + 1}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.ptRankName} numberOfLines={1}>
+                          {pt.fullName}
+                        </Text>
+                        <Text style={styles.ptRankMeta}>@{pt.username}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.ptRankBadgeCount}>
+                      <Text style={styles.ptRankCountText}>
+                        {pt.activeCustomers} Học viên
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.miniWorkloadTrack}>
+                    <View style={[styles.miniWorkloadFill, { width: `${ratio * 100}%` }]} />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      {/* 6. CARE ALERTS SECTION */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionHeaderTitle}>CẢNH BÁO CHĂM SÓC HỘI VIÊN</Text>
+        {openAlerts > 0 && <Text style={styles.alertBadgeCount}>{openAlerts} Cảnh báo</Text>}
+      </View>
+
+      {data?.recentAlerts && data.recentAlerts.length > 0 ? (
+        <View style={styles.cleanCard}>
+          {data.recentAlerts.map((alert, idx) => (
+            <View key={(alert as any)._id || (alert as any).id || `alert-${idx}`} style={styles.alertRowItem}>
+              <Ionicons name="alert-circle-outline" size={18} color="#EF4444" style={{ marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.alertItemTitle}>{alert.customerName}</Text>
+                <Text style={styles.alertItemReason}>{alert.reason}</Text>
+                {alert.ptName && <Text style={styles.alertItemPt}>HLV: {alert.ptName}</Text>}
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.safeStateCard}>
+          <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+          <Text style={styles.safeStateText}>Hệ thống vận hành an toàn! Không có cảnh báo tồn đọng.</Text>
+        </View>
+      )}
 
       {/* Date Pickers */}
       <DatePickerModal
@@ -880,493 +817,465 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: 16,
+    paddingBottom: 28,
+    gap: 12,
+    backgroundColor: '#F8FAFC',
   },
-  topTabsScroll: {
-    marginBottom: 12,
+
+  /* Sub-tabs Pills */
+  pillTabsScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    marginBottom: 2,
   },
-  topTabsRow: {
+  pillTabsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
+    paddingVertical: 4,
   },
-  topTabBtn: {
+  pillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  topTabBtnActive: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
+  pillBtnActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
   },
-  topTabText: {
-    fontSize: 12,
+  pillText: {
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#475569',
   },
-  topTabTextActive: {
-    color: '#0284C7',
-    fontWeight: '700',
+  pillTextActive: {
+    color: '#FFFFFF',
   },
-  pageHeaderRow: {
+
+  /* Header Row */
+  titleFilterHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginTop: 2,
   },
-  pageTitleLeft: {
+  titleLeftRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
+  sectionHeaderTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.5,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: '#16A34A',
   },
   liveBadgeText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
     color: '#15803D',
   },
-  refreshBtn: {
+  headerRightBtns: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
+    gap: 8,
+  },
+  filterToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  refreshBtnPressed: {
-    backgroundColor: '#F1F5F9',
-  },
-  refreshBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterCard: {
+    paddingVertical: 5,
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 14,
   },
-  filterHeader: {
-    flexDirection: 'row',
+  filterToggleBtnActive: {
+    borderColor: '#0284C7',
+    backgroundColor: '#F0F9FF',
+  },
+  filterToggleText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#475569',
+  },
+  iconRefreshBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#F0F9FF',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
   },
-  filterTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0284C7',
+  btnPressed: {
+    opacity: 0.7,
   },
-  filterGrid: {
+
+  /* Expanded Filter Card */
+  expandedFilterCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     gap: 10,
   },
-  filterField: {
-    gap: 4,
-  },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterInputFake: {
+  filterCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 38,
   },
-  filterValueText: {
-    fontSize: 12,
+  filterCardTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  resetFilterText: {
+    fontSize: 11.5,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#EF4444',
   },
-  filterPlaceholder: {
-    color: '#94A3B8',
-    fontWeight: '400',
+  fieldLabel: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
-  filterRowDates: {
+  statusPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  statusChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+  },
+  statusChipActive: {
+    backgroundColor: '#0284C7',
+  },
+  statusChipText: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#475569',
+  },
+  statusChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  dateRowContainer: {
     flexDirection: 'row',
     gap: 8,
   },
-  kpiGrid: {
-    gap: 10,
-    marginBottom: 14,
+  dateChipBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  kpiCard: {
+  dateChipText: {
+    fontSize: 11.5,
+    color: '#334155',
+  },
+
+  /* Quick Stats Card (PT UI Style) */
+  quickStatsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
-    borderWidth: 1.5,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
-  kpiBorderBlue: { borderColor: '#BAE6FD' },
-  kpiBorderGreen: { borderColor: '#BBF7D0' },
-  kpiBorderPurple: { borderColor: '#DDD6FE' },
-  kpiBorderRed: { borderColor: '#FECACA' },
-
-  kpiTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+  quickStatCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
   },
-  kpiLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.5,
-    marginBottom: 2,
+  quickStatColPressed: {
+    opacity: 0.7,
   },
-  kpiValue: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  kpiIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+  statIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  kpiIconBlue: { backgroundColor: '#F0F9FF' },
-  kpiIconGreen: { backgroundColor: '#F0FDF4' },
-  kpiIconPurple: { backgroundColor: '#F5F3FF' },
-  kpiIconRed: { backgroundColor: '#FEF2F2' },
-
-  kpiBadgeBlue: { backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
-  kpiBadgeTextBlue: { fontSize: 10.5, fontWeight: '700', color: '#0284C7' },
-
-  kpiBadgeGreen: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
-  kpiBadgeTextGreen: { fontSize: 10.5, fontWeight: '700', color: '#15803D' },
-
-  kpiBadgePurple: { backgroundColor: '#F3E8FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
-  kpiBadgeTextPurple: { fontSize: 10.5, fontWeight: '700', color: '#7C3AED' },
-
-  kpiBadgeRed: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
-  kpiBadgeTextRed: { fontSize: 10.5, fontWeight: '700', color: '#DC2626' },
-
-  chartsColumn: {
-    gap: 14,
-    marginBottom: 14,
+  statInfo: {
+    alignItems: 'center',
   },
-  chartCard: {
+  statValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#F1F5F9',
+  },
+
+  /* Section Header Row */
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  sectionMetaText: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  linkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0284C7',
+  },
+
+  /* Clean Card Wrapper */
+  cleanCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
+    gap: 10,
+    elevation: 1,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
   },
-  chartHeader: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
-  chartTitle: {
+  cardTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '700',
+    color: '#1E293B',
   },
-  chartSubtitle: {
+  cardSubtitle: {
     fontSize: 11,
     color: '#64748B',
     marginTop: 1,
   },
-  chartBadgeWrap: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  chartBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  progressBarSegmentedWrap: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E2E8F0',
-    flexDirection: 'row',
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressSegmentGreen: { backgroundColor: '#16A34A' },
-  progressSegmentYellow: { backgroundColor: '#F59E0B' },
-  progressSegmentGray: { backgroundColor: '#94A3B8' },
-
-  progressSingleBarWrap: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E0F2FE',
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressSingleBarFill: {
-    height: '100%',
-    backgroundColor: '#0284C7',
-    borderRadius: 4,
-  },
-  statusCardsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  statusMiniCard: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-  },
-  statusCardGreen: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
-  statusCardYellow: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-  statusCardGray: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-  statusCardWhite: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0' },
-  statusCardBlue: { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' },
-  statusCardLightGreen: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
-
-  statusTitleRow: {
+  badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  dotGreen: { backgroundColor: '#16A34A' },
-  dotYellow: { backgroundColor: '#F59E0B' },
-  dotGray: { backgroundColor: '#64748B' },
+  badgePillText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
 
-  statusMiniLabel: { fontSize: 10.5, fontWeight: '600', color: '#64748B' },
-  statusMiniVal: { fontSize: 18, fontWeight: '900', color: '#0F172A', marginVertical: 2 },
-  statusMiniSub: { fontSize: 9.5, fontWeight: '600', color: '#64748B' },
-
-  lowerColumn: {
-    gap: 14,
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  sectionCardHeader: {
+  /* Donut Side-by-Side Breakdown */
+  donutRowLayout: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    paddingVertical: 4,
   },
-  sectionCardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionCardTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  seeDetailLink: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0284C7',
-  },
-  alertBadgeWrap: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  alertBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  ptList: {
+  donutBreakdownCol: {
+    flex: 1,
+    marginLeft: 14,
     gap: 8,
   },
-  ptItem: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  ptTopRow: {
+  breakdownRowItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
   },
-  ptInfoLeft: {
+  breakdownLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  dotIndicator: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  breakdownLabel: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '500',
+  },
+  breakdownValue: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  breakdownSub: {
+    fontSize: 10.5,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+
+  /* PT Ranking List */
+  ptRankingList: {
+    marginTop: 8,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 10,
+  },
+  ptRankItem: {
+    gap: 5,
+  },
+  ptRankTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ptRankLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
   },
-  ptRankBadge: {
+  rankBadgeNum: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ptRankText: {
+  rankBadgeGold: {
+    backgroundColor: '#FEF3C7',
+  },
+  rankBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  rankBadgeTextGold: {
+    color: '#B45309',
+  },
+  ptRankName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  ptRankMeta: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+  },
+  ptRankBadgeCount: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#F0F9FF',
+  },
+  ptRankCountText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0284C7',
   },
-  ptName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  ptUsername: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  ptMetricsRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ptActiveCust: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#16A34A',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  ptActivePkg: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  ptWorkloadBarWrap: {
+  miniWorkloadTrack: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
     overflow: 'hidden',
   },
-  ptWorkloadBarFill: {
+  miniWorkloadFill: {
     height: '100%',
     backgroundColor: '#0284C7',
     borderRadius: 2,
   },
-  safeBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 6,
+
+  /* Care Alerts */
+  alertBadgeCount: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EF4444',
   },
-  safeIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  safeTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  safeSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  alertsList: {
-    gap: 8,
-  },
-  alertItem: {
+  alertRowItem: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    borderRadius: 12,
-    padding: 10,
-  },
-  alertIconCol: {
-    marginTop: 2,
-  },
-  alertContentCol: {
-    flex: 1,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
   alertItemTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#991B1B',
   },
   alertItemReason: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#7F1D1D',
-    marginTop: 1,
   },
-  alertItemMeta: {
+  alertItemPt: {
     fontSize: 10.5,
-    color: '#B91C1C',
-    marginTop: 4,
-  },
-  emptyWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 6,
-  },
-  emptyText: {
-    fontSize: 12,
     color: '#94A3B8',
+    marginTop: 2,
+  },
+  safeStateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  safeStateText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#15803D',
   },
 });
