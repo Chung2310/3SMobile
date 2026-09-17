@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  ImageBackground,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -353,28 +353,22 @@ export default function WalletScreen() {
           </View>
 
           {/* Phương thức chuyển khoản QR tự động */}
-          <ImageBackground
-            source={BANNER_WALLET}
-            style={styles.paymentMethodBox}
-            imageStyle={styles.paymentMethodBgImage}
-            resizeMode="cover"
-          >
-            <View style={styles.paymentMethodOverlay}>
-              <View style={styles.methodHeaderRow}>
-                <View style={styles.methodHeaderLeft}>
-                  <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
-                  <Text style={styles.methodTitle}>Chuyển khoản QR tự động</Text>
-                </View>
-                <View style={styles.instantBadge}>
-                  <Feather name="zap" size={11} color="#15803D" style={{ marginRight: 3 }} />
-                  <Text style={styles.instantBadgeText}>Tự động 24/7</Text>
-                </View>
+          <View style={styles.paymentMethodBox}>
+            <View style={styles.methodHeaderRow}>
+              <View style={styles.methodHeaderLeft}>
+                <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
+                <Text style={styles.methodTitle}>Chuyển khoản QR tự động</Text>
               </View>
-              <Text style={styles.bankSupportText}>
-                Hỗ trợ: VCB, MB Bank, Techcombank, ACB, VPBank, MoMo, ZaloPay và 40+ ngân hàng...
-              </Text>
             </View>
-          </ImageBackground>
+            <Text style={styles.bankSupportText}>
+              Hỗ trợ: VCB, MB Bank, Techcombank, ACB, VPBank, MoMo, ZaloPay và 40+ ngân hàng...
+            </Text>
+            <Image
+              source={BANNER_WALLET}
+              style={styles.bankBannerImage}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Tóm tắt thanh toán & Nút tạo QR */}
           <View style={styles.checkoutBar}>
@@ -830,22 +824,15 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   paymentMethodBox: {
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  paymentMethodBgImage: {
-    borderRadius: 14,
-  },
-  paymentMethodOverlay: {
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
   },
   methodHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
@@ -855,27 +842,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   methodTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-  },
-  instantBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  instantBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
   },
   bankSupportText: {
     fontSize: 11,
     color: '#64748B',
     lineHeight: 16,
+    marginBottom: 8,
+  },
+  bankBannerImage: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
   checkoutBar: {
     flexDirection: 'row',
