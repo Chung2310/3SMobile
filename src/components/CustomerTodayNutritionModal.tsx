@@ -172,9 +172,12 @@ export function CustomerTodayNutritionModal({
   const [showNotes, setShowNotes] = useState(false);
   const [expandedMeals, setExpandedMeals] = useState<Record<number, boolean>>({});
 
-  // Ảnh món ăn / bữa ăn động được tải từ API
+  // Ảnh món ăn động tải từ API
   const [dynamicImages, setDynamicImages] = useState<Record<string, string>>({});
   const fetchedKeysRef = useRef<Set<string>>(new Set());
+
+  // Lưu trữ danh sách ảnh bị lỗi (404/network error) để fallback sang ảnh minh họa
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   // Modal xem ảnh phóng to
   const [previewImage, setPreviewImage] = useState<{
@@ -263,19 +266,6 @@ export function CustomerTodayNutritionModal({
 
     const toFetch: { name: string; items?: string[] }[] = [];
 
-    // Kiểm tra bữa ăn hiện tại
-    if (
-      currentMeal &&
-      !currentMeal.imageUrl &&
-      !dynamicImages[currentMeal.name] &&
-      !fetchedKeysRef.current.has(currentMeal.name)
-    ) {
-      toFetch.push({
-        name: currentMeal.name,
-        items: currentMeal.items?.map((i) => i.name),
-      });
-    }
-
     // Kiểm tra từng món ăn trong các bữa ăn của ngày đang xem
     activeDay.meals.forEach((m) => {
       m.items?.forEach((it) => {
@@ -299,7 +289,7 @@ export function CustomerTodayNutritionModal({
         .post<any>('/api/images/meal-image', {
           mealName: target.name,
           items: target.items || [target.name],
-          aspectRatio: '4:3',
+          aspectRatio: '1:1',
           forceRegenerate: false,
         })
         .then((res) => {
@@ -309,10 +299,38 @@ export function CustomerTodayNutritionModal({
           }
         })
         .catch(() => {
-          // Bỏ qua lỗi, dùng ảnh minh họa mặc định
+          // Bỏ qua lỗi, fallback sang ảnh minh họa mặc định
         });
     });
-  }, [visible, plan, currentMeal, activeDay, dynamicImages]);
+  }, [visible, plan, activeDay, dynamicImages]);
+
+  // Hàm resolve ảnh chuẩn xác: nếu không có hoặc link lỗi -> luôn trả về DEFAULT_FOOD_IMAGE
+  const resolveItemImage = (item: FoodItem) => {
+    const rawUrl = item.imageUrl || dynamicImages[item.name];
+    const isBroken = Boolean(
+      brokenImages[item.name] || (rawUrl && brokenImages[rawUrl])
+    );
+
+    if (!rawUrl || typeof rawUrl !== 'string' || isBroken) {
+      return DEFAULT_FOOD_IMAGE;
+    }
+
+    const trimmed = rawUrl.trim();
+    if (
+      trimmed.length === 0 ||
+      trimmed === 'null' ||
+      trimmed === 'undefined' ||
+      !(
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('data:')
+      )
+    ) {
+      return DEFAULT_FOOD_IMAGE;
+    }
+
+    return { uri: trimmed };
+  };
 
   const toggleMeal = (mIdx: number) => {
     setExpandedMeals((prev) => ({
@@ -524,36 +542,6 @@ export function CustomerTodayNutritionModal({
               <View>
                 {currentMeal ? (
                   <View style={styles.realtimeCard}>
-                    {/* Banner ảnh món ăn / bữa ăn */}
-                    {(() => {
-                      const mealImg = currentMeal.imageUrl || dynamicImages[currentMeal.name];
-                      const isDefault = !mealImg;
-                      return (
-                        <Pressable
-                          style={styles.mealBannerWrap}
-                          onPress={() =>
-                            setPreviewImage({
-                              url: isDefault ? DEFAULT_FOOD_IMAGE : mealImg,
-                              title: currentMeal.name,
-                              isStatic: isDefault,
-                            })
-                          }
-                        >
-                          <Image
-                            source={isDefault ? DEFAULT_FOOD_IMAGE : { uri: mealImg }}
-                            style={styles.mealBannerImage}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.mealBannerOverlay}>
-                            <View style={styles.zoomHintBadge}>
-                              <Feather name="maximize-2" size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
-                              <Text style={styles.zoomHintText}>Bấm xem ảnh</Text>
-                            </View>
-                          </View>
-                        </Pressable>
-                      );
-                    })()}
-
                     {/* Thanh trạng thái bữa ăn */}
                     <View style={styles.realtimeCardHeader}>
                       <View style={styles.realtimeHeaderLeft}>
@@ -598,26 +586,37 @@ export function CustomerTodayNutritionModal({
                       {Array.isArray(currentMeal.items) && currentMeal.items.length > 0 ? (
                         <View style={styles.foodItemsCol}>
                           {currentMeal.items.map((item, idx) => {
-                            const itemImg = item.imageUrl || dynamicImages[item.name];
-                            const isDefaultItemImg = !itemImg;
+                            const itemImgSource = resolveItemImage(item);
+                            const isStaticImg = itemImgSource === DEFAULT_FOOD_IMAGE;
 
                             return (
                               <View key={idx} style={styles.foodItemCard}>
-                                {/* Thumbnail ảnh món ăn */}
+                                {/* Thumbnail ảnh món ăn (luôn có ảnh, không bao giờ bị trắng) */}
                                 <Pressable
                                   style={styles.foodThumbWrap}
                                   onPress={() =>
                                     setPreviewImage({
-                                      url: isDefaultItemImg ? DEFAULT_FOOD_IMAGE : itemImg,
+                                      url: isStaticImg
+                                        ? DEFAULT_FOOD_IMAGE
+                                        : (itemImgSource as any).uri,
                                       title: item.name,
-                                      isStatic: isDefaultItemImg,
+                                      isStatic: isStaticImg,
                                     })
                                   }
                                 >
                                   <Image
-                                    source={isDefaultItemImg ? DEFAULT_FOOD_IMAGE : { uri: itemImg }}
+                                    source={itemImgSource}
                                     style={styles.foodThumbImage}
                                     resizeMode="cover"
+                                    onError={() => {
+                                      const rawUrl =
+                                        item.imageUrl || dynamicImages[item.name];
+                                      setBrokenImages((prev) => ({
+                                        ...prev,
+                                        [item.name]: true,
+                                        ...(rawUrl ? { [rawUrl]: true } : {}),
+                                      }));
+                                    }}
                                   />
                                 </Pressable>
 
@@ -739,8 +738,6 @@ export function CustomerTodayNutritionModal({
                 {activeDay.meals.map((meal, mIdx) => {
                   const isCurrent = realtimeMealInfo?.index === mIdx && isViewingToday;
                   const isExpanded = Boolean(expandedMeals[mIdx]);
-                  const mealImg = meal.imageUrl || dynamicImages[meal.name];
-                  const isDefault = !mealImg;
 
                   return (
                     <View
@@ -811,29 +808,11 @@ export function CustomerTodayNutritionModal({
                       {/* Chi tiết danh sách món khi mở rộng */}
                       {isExpanded && (
                         <View style={styles.accordionBody}>
-                          {/* Banner ảnh bữa ăn nhỏ trong accordion nếu có */}
-                          <Pressable
-                            style={styles.accordionMealImgWrap}
-                            onPress={() =>
-                              setPreviewImage({
-                                url: isDefault ? DEFAULT_FOOD_IMAGE : mealImg,
-                                title: meal.name,
-                                isStatic: isDefault,
-                              })
-                            }
-                          >
-                            <Image
-                              source={isDefault ? DEFAULT_FOOD_IMAGE : { uri: mealImg }}
-                              style={styles.accordionMealImg}
-                              resizeMode="cover"
-                            />
-                          </Pressable>
-
                           {Array.isArray(meal.items) && meal.items.length > 0 ? (
                             <View style={styles.expandedItemsCol}>
                               {meal.items.map((item, iIdx) => {
-                                const itemImg = item.imageUrl || dynamicImages[item.name];
-                                const isDefaultItem = !itemImg;
+                                const itemImgSource = resolveItemImage(item);
+                                const isStaticImg = itemImgSource === DEFAULT_FOOD_IMAGE;
 
                                 return (
                                   <View key={iIdx} style={styles.expandedItemCard}>
@@ -841,16 +820,27 @@ export function CustomerTodayNutritionModal({
                                       style={styles.accordionItemThumbWrap}
                                       onPress={() =>
                                         setPreviewImage({
-                                          url: isDefaultItem ? DEFAULT_FOOD_IMAGE : itemImg,
+                                          url: isStaticImg
+                                            ? DEFAULT_FOOD_IMAGE
+                                            : (itemImgSource as any).uri,
                                           title: item.name,
-                                          isStatic: isDefaultItem,
+                                          isStatic: isStaticImg,
                                         })
                                       }
                                     >
                                       <Image
-                                        source={isDefaultItem ? DEFAULT_FOOD_IMAGE : { uri: itemImg }}
+                                        source={itemImgSource}
                                         style={styles.accordionItemThumb}
                                         resizeMode="cover"
+                                        onError={() => {
+                                          const rawUrl =
+                                            item.imageUrl || dynamicImages[item.name];
+                                          setBrokenImages((prev) => ({
+                                            ...prev,
+                                            [item.name]: true,
+                                            ...(rawUrl ? { [rawUrl]: true } : {}),
+                                          }));
+                                        }}
                                       />
                                     </Pressable>
 
@@ -1270,35 +1260,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
-  },
-  mealBannerWrap: {
-    width: '100%',
-    height: 145,
-    backgroundColor: '#E2E8F0',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  mealBannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  mealBannerOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-  },
-  zoomHintBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  zoomHintText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   realtimeCardHeader: {
     backgroundColor: '#F0FDF4',
@@ -1725,18 +1686,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     backgroundColor: '#F8FAFC',
-  },
-  accordionMealImgWrap: {
-    width: '100%',
-    height: 100,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#E2E8F0',
-    marginBottom: 8,
-  },
-  accordionMealImg: {
-    width: '100%',
-    height: '100%',
   },
   expandedItemsCol: {
     gap: 6,
