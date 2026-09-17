@@ -25,18 +25,6 @@ interface PtPackageModalProps {
 
 const getTodayIso = (): string => new Date().toISOString().slice(0, 10);
 
-const calculateEndDate = (startDateIso: string, sessionsCount: number): string => {
-  if (!startDateIso || isNaN(Date.parse(startDateIso))) return '';
-  const sessions = Number(sessionsCount) || 0;
-  if (sessions <= 0) return '';
-  // Chuẩn phòng gym: 12 buổi = 30 ngày (1 tháng), 24 buổi = 60 ngày...
-  const durationDays = Math.max(30, Math.ceil(sessions / 12) * 30);
-  const start = new Date(startDateIso);
-  const end = new Date(start);
-  end.setDate(end.getDate() + durationDays);
-  return end.toISOString().slice(0, 10);
-};
-
 const formatDateDisplay = (isoStr?: string): string => {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
@@ -56,10 +44,11 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const [name, setName] = useState('');
   const [totalSessions, setTotalSessions] = useState('24');
   const [startDate, setStartDate] = useState(getTodayIso());
-  const [endDate, setEndDate] = useState(() => calculateEndDate(getTodayIso(), 24));
+  const [endDate, setEndDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDeletePkg, setPendingDeletePkg] = useState<PtPackage | null>(null);
 
@@ -82,9 +71,8 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     setShowAddForm(false);
     setName('');
     setTotalSessions('24');
-    const today = getTodayIso();
-    setStartDate(today);
-    setEndDate(calculateEndDate(today, 24));
+    setStartDate(getTodayIso());
+    setEndDate('');
     setFormError(null);
     setPendingDeletePkg(null);
     onClose();
@@ -117,13 +105,12 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const handleApplyTemplate = (templateName: string, sessions: number) => {
     setName(templateName);
     setTotalSessions(String(sessions));
-    setEndDate(calculateEndDate(startDate, sessions));
+    if (formError) setFormError(null);
   };
 
   const handleChangeSessions = (val: string) => {
-    const num = parseInt(val, 10) || 0;
     setTotalSessions(val);
-    setEndDate(calculateEndDate(startDate, num));
+    if (formError) setFormError(null);
   };
 
   const handleCreatePackage = async () => {
@@ -139,6 +126,10 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     }
     if (!startDate || !endDate) {
       setFormError('Vui lòng chọn ngày bắt đầu và kết thúc.');
+      return;
+    }
+    if (endDate < startDate) {
+      setFormError('Ngày kết thúc không được trước ngày bắt đầu.');
       return;
     }
 
@@ -276,19 +267,19 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Khởi Động 12 Buổi', 12)}
                   >
-                    <Text style={styles.templatePillText}>12 buổi (1 th)</Text>
+                    <Text style={styles.templatePillText}>12 buổi</Text>
                   </Pressable>
                   <Pressable
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Tăng Cơ 24 Buổi', 24)}
                   >
-                    <Text style={styles.templatePillText}>24 buổi (2 th)</Text>
+                    <Text style={styles.templatePillText}>24 buổi</Text>
                   </Pressable>
                   <Pressable
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Chuyên Sâu 36 Buổi', 36)}
                   >
-                    <Text style={styles.templatePillText}>36 buổi (3 th)</Text>
+                    <Text style={styles.templatePillText}>36 buổi</Text>
                   </Pressable>
                 </View>
 
@@ -340,12 +331,21 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                   </View>
 
                   <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.fieldLabel}>Ngày kết thúc (dự kiến)</Text>
-                    <View style={[styles.input, styles.readOnlyInput]}>
-                      <Text style={styles.readOnlyText}>
-                        {formatDateDisplay(endDate)}
+                    <Text style={styles.fieldLabel}>Ngày kết thúc</Text>
+                    <Pressable
+                      style={styles.datePickerTrigger}
+                      onPress={() => setShowEndDatePicker(true)}
+                    >
+                      <Feather name="calendar" size={16} color="#0284C7" />
+                      <Text
+                        style={[
+                          styles.datePickerText,
+                          !endDate && { color: colors.textMuted },
+                        ]}
+                      >
+                        {endDate ? formatDateDisplay(endDate) : 'Chọn ngày'}
                       </Text>
-                    </View>
+                    </Pressable>
                   </View>
                 </View>
 
@@ -446,10 +446,22 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
             maxDate={null}
             onSelect={(iso) => {
               setStartDate(iso);
-              const num = parseInt(totalSessions, 10) || 0;
-              setEndDate(calculateEndDate(iso, num));
+              if (formError) setFormError(null);
             }}
             onClose={() => setShowStartDatePicker(false)}
+          />
+
+          {/* Date Picker Modal for End Date */}
+          <DatePickerModal
+            visible={showEndDatePicker}
+            value={endDate || startDate}
+            title="Chọn ngày kết thúc"
+            maxDate={null}
+            onSelect={(iso) => {
+              setEndDate(iso);
+              if (formError) setFormError(null);
+            }}
+            onClose={() => setShowEndDatePicker(false)}
           />
 
           {/* Popup xác nhận xóa gói tập PT */}
