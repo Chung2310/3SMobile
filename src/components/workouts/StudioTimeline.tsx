@@ -14,11 +14,11 @@ const time = (minute: number) => {
 function formatPrescription(item: JsonRecord): string {
   const prescription = asRecord(item.prescription);
   const parts: string[] = [];
-  if (prescription.sets) parts.push(`${prescription.sets} hiệp`);
-  if (prescription.reps) parts.push(`${prescription.reps} lần`);
+  if (prescription.sets) parts.push(`${prescription.sets} sets`);
+  if (prescription.reps) parts.push(`${prescription.reps} reps`);
   if (prescription.weight) parts.push(`${prescription.weight} kg`);
-  if (prescription.durationMinutes) parts.push(`${prescription.durationMinutes} phút`);
-  if (prescription.restSeconds) parts.push(`Nghỉ ${prescription.restSeconds}s`);
+  if (prescription.durationMinutes) parts.push(`${prescription.durationMinutes} min`);
+  if (prescription.restSeconds) parts.push(`Rest ${prescription.restSeconds}s`);
   return parts.join(' · ');
 }
 
