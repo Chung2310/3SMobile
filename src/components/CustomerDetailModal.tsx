@@ -764,6 +764,16 @@ export function CustomerDetailModal({
       <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
         {/* TOP HEADER */}
         <View style={styles.topHeader}>
+          <Pressable
+            onPress={onClose}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+          >
+            <Feather name="arrow-left" size={20} color="#0F172A" />
+          </Pressable>
+
           <View style={styles.headerLeft}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
@@ -781,37 +791,6 @@ export function CustomerDetailModal({
                 <View style={styles.phoneBox}>
                   <Feather name="phone" size={11} color="#64748B" />
                   <Text style={styles.metaText}>{customer.phone || 'Chưa có SĐT'}</Text>
-                  {customer.phone ? (
-                    <View style={styles.headerPhoneActions}>
-                      <Pressable
-                        style={styles.headerCallBtn}
-                        onPress={() => handleCall(customer.phone)}
-                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                        accessibilityRole="button"
-                        accessibilityLabel="Gọi điện thoại"
-                      >
-                        <Feather name="phone" size={10} color="#0284C7" />
-                      </Pressable>
-                      <Pressable
-                        style={styles.headerSmsBtn}
-                        onPress={() => handleSms(customer.phone)}
-                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                        accessibilityRole="button"
-                        accessibilityLabel="Nhắn tin SMS"
-                      >
-                        <Feather name="message-square" size={10} color="#16A34A" />
-                      </Pressable>
-                      <Pressable
-                        style={styles.headerZaloBtn}
-                        onPress={() => handleZalo(customer.phone)}
-                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                        accessibilityRole="button"
-                        accessibilityLabel="Mở Zalo"
-                      >
-                        <Image source={ICON_ZALO} style={styles.headerZaloIcon} resizeMode="contain" />
-                      </Pressable>
-                    </View>
-                  ) : null}
                 </View>
                 <Text style={styles.metaDot}>•</Text>
                 <Text style={styles.metaText}>{getGenderText(profile?.gender)}</Text>
@@ -829,21 +808,13 @@ export function CustomerDetailModal({
                 }}
                 hitSlop={8}
                 style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
+                accessibilityRole="button"
                 accessibilityLabel="Sửa thông tin khách hàng"
               >
                 <Feather name="edit-2" size={13} color="#475569" />
                 <Text style={styles.editBtnText}>Sửa</Text>
               </Pressable>
             )}
-
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              style={({ pressed }) => [styles.closeBtn, pressed && styles.btnPressed]}
-              accessibilityLabel="Đóng chi tiết hồ sơ"
-            >
-              <Feather name="x" size={20} color="#0F172A" />
-            </Pressable>
           </View>
         </View>
 
@@ -2484,38 +2455,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  headerPhoneActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginLeft: 3,
-  },
-  headerCallBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#E0F2FE',
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerSmsBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerZaloBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  headerZaloIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    marginRight: 10,
   },
   metaText: {
     fontSize: 12,
