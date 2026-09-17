@@ -70,9 +70,14 @@ export function InBodyMetricsFormFields({
       <View style={styles.twoColRow}>
         <View style={[styles.formGroup, { flex: 1 }]}>
           <View style={styles.labelWithBadge}>
-            <Text style={styles.label}>Chỉ số BMI</Text>
+            <Text style={styles.labelInRow} numberOfLines={1} ellipsizeMode="tail">
+              Chỉ số BMI
+            </Text>
             {liveBmiClass && (
-              <Text style={[styles.miniBadge, { color: liveBmiClass.color }]}>
+              <Text
+                style={[styles.miniBadge, { color: liveBmiClass.color }]}
+                numberOfLines={1}
+              >
                 {liveBmiClass.label}
               </Text>
             )}
@@ -89,9 +94,14 @@ export function InBodyMetricsFormFields({
 
         <View style={[styles.formGroup, { flex: 1 }]}>
           <View style={styles.labelWithBadge}>
-            <Text style={styles.label}>% Mỡ cơ thể</Text>
+            <Text style={styles.labelInRow} numberOfLines={1} ellipsizeMode="tail">
+              % Mỡ cơ thể
+            </Text>
             {liveFatClass && (
-              <Text style={[styles.miniBadge, { color: liveFatClass.color }]}>
+              <Text
+                style={[styles.miniBadge, { color: liveFatClass.color }]}
+                numberOfLines={1}
+              >
                 {liveFatClass.label}
               </Text>
             )}
@@ -110,7 +120,7 @@ export function InBodyMetricsFormFields({
       {/* Khối lượng cơ xương (SMM) & Khối lượng mỡ */}
       <View style={styles.twoColRow}>
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>Cơ xương SMM (kg)</Text>
+          <Text style={styles.label} numberOfLines={1}>Cơ xương SMM (kg)</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -122,7 +132,7 @@ export function InBodyMetricsFormFields({
         </View>
 
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>Khối lượng mỡ (kg)</Text>
+          <Text style={styles.label} numberOfLines={1}>Khối lượng mỡ (kg)</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -138,9 +148,14 @@ export function InBodyMetricsFormFields({
       <View style={styles.twoColRow}>
         <View style={[styles.formGroup, { flex: 1 }]}>
           <View style={styles.labelWithBadge}>
-            <Text style={styles.label}>Mỡ nội tạng (1-20)</Text>
+            <Text style={styles.labelInRow} numberOfLines={1} ellipsizeMode="tail">
+              Mỡ nội tạng
+            </Text>
             {liveVisceralClass && (
-              <Text style={[styles.miniBadge, { color: liveVisceralClass.color }]}>
+              <Text
+                style={[styles.miniBadge, { color: liveVisceralClass.color }]}
+                numberOfLines={1}
+              >
                 {liveVisceralClass.label}
               </Text>
             )}
@@ -148,7 +163,7 @@ export function InBodyMetricsFormFields({
           <TextInput
             style={styles.input}
             keyboardType="numeric"
-            placeholder="VD: 5"
+            placeholder="Thang 1-20 (VD: 5)"
             placeholderTextColor={colors.textMuted}
             value={values.visceralFatLevel}
             onChangeText={(v) => onChangeField('visceralFatLevel', v)}
@@ -156,7 +171,7 @@ export function InBodyMetricsFormFields({
         </View>
 
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>BMR (kcal)</Text>
+          <Text style={styles.label} numberOfLines={1}>BMR (kcal)</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -171,7 +186,7 @@ export function InBodyMetricsFormFields({
       {/* Điểm InBody & Nước cơ thể */}
       <View style={styles.twoColRow}>
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>Điểm InBody</Text>
+          <Text style={styles.label} numberOfLines={1}>Điểm InBody</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -183,7 +198,7 @@ export function InBodyMetricsFormFields({
         </View>
 
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>Nước cơ thể (L)</Text>
+          <Text style={styles.label} numberOfLines={1}>Nước cơ thể (L)</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -199,7 +214,7 @@ export function InBodyMetricsFormFields({
       <View style={styles.twoColRow}>
         {showBoneMineral ? (
           <View style={[styles.formGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Khoáng xương (kg)</Text>
+            <Text style={styles.label} numberOfLines={1}>Khoáng xương (kg)</Text>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -212,7 +227,7 @@ export function InBodyMetricsFormFields({
         ) : null}
 
         <View style={[styles.formGroup, { flex: 1 }]}>
-          <Text style={styles.label}>Tỉ lệ eo/hông (WHR)</Text>
+          <Text style={styles.label} numberOfLines={1}>Tỉ lệ eo/hông (WHR)</Text>
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -251,12 +266,16 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: spacing.sm,
+    overflow: 'hidden',
   },
   labelWithBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 6,
     marginBottom: 4,
+    minHeight: 18,
+    overflow: 'hidden',
   },
   label: {
     fontWeight: '500',
@@ -264,9 +283,16 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 4,
   },
+  labelInRow: {
+    fontWeight: '500',
+    fontSize: 12.5,
+    color: colors.text,
+    flexShrink: 1,
+  },
   miniBadge: {
     fontSize: 11,
     fontWeight: '700',
+    flexShrink: 0,
   },
   req: {
     color: colors.danger,

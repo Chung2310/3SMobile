@@ -66,10 +66,18 @@ export function InBodyDetailSheet({
     setAlertConfig({ visible: true, ...cfg });
   };
   const [customerGoal, setCustomerGoal] = useState<CustomerGoalData | null>(null);
+  const [customerHistory, setCustomerHistory] = useState<InBodyRecordData[]>(historyRecords || []);
+
+  useEffect(() => {
+    if (historyRecords && historyRecords.length > 0) {
+      setCustomerHistory(historyRecords);
+    }
+  }, [historyRecords]);
 
   useEffect(() => {
     if (!visible || !record) {
       setCustomerGoal(null);
+      setCustomerHistory([]);
       return;
     }
     const cId =
@@ -81,6 +89,7 @@ export function InBodyDetailSheet({
       return;
     }
 
+    // Tải mục tiêu học viên
     api
       .get<CustomerGoalData[]>(`/api/goals?customerId=${cId}&limit=1`)
       .then((res) => {
@@ -99,6 +108,23 @@ export function InBodyDetailSheet({
         }
       })
       .catch(() => setCustomerGoal(null));
+
+    // Tải trọn vẹn toàn bộ lịch sử InBody của học viên này
+    inbodyService
+      .getRecords({ customerId: cId, limit: 100, sortBy: 'measurementDate', sortOrder: 'asc' })
+      .then((res) => {
+        const items = Array.isArray((res as any)?.data)
+          ? (res as any).data
+          : Array.isArray(res)
+          ? res
+          : [];
+        if (items.length > 0) {
+          setCustomerHistory(items);
+        }
+      })
+      .catch((err) => {
+        console.warn('[InBodyDetailSheet] Failed to load full customer InBody history:', err);
+      });
   }, [visible, record]);
 
   const customerMeta = useMemo(() => {
@@ -117,10 +143,24 @@ export function InBodyDetailSheet({
   const customerName = customerMeta?.fullName || 'Học viên';
   const isPublished = record?.status === 'PUBLISHED';
 
+  // Tự động tìm phiếu đo trước đó từ toàn bộ lịch sử nếu previousRecord truyền vào bị thiếu
+  const effectivePreviousRecord = useMemo(() => {
+    if (previousRecord) return previousRecord;
+    if (!record || customerHistory.length < 2) return null;
+    const sorted = [...customerHistory].sort(
+      (a, b) => new Date(b.measurementDate).getTime() - new Date(a.measurementDate).getTime()
+    );
+    const idx = sorted.findIndex((r) => r._id === record._id);
+    if (idx >= 0 && idx + 1 < sorted.length) {
+      return sorted[idx + 1];
+    }
+    return null;
+  }, [previousRecord, record, customerHistory]);
+
   const analysis = useMemo(() => {
     if (!record) return null;
-    return analyzeInBody(record, previousRecord, customerMeta, customerGoal);
-  }, [record, previousRecord, customerMeta, customerGoal]);
+    return analyzeInBody(record, effectivePreviousRecord, customerMeta, customerGoal);
+  }, [record, effectivePreviousRecord, customerMeta, customerGoal]);
 
   if (!record) return null;
 
@@ -355,10 +395,10 @@ export function InBodyDetailSheet({
             />
 
             {/* 6. Evolution Chart across history */}
-            {historyRecords && historyRecords.length >= 2 && (
+            {customerHistory && customerHistory.length >= 2 && (
               <View style={{ marginTop: 12 }}>
                 <InBodyEvolutionChart
-                  records={historyRecords}
+                  records={customerHistory}
                   title="Tiến trình thay đổi thể chất"
                 />
               </View>
