@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -8,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+
+const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
 
 export interface FoodItem {
   name: string;
@@ -69,7 +72,7 @@ export function CustomerTodayNutritionModal({
   const currentTimeNumber = currentHour * 60 + currentMinute;
   const currentTimeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
-  // 2. Trích xuất danh sách các ngày trong thực đơn (hỗ trợ nhiều cấu trúc khác nhau từ API)
+  // 2. Trích xuất danh sách các ngày trong thực đơn
   const normalizedDays: DayPlan[] = useMemo(() => {
     if (!plan) return [];
 
@@ -151,7 +154,7 @@ export function CustomerTodayNutritionModal({
     return 0;
   }, [normalizedDays, currentDayOfWeekName, now]);
 
-  // Tab ngày đang được xem (mặc định mở ra là ngày HÔM NAY)
+  // Tab ngày đang được xem (mặc định là ngày hôm nay)
   const [userSelectedDayIdx, setUserSelectedDayIdx] = useState<number | null>(null);
   const selectedDayIdx = userSelectedDayIdx ?? todayDayIndex;
 
@@ -161,7 +164,7 @@ export function CustomerTodayNutritionModal({
   );
   const isViewingToday = selectedDayIdx === todayDayIndex;
 
-  // Chế độ xem: 'realtime' (chỉ bữa hiện tại - mặc định) | 'all' (tất cả bữa trong ngày)
+  // Chế độ xem: 'realtime' (mặc định) | 'all' (tất cả bữa trong ngày)
   const [viewMode, setViewMode] = useState<'realtime' | 'all'>('realtime');
   const [showDaySelector, setShowDaySelector] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -265,23 +268,36 @@ export function CustomerTodayNutritionModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          {/* ================= HEADER TỐI MÀU HIỆN ĐẠI ================= */}
+          {/* ================= HEADER TRẮNG HIỆN ĐẠI CÙNG 3S CHEF ================= */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <View style={styles.metaRow}>
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveBadgeText}>
-                    Thời Gian Thực • {currentTimeString}
-                  </Text>
-                </View>
-                <Text style={styles.dayOfWeekText}>{activeDay.dayOfWeek}</Text>
+              {/* Minh họa 3S Chef mascot */}
+              <View style={styles.mascotBadge}>
+                <Image
+                  source={MASCOT_CHEF}
+                  style={styles.mascotImage}
+                  resizeMode="contain"
+                />
               </View>
 
-              <View style={styles.titleRow}>
-                <Ionicons name="restaurant-outline" size={17} color="#BAE6FD" style={{ marginRight: 6 }} />
+              <View style={styles.headerTitleWrap}>
+                <View style={styles.metaRow}>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveBadgeText}>
+                      Thời Gian Thực • {currentTimeString}
+                    </Text>
+                  </View>
+                  <View style={styles.dayTag}>
+                    <Text style={styles.dayTagText}>{activeDay.dayOfWeek}</Text>
+                  </View>
+                </View>
+
                 <Text style={styles.headerTitle} numberOfLines={1}>
                   Hôm nay ăn gì: <Text style={styles.headerCustomerName}>{customerName || 'Học viên'}</Text>
+                </Text>
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  Gợi ý thực đơn chuẩn hóa từ HLV cá nhân
                 </Text>
               </View>
             </View>
@@ -289,27 +305,27 @@ export function CustomerTodayNutritionModal({
             <Pressable
               style={styles.closeBtn}
               onPress={onClose}
-              hitSlop={8}
+              hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Đóng popup"
             >
-              <Feather name="x" size={18} color="#FFFFFF" />
+              <Feather name="x" size={18} color="#64748B" />
             </Pressable>
           </View>
 
-          {/* ================= THANH ĐIỀU HƯỚNG GỌN GÀNG ================= */}
+          {/* ================= THANH ĐIỀU HƯỚNG SÁNG VÀ TINH GỌN ================= */}
           <View style={styles.navBar}>
-            {/* Chuyển đổi chế độ: Bữa hiện tại / Cả ngày */}
+            {/* Chuyển đổi chế độ xem: Bữa Hiện Tại / Cả Ngày */}
             <View style={styles.modeSegment}>
               <Pressable
                 style={[styles.modeBtn, viewMode === 'realtime' && styles.modeBtnActive]}
                 onPress={() => setViewMode('realtime')}
               >
                 <Ionicons
-                  name="flash-outline"
+                  name="flash"
                   size={13}
-                  color={viewMode === 'realtime' ? '#FFFFFF' : '#0369A1'}
-                  style={{ marginRight: 4 }}
+                  color={viewMode === 'realtime' ? '#0284C7' : '#64748B'}
+                  style={{ marginRight: 5 }}
                 />
                 <Text
                   style={[
@@ -326,10 +342,10 @@ export function CustomerTodayNutritionModal({
                 onPress={() => setViewMode('all')}
               >
                 <Feather
-                  name="file-text"
+                  name="calendar"
                   size={12}
-                  color={viewMode === 'all' ? '#FFFFFF' : '#0369A1'}
-                  style={{ marginRight: 4 }}
+                  color={viewMode === 'all' ? '#0284C7' : '#64748B'}
+                  style={{ marginRight: 5 }}
                 />
                 <Text
                   style={[
@@ -342,13 +358,13 @@ export function CustomerTodayNutritionModal({
               </Pressable>
             </View>
 
-            {/* Chọn ngày khác */}
+            {/* Bộ chọn ngày trong tuần */}
             <View style={styles.daySelectorWrap}>
               <Pressable
                 style={[styles.daySelectorBtn, showDaySelector && styles.daySelectorBtnActive]}
                 onPress={() => setShowDaySelector((prev) => !prev)}
               >
-                <Feather name="calendar" size={13} color={showDaySelector ? '#0284C7' : '#475569'} />
+                <Feather name="clock" size={12} color={showDaySelector ? '#0284C7' : '#64748B'} />
                 <Text
                   style={[
                     styles.daySelectorBtnText,
@@ -360,7 +376,7 @@ export function CustomerTodayNutritionModal({
                 <Feather
                   name={showDaySelector ? 'chevron-up' : 'chevron-down'}
                   size={12}
-                  color={showDaySelector ? '#0284C7' : '#475569'}
+                  color={showDaySelector ? '#0284C7' : '#64748B'}
                 />
               </Pressable>
 
@@ -378,7 +394,7 @@ export function CustomerTodayNutritionModal({
             </View>
           </View>
 
-          {/* DANH SÁCH CÁC NGÀY TRONG TUẦN (MỞ KHI BẤM CHỌN NGÀY) */}
+          {/* DANH SÁCH NGÀY TRONG TUẦN MỞ RỘNG */}
           {showDaySelector && (
             <View style={styles.dayListBar}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayListScroll}>
@@ -416,7 +432,7 @@ export function CustomerTodayNutritionModal({
             </View>
           )}
 
-          {/* ================= NỘI DUNG CHÍNH ================= */}
+          {/* ================= NỘI DUNG CHÍNH (NỀN TRẮNG SẠCH SẼ) ================= */}
           <ScrollView
             style={styles.scrollArea}
             contentContainerStyle={styles.scrollContent}
@@ -426,12 +442,12 @@ export function CustomerTodayNutritionModal({
             {viewMode === 'realtime' && (
               <View>
                 {currentMeal ? (
-                  <View style={styles.realtimeBox}>
-                    {/* Header bữa ăn hiện tại */}
-                    <View style={styles.realtimeBoxHeader}>
-                      <View style={styles.realtimeBoxHeaderLeft}>
+                  <View style={styles.realtimeCard}>
+                    {/* Thanh trạng thái bữa ăn */}
+                    <View style={styles.realtimeCardHeader}>
+                      <View style={styles.realtimeHeaderLeft}>
                         <View style={styles.realtimeStatusBadge}>
-                          <Ionicons name="sparkles" size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
+                          <Ionicons name="sparkles" size={11} color="#15803D" style={{ marginRight: 4 }} />
                           <Text style={styles.realtimeStatusText}>
                             {realtimeMealInfo.label}
                           </Text>
@@ -439,16 +455,16 @@ export function CustomerTodayNutritionModal({
                         <Text style={styles.realtimeMealName}>{currentMeal.name}</Text>
                       </View>
 
-                      <View style={styles.realtimeBoxHeaderRight}>
+                      <View style={styles.realtimeHeaderRight}>
                         {!!currentMeal.timeSlot && (
-                          <View style={styles.timeSlotWrap}>
-                            <Feather name="clock" size={12} color="#64748B" style={{ marginRight: 4 }} />
+                          <View style={styles.timeSlotBadge}>
+                            <Feather name="clock" size={12} color="#0284C7" style={{ marginRight: 4 }} />
                             <Text style={styles.timeSlotText}>{currentMeal.timeSlot}</Text>
                           </View>
                         )}
                         {!!currentMeal.calories && (
-                          <View style={styles.mealKcalPill}>
-                            <Ionicons name="flame" size={12} color="#E11D48" style={{ marginRight: 3 }} />
+                          <View style={styles.mealKcalBadge}>
+                            <Ionicons name="flame" size={12} color="#EA580C" style={{ marginRight: 3 }} />
                             <Text style={styles.mealKcalText}>{currentMeal.calories} kcal</Text>
                           </View>
                         )}
@@ -456,82 +472,131 @@ export function CustomerTodayNutritionModal({
                     </View>
 
                     {/* Danh sách món ăn trong bữa */}
-                    <View style={styles.foodListWrap}>
-                      <Text style={styles.foodSectionTitle}>
-                        MÓN ĂN & ĐỊNH LƯỢNG ({currentMeal.items?.length || 0} MÓN):
-                      </Text>
+                    <View style={styles.foodListContainer}>
+                      <View style={styles.foodListHeaderRow}>
+                        <Text style={styles.foodSectionTitle}>
+                          DANH SÁCH MÓN ĂN & ĐỊNH LƯỢNG
+                        </Text>
+                        <View style={styles.itemCountPill}>
+                          <Text style={styles.itemCountText}>
+                            {currentMeal.items?.length || 0} món
+                          </Text>
+                        </View>
+                      </View>
 
                       {Array.isArray(currentMeal.items) && currentMeal.items.length > 0 ? (
                         <View style={styles.foodItemsCol}>
                           {currentMeal.items.map((item, idx) => (
-                            <View key={idx} style={styles.foodItemRow}>
-                              <View style={styles.foodItemInfo}>
-                                <Text style={styles.foodItemName}>{item.name}</Text>
+                            <View key={idx} style={styles.foodItemCard}>
+                              <View style={styles.foodItemMain}>
+                                <View style={styles.foodItemTitleRow}>
+                                  <View style={styles.foodIndexBadge}>
+                                    <Text style={styles.foodIndexText}>{idx + 1}</Text>
+                                  </View>
+                                  <Text style={styles.foodItemName}>{item.name}</Text>
+                                </View>
+
                                 {!!item.prepTip && (
-                                  <View style={styles.prepTipRow}>
-                                    <Ionicons name="bulb-outline" size={12} color="#64748B" style={{ marginRight: 4 }} />
+                                  <View style={styles.prepTipWrap}>
+                                    <Ionicons name="bulb-outline" size={12} color="#0284C7" style={{ marginRight: 4 }} />
                                     <Text style={styles.prepTipText}>{item.prepTip}</Text>
+                                  </View>
+                                )}
+
+                                {/* Macros chi tiết nếu có */}
+                                {(!!item.protein || !!item.carbs || !!item.fat) && (
+                                  <View style={styles.macrosRow}>
+                                    {!!item.protein && (
+                                      <View style={[styles.macroPill, { backgroundColor: '#F0FDF4' }]}>
+                                        <Text style={[styles.macroPillText, { color: '#16A34A' }]}>
+                                          P: {item.protein}g
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {!!item.carbs && (
+                                      <View style={[styles.macroPill, { backgroundColor: '#EFF6FF' }]}>
+                                        <Text style={[styles.macroPillText, { color: '#2563EB' }]}>
+                                          C: {item.carbs}g
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {!!item.fat && (
+                                      <View style={[styles.macroPill, { backgroundColor: '#FFF7ED' }]}>
+                                        <Text style={[styles.macroPillText, { color: '#EA580C' }]}>
+                                          F: {item.fat}g
+                                        </Text>
+                                      </View>
+                                    )}
                                   </View>
                                 )}
                               </View>
 
-                              <View style={styles.foodItemMeta}>
+                              <View style={styles.foodItemRightMeta}>
                                 {!!item.amount && (
-                                  <View style={styles.amountPill}>
-                                    <Text style={styles.amountPillText}>{item.amount}</Text>
+                                  <View style={styles.portionPill}>
+                                    <Text style={styles.portionPillText}>{item.amount}</Text>
                                   </View>
                                 )}
                                 {!!item.calories && (
-                                  <Text style={styles.itemKcalText}>{item.calories} kcal</Text>
+                                  <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
                                 )}
                               </View>
                             </View>
                           ))}
                         </View>
                       ) : (
-                        <Text style={styles.emptyFoodText}>
-                          Chưa có chi tiết món ăn cụ thể cho bữa này.
-                        </Text>
+                        <View style={styles.emptyItemsBox}>
+                          <Feather name="info" size={15} color="#94A3B8" style={{ marginBottom: 4 }} />
+                          <Text style={styles.emptyFoodText}>
+                            Chưa có danh sách món ăn chi tiết cho bữa này.
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>
                 ) : (
-                  <View style={styles.emptyNotice}>
-                    <Text style={styles.emptyNoticeText}>
-                      Không tìm thấy dữ liệu bữa ăn cho ngày hôm nay.
+                  <View style={styles.emptyCard}>
+                    <Image
+                      source={MASCOT_CHEF}
+                      style={styles.emptyCardMascot}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.emptyCardTitle}>Chưa có thực đơn cho hôm nay</Text>
+                    <Text style={styles.emptyCardSubtitle}>
+                      HLV chưa thiết lập các bữa ăn trong ngày hoặc ngày này đang trong giai đoạn nghỉ.
                     </Text>
                   </View>
                 )}
 
-                {/* Nút xem thêm các bữa khác */}
+                {/* Nút xem nhanh tất cả các bữa khác */}
                 {activeDay.meals.length > 1 && (
                   <Pressable
-                    style={styles.viewMoreMealsBtn}
+                    style={styles.viewOtherMealsBtn}
                     onPress={() => setViewMode('all')}
                   >
-                    <Feather name="file-text" size={13} color="#0284C7" style={{ marginRight: 6 }} />
-                    <Text style={styles.viewMoreMealsBtnText}>
-                      Xem thêm {activeDay.meals.length - 1} bữa khác trong ngày hôm nay
+                    <Feather name="list" size={14} color="#0284C7" style={{ marginRight: 6 }} />
+                    <Text style={styles.viewOtherMealsBtnText}>
+                      Xem toàn bộ {activeDay.meals.length} bữa trong ngày hôm nay
                     </Text>
-                    <Feather name="chevron-down" size={13} color="#0284C7" style={{ marginLeft: 4 }} />
+                    <Feather name="chevron-right" size={14} color="#0284C7" style={{ marginLeft: 4 }} />
                   </Pressable>
                 )}
               </View>
             )}
 
-            {/* CHẾ ĐỘ 2: TOÀN BỘ CÁC BỮA TRONG NGÀY (ACCORDION) */}
+            {/* CHẾ ĐỘ 2: TOÀN BỘ CÁC BỮA TRONG NGÀY (ACCORDION CARD) */}
             {viewMode === 'all' && (
-              <View style={styles.allMealsWrap}>
-                <View style={styles.allMealsHeaderRow}>
-                  <Text style={styles.allMealsHeaderTitle}>
-                    Toàn bộ thực đơn {activeDay.dayOfWeek} ({activeDay.meals.length} bữa)
+              <View style={styles.allMealsContainer}>
+                <View style={styles.allMealsTopBar}>
+                  <Text style={styles.allMealsTopTitle}>
+                    Thực đơn {activeDay.dayOfWeek} ({activeDay.meals.length} bữa ăn)
                   </Text>
                   <Pressable
-                    style={styles.backToRealtimeBtn}
+                    style={styles.switchRealtimeBtn}
                     onPress={() => setViewMode('realtime')}
                   >
-                    <Ionicons name="flash-outline" size={12} color="#0284C7" style={{ marginRight: 3 }} />
-                    <Text style={styles.backToRealtimeText}>Quay lại bữa hiện tại</Text>
+                    <Ionicons name="flash" size={12} color="#0284C7" style={{ marginRight: 3 }} />
+                    <Text style={styles.switchRealtimeText}>Bữa hiện tại</Text>
                   </Pressable>
                 </View>
 
@@ -543,16 +608,16 @@ export function CustomerTodayNutritionModal({
                     <View
                       key={meal.id || mIdx}
                       style={[
-                        styles.mealCard,
-                        isCurrent && styles.mealCardCurrent,
+                        styles.accordionMealCard,
+                        isCurrent && styles.accordionMealCardCurrent,
                       ]}
                     >
-                      {/* Tiêu đề bữa ăn */}
+                      {/* Tiêu đề thanh Accordion */}
                       <Pressable
-                        style={styles.mealCardHeader}
+                        style={styles.accordionMealHeader}
                         onPress={() => toggleMeal(mIdx)}
                       >
-                        <View style={styles.mealCardHeaderLeft}>
+                        <View style={styles.accordionLeft}>
                           <View
                             style={[
                               styles.mealNumberCircle,
@@ -569,36 +634,37 @@ export function CustomerTodayNutritionModal({
                             </Text>
                           </View>
 
-                          <View style={styles.mealTitleCol}>
+                          <View style={styles.mealMetaCol}>
                             <View style={styles.mealTitleRow}>
-                              <Text style={styles.mealName}>{meal.name}</Text>
+                              <Text style={styles.accordionMealName}>{meal.name}</Text>
                               {isCurrent && (
-                                <View style={styles.currentTag}>
-                                  <View style={styles.currentDot} />
-                                  <Text style={styles.currentTagText}>Giờ này</Text>
+                                <View style={styles.liveTag}>
+                                  <View style={styles.liveTagDot} />
+                                  <Text style={styles.liveTagText}>Giờ này</Text>
                                 </View>
                               )}
                             </View>
-                            <Text style={styles.mealSubtitle}>
+                            <Text style={styles.accordionMealSub}>
                               {meal.timeSlot ? `${meal.timeSlot} • ` : ''}
                               {meal.items?.length || 0} món
                             </Text>
                           </View>
                         </View>
 
-                        <View style={styles.mealCardHeaderRight}>
+                        <View style={styles.accordionRight}>
                           {!!meal.calories && (
-                            <Text style={styles.allMealKcalText}>{meal.calories} kcal</Text>
+                            <Text style={styles.accordionKcalText}>{meal.calories} kcal</Text>
                           )}
-                          <View style={styles.expandToggleBtn}>
-                            <Text style={styles.expandToggleText}>
-                              {isExpanded ? 'Thu gọn' : 'Xem món'}
-                            </Text>
+                          <View
+                            style={[
+                              styles.accordionChevronWrap,
+                              isExpanded && styles.accordionChevronWrapExpanded,
+                            ]}
+                          >
                             <Feather
                               name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                              size={12}
+                              size={14}
                               color="#0284C7"
-                              style={{ marginLeft: 3 }}
                             />
                           </View>
                         </View>
@@ -606,34 +672,36 @@ export function CustomerTodayNutritionModal({
 
                       {/* Chi tiết danh sách món khi mở rộng */}
                       {isExpanded && (
-                        <View style={styles.mealExpandedBody}>
+                        <View style={styles.accordionBody}>
                           {Array.isArray(meal.items) && meal.items.length > 0 ? (
-                            <View style={styles.expandedItemsList}>
+                            <View style={styles.expandedItemsCol}>
                               {meal.items.map((item, iIdx) => (
-                                <View key={iIdx} style={styles.expandedItemRow}>
+                                <View key={iIdx} style={styles.expandedItemCard}>
                                   <View style={styles.expandedItemInfo}>
                                     <Text style={styles.expandedItemName}>{item.name}</Text>
                                     {!!item.prepTip && (
-                                      <View style={styles.prepTipRow}>
-                                        <Ionicons name="bulb-outline" size={11} color="#64748B" style={{ marginRight: 4 }} />
+                                      <View style={styles.prepTipWrap}>
+                                        <Ionicons name="bulb-outline" size={11} color="#0284C7" style={{ marginRight: 4 }} />
                                         <Text style={styles.prepTipText}>{item.prepTip}</Text>
                                       </View>
                                     )}
                                   </View>
 
-                                  <View style={styles.expandedItemMeta}>
+                                  <View style={styles.expandedItemRight}>
                                     {!!item.amount && (
-                                      <Text style={styles.expandedItemAmount}>{item.amount}</Text>
+                                      <View style={styles.portionPill}>
+                                        <Text style={styles.portionPillText}>{item.amount}</Text>
+                                      </View>
                                     )}
                                     {!!item.calories && (
-                                      <Text style={styles.expandedItemKcal}>{item.calories} kcal</Text>
+                                      <Text style={styles.itemCaloriesText}>{item.calories} kcal</Text>
                                     )}
                                   </View>
                                 </View>
                               ))}
                             </View>
                           ) : (
-                            <Text style={styles.emptyFoodText}>Chưa có chi tiết món ăn.</Text>
+                            <Text style={styles.emptyFoodText}>Chưa có danh sách món ăn cụ thể.</Text>
                           )}
                         </View>
                       )}
@@ -643,53 +711,57 @@ export function CustomerTodayNutritionModal({
               </View>
             )}
 
-            {/* ACCORDION LƯU Ý TỪ HLV */}
+            {/* ACCORDION LƯU Ý TỪ HUẤN LUYỆN VIÊN */}
             {!!plan.notes && (
-              <View style={styles.notesBox}>
+              <View style={styles.coachNotesCard}>
                 <Pressable
-                  style={styles.notesHeader}
+                  style={styles.coachNotesHeader}
                   onPress={() => setShowNotes((prev) => !prev)}
                 >
-                  <View style={styles.notesHeaderLeft}>
-                    <Feather name="info" size={14} color="#0284C7" style={{ marginRight: 6 }} />
-                    <Text style={styles.notesTitle}>Lưu ý từ Huấn Luyện Viên</Text>
+                  <View style={styles.coachNotesHeaderLeft}>
+                    <View style={styles.coachNotesIconWrap}>
+                      <Feather name="message-square" size={14} color="#0284C7" />
+                    </View>
+                    <Text style={styles.coachNotesTitle}>Lưu ý từ Huấn Luyện Viên</Text>
                   </View>
                   <Feather
                     name={showNotes ? 'chevron-up' : 'chevron-down'}
                     size={14}
-                    color="#475569"
+                    color="#64748B"
                   />
                 </Pressable>
 
                 {showNotes && (
-                  <View style={styles.notesBody}>
-                    <Text style={styles.notesContent}>{plan.notes}</Text>
+                  <View style={styles.coachNotesBody}>
+                    <Text style={styles.coachNotesContent}>{plan.notes}</Text>
                   </View>
                 )}
               </View>
             )}
           </ScrollView>
 
-          {/* ================= FOOTER GỌN GÀNG ================= */}
+          {/* ================= FOOTER TRẮNG HIỆN ĐẠI ================= */}
           <View style={styles.footer}>
-            <View style={styles.footerLeft}>
-              <Text style={styles.footerTotalLabel}>Tổng ngày: </Text>
-              <Ionicons name="flame" size={14} color="#EA580C" style={{ marginHorizontal: 3 }} />
-              <Text style={styles.footerTotalVal}>
-                {dayTotalCalories > 0
-                  ? dayTotalCalories.toLocaleString()
-                  : plan.targetCalories?.toLocaleString() || '—'}{' '}
-                kcal
-              </Text>
+            <View style={styles.footerSummary}>
+              <Text style={styles.footerSummaryLabel}>Tổng calo ngày:</Text>
+              <View style={styles.footerKcalBadge}>
+                <Ionicons name="flame" size={14} color="#EA580C" style={{ marginRight: 3 }} />
+                <Text style={styles.footerSummaryVal}>
+                  {dayTotalCalories > 0
+                    ? dayTotalCalories.toLocaleString()
+                    : plan.targetCalories?.toLocaleString() || '—'}{' '}
+                  kcal
+                </Text>
+              </View>
             </View>
 
             <Pressable
-              style={styles.closeActionBtn}
+              style={styles.closeFooterBtn}
               onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel="Đóng"
             >
-              <Text style={styles.closeActionText}>Đóng</Text>
+              <Text style={styles.closeFooterText}>Đóng</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -701,97 +773,139 @@ export function CustomerTodayNutritionModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(2, 44, 80, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
   },
   card: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 520,
     maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
+
+  /* HEADER TRẮNG CÙNG 3S CHEF */
   header: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#0369A1',
+    borderBottomColor: '#F1F5F9',
   },
   headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    paddingRight: 8,
+    paddingRight: 10,
+    gap: 12,
+  },
+  mascotBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  mascotImage: {
+    width: 42,
+    height: 42,
+  },
+  headerTitleWrap: {
+    flex: 1,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: 6,
+    marginBottom: 3,
+    flexWrap: 'wrap',
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 999,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#4ADE80',
+    borderColor: '#A7F3D0',
   },
   liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#16A34A',
-    marginRight: 6,
+    marginRight: 5,
   },
   liveBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: '#15803D',
   },
-  dayOfWeekText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#E0F2FE',
+  dayTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dayTagText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
   headerTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    flex: 1,
+    fontWeight: '800',
+    color: '#0F172A',
   },
   headerCustomerName: {
-    color: '#BAE6FD',
+    color: '#0284C7',
     fontWeight: '800',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 1,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  /* THANH ĐIỀU HƯỚNG GỌN GÀNG */
   navBar: {
     backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#F1F5F9',
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -802,33 +916,35 @@ const styles = StyleSheet.create({
   },
   modeSegment: {
     flexDirection: 'row',
-    backgroundColor: '#E0F2FE',
-    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
     padding: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   modeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 9,
   },
   modeBtnActive: {
-    backgroundColor: '#0284C7',
-    shadowColor: '#0284C7',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 2,
   },
   modeBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0369A1',
+    color: '#64748B',
   },
   modeBtnTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#0284C7',
+    fontWeight: '800',
   },
   daySelectorWrap: {
     flexDirection: 'row',
@@ -838,12 +954,12 @@ const styles = StyleSheet.create({
   daySelectorBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
   daySelectorBtnActive: {
@@ -853,14 +969,15 @@ const styles = StyleSheet.create({
   daySelectorBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#334155',
   },
   daySelectorBtnTextActive: {
     color: '#0284C7',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   returnTodayBtn: {
     paddingVertical: 4,
+    paddingHorizontal: 6,
   },
   returnTodayText: {
     fontSize: 11,
@@ -868,21 +985,21 @@ const styles = StyleSheet.create({
     color: '#0284C7',
   },
   dayListBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#F1F5F9',
     paddingVertical: 8,
   },
   dayListScroll: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     gap: 6,
   },
   dayPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
   dayPillSelected: {
@@ -890,8 +1007,8 @@ const styles = StyleSheet.create({
     borderColor: '#0284C7',
   },
   dayPillToday: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   dayPillText: {
     fontSize: 12,
@@ -900,35 +1017,40 @@ const styles = StyleSheet.create({
   },
   dayPillTextSelected: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   dayPillTextToday: {
-    color: '#166534',
-    fontWeight: '700',
+    color: '#15803D',
+    fontWeight: '800',
   },
+
+  /* SCROLL CONTENT */
   scrollArea: {
     flexGrow: 1,
   },
   scrollContent: {
     padding: 14,
     gap: 12,
+    backgroundColor: '#FAFAFA',
   },
-  realtimeBox: {
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: '#22C55E',
+
+  /* REALTIME CURRENT MEAL CARD */
+  realtimeCard: {
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  realtimeBoxHeader: {
+  realtimeCardHeader: {
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#DCFCE7',
     flexDirection: 'row',
@@ -937,7 +1059,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  realtimeBoxHeaderLeft: {
+  realtimeHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -946,7 +1068,9 @@ const styles = StyleSheet.create({
   realtimeStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16A34A',
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
@@ -954,112 +1078,175 @@ const styles = StyleSheet.create({
   realtimeStatusText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#15803D',
   },
   realtimeMealName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#0F172A',
   },
-  realtimeBoxHeaderRight: {
+  realtimeHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  timeSlotWrap: {
+  timeSlotBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   timeSlotText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
   },
-  mealKcalPill: {
+  mealKcalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF1F2',
+    backgroundColor: '#FFF7ED',
     borderWidth: 1,
-    borderColor: '#FFE4E6',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    borderColor: '#FFEDD5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   mealKcalText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#E11D48',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#EA580C',
   },
-  foodListWrap: {
-    padding: 12,
+  foodListContainer: {
+    padding: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  foodListHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   foodSectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: '#64748B',
     letterSpacing: 0.5,
-    marginBottom: 8,
+  },
+  itemCountPill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  itemCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
   },
   foodItemsCol: {
     gap: 8,
   },
-  foodItemRow: {
+  foodItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  foodItemInfo: {
+  foodItemMain: {
     flex: 1,
     paddingRight: 10,
+  },
+  foodItemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  foodIndexBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foodIndexText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284C7',
   },
   foodItemName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
+    flex: 1,
   },
-  prepTipRow: {
+  prepTipWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 4,
+    marginLeft: 28,
   },
   prepTipText: {
-    fontSize: 12,
+    fontSize: 11,
     fontStyle: 'italic',
     color: '#64748B',
   },
-  foodItemMeta: {
-    alignItems: 'flex-end',
-    gap: 2,
+  macrosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    marginLeft: 28,
   },
-  amountPill: {
-    backgroundColor: '#E0F2FE',
+  macroPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  macroPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  foodItemRightMeta: {
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  portionPill: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 2.5,
     borderRadius: 6,
   },
-  amountPillText: {
+  portionPillText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0284C7',
+    color: '#15803D',
   },
-  itemKcalText: {
+  itemCaloriesText: {
     fontSize: 11,
-    color: '#64748B',
+    fontWeight: '600',
+    color: '#94A3B8',
   },
-  emptyFoodText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: '#64748B',
-    paddingVertical: 8,
-  },
-  emptyNotice: {
-    padding: 24,
+  emptyItemsBox: {
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
@@ -1068,78 +1255,127 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderStyle: 'dashed',
   },
-  emptyNoticeText: {
+  emptyFoodText: {
     fontSize: 12,
-    color: '#64748B',
+    fontStyle: 'italic',
+    color: '#94A3B8',
   },
-  viewMoreMealsBtn: {
+  viewOtherMealsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingVertical: 10,
+    borderColor: '#BAE6FD',
+    borderRadius: 14,
+    paddingVertical: 11,
     marginTop: 10,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  viewMoreMealsBtnText: {
+  viewOtherMealsBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0284C7',
   },
-  allMealsWrap: {
+
+  /* EMPTY CARD */
+  emptyCard: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyCardMascot: {
+    width: 64,
+    height: 64,
+    marginBottom: 10,
+  },
+  emptyCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  emptyCardSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  /* ALL MEALS ACCORDION */
+  allMealsContainer: {
     gap: 8,
   },
-  allMealsHeaderRow: {
+  allMealsTopBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+    paddingHorizontal: 2,
   },
-  allMealsHeaderTitle: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  backToRealtimeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backToRealtimeText: {
+  allMealsTopTitle: {
     fontSize: 12,
     fontWeight: '700',
+    color: '#64748B',
+  },
+  switchRealtimeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  switchRealtimeText: {
+    fontSize: 11,
+    fontWeight: '800',
     color: '#0284C7',
   },
-  mealCard: {
+  accordionMealCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  mealCardCurrent: {
+  accordionMealCardCurrent: {
     borderColor: '#22C55E',
     borderWidth: 1.5,
   },
-  mealCardHeader: {
+  accordionMealHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
   },
-  mealCardHeaderLeft: {
+  accordionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
   },
   mealNumberCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: '#E0F2FE',
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1150,12 +1386,12 @@ const styles = StyleSheet.create({
   mealNumberText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0284C7',
+    color: '#475569',
   },
   mealNumberTextCurrent: {
     color: '#FFFFFF',
   },
-  mealTitleCol: {
+  mealMetaCol: {
     flex: 1,
   },
   mealTitleRow: {
@@ -1164,80 +1400,81 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: 'wrap',
   },
-  mealName: {
+  accordionMealName: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
   },
-  currentTag: {
+  liveTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  currentDot: {
+  liveTagDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#16A34A',
     marginRight: 4,
   },
-  currentTagText: {
+  liveTagText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#166534',
+    fontWeight: '800',
+    color: '#15803D',
   },
-  mealSubtitle: {
+  accordionMealSub: {
     fontSize: 11,
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
   },
-  mealCardHeaderRight: {
+  accordionRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  allMealKcalText: {
+  accordionKcalText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#334155',
   },
-  expandToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  accordionChevronWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  expandToggleText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#0284C7',
+  accordionChevronWrapExpanded: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
   },
-  mealExpandedBody: {
+  accordionBody: {
     paddingHorizontal: 12,
     paddingBottom: 12,
     paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F8FAFC',
   },
-  expandedItemsList: {
+  expandedItemsCol: {
     gap: 6,
   },
-  expandedItemRow: {
+  expandedItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -1247,97 +1484,113 @@ const styles = StyleSheet.create({
   },
   expandedItemName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1E293B',
   },
-  expandedItemMeta: {
+  expandedItemRight: {
     alignItems: 'flex-end',
+    gap: 2,
   },
-  expandedItemAmount: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0284C7',
-  },
-  expandedItemKcal: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  notesBox: {
-    borderRadius: 14,
+
+  /* LƯU Ý TỪ HLV */
+  coachNotesCard: {
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  notesHeader: {
+  coachNotesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
     backgroundColor: '#FFFFFF',
   },
-  notesHeaderLeft: {
+  coachNotesHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  notesTitle: {
+  coachNotesIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coachNotesTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: '#0F172A',
   },
-  notesBody: {
-    paddingHorizontal: 12,
+  coachNotesBody: {
+    paddingHorizontal: 14,
     paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     backgroundColor: '#F8FAFC',
   },
-  notesContent: {
+  coachNotesContent: {
     fontSize: 12,
     color: '#475569',
     lineHeight: 18,
     marginTop: 6,
   },
+
+  /* FOOTER TRẮNG */
   footer: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#BAE6FD',
+    borderTopColor: '#F1F5F9',
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  footerLeft: {
+  footerSummary: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  footerTotalLabel: {
-    fontSize: 13,
-    color: '#0369A1',
+  footerSummaryLabel: {
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '600',
   },
-  footerTotalVal: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0284C7',
+  footerKcalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  closeActionBtn: {
+  footerSummaryVal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#EA580C',
+  },
+  closeFooterBtn: {
     minHeight: 44,
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     borderRadius: 12,
     backgroundColor: '#0284C7',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0284C7',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
-  closeActionText: {
+  closeFooterText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
   },
 });
