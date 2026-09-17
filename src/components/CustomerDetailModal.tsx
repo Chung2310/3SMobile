@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -77,6 +79,33 @@ interface CustomerDetailModalProps {
   onEdit?: () => void;
   onManagePackages?: () => void;
 }
+
+const handleCall = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
+  });
+};
+
+const handleSms = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
+  });
+};
+
+const handleZalo = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
+  });
+};
 
 const formatDateDisplay = (isoStr?: string | null): string => {
   if (!isoStr) return 'Chưa cập nhật';
@@ -741,6 +770,37 @@ export function CustomerDetailModal({
                 <View style={styles.phoneBox}>
                   <Feather name="phone" size={11} color="#64748B" />
                   <Text style={styles.metaText}>{customer.phone || 'Chưa có SĐT'}</Text>
+                  {customer.phone ? (
+                    <View style={styles.headerPhoneActions}>
+                      <Pressable
+                        style={styles.headerCallBtn}
+                        onPress={() => handleCall(customer.phone)}
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Gọi điện thoại"
+                      >
+                        <Feather name="phone" size={10} color="#0284C7" />
+                      </Pressable>
+                      <Pressable
+                        style={styles.headerSmsBtn}
+                        onPress={() => handleSms(customer.phone)}
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Nhắn tin SMS"
+                      >
+                        <Feather name="message-square" size={10} color="#16A34A" />
+                      </Pressable>
+                      <Pressable
+                        style={styles.headerZaloBtn}
+                        onPress={() => handleZalo(customer.phone)}
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Mở Zalo"
+                      >
+                        <Text style={styles.headerZaloText}>Zalo</Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={styles.metaDot}>•</Text>
                 <Text style={styles.metaText}>{getGenderText(profile?.gender)}</Text>
@@ -954,7 +1014,40 @@ export function CustomerDetailModal({
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Số điện thoại:</Text>
-                    <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                    <View style={styles.infoPhoneWrap}>
+                      <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                      {customer.phone ? (
+                        <View style={styles.overviewPhoneActions}>
+                          <Pressable
+                            style={styles.overviewCallBtn}
+                            onPress={() => handleCall(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gọi điện"
+                          >
+                            <Feather name="phone" size={12} color="#0284C7" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewSmsBtn}
+                            onPress={() => handleSms(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gửi SMS"
+                          >
+                            <Feather name="message-square" size={12} color="#16A34A" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewZaloBtn}
+                            onPress={() => handleZalo(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Mở Zalo"
+                          >
+                            <Text style={styles.overviewZaloText}>Zalo</Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Email:</Text>
@@ -2351,6 +2444,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  headerPhoneActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 3,
+  },
+  headerCallBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSmsBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerZaloBtn: {
+    paddingHorizontal: 5,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#0068FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerZaloText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   metaText: {
     fontSize: 12,
     color: '#64748B',
@@ -2577,6 +2705,50 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     flex: 1,
+  },
+  infoPhoneWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overviewPhoneActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  overviewCallBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewSmsBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewZaloBtn: {
+    paddingHorizontal: 8,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#0068FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewZaloText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 
   /* INBODY TAB */

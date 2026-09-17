@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { radius, spacing } from '@/theme';
 import {
@@ -17,6 +17,33 @@ interface CustomerCardProps {
   onDelete: (item: CustomerListItem) => void;
 }
 
+const handleCall = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
+  });
+};
+
+const handleSms = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
+  });
+};
+
+const handleZalo = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
+  });
+};
+
 export function CustomerCard({
   item,
   onPress,
@@ -31,21 +58,30 @@ export function CustomerCard({
   return (
     <View style={styles.customerCard}>
       {/* TOP ROW: Avatar + Tên + Badge trạng thái + Meta */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.cardMainRow,
-          pressed && { opacity: 0.72, transform: [{ scale: 0.99 }] },
-        ]}
-        onPress={() => onPress(item)}
-      >
-        <View style={styles.avatarMini}>
+      <View style={styles.cardMainRow}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.avatarMini,
+            pressed && { opacity: 0.8 },
+          ]}
+          onPress={() => onPress(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`Xem hồ sơ ${item.fullName}`}
+        >
           <Text style={styles.avatarMiniText}>
             {item.fullName.trim().charAt(0).toUpperCase()}
           </Text>
-        </View>
+        </Pressable>
 
         <View style={styles.customerInfoWrap}>
-          <View style={styles.nameRow}>
+          {/* Tên & Badge tiến bộ */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.nameRow,
+              pressed && { opacity: 0.75 },
+            ]}
+            onPress={() => onPress(item)}
+          >
             <Text style={styles.customerName} numberOfLines={1}>
               {item.fullName}
             </Text>
@@ -64,27 +100,92 @@ export function CustomerCard({
                 {categoryText}
               </Text>
             </View>
-          </View>
+          </Pressable>
 
-          {/* SĐT & Số phiếu InBody gọn gàng trên 1 hàng */}
+          {/* SĐT kèm 3 icon nhanh (Gọi điện, SMS, Zalo) & Số phiếu InBody */}
           <View style={styles.metaRow}>
             {item.phone ? (
-              <Text style={styles.phoneTextCompact}>{item.phone}</Text>
+              <View style={styles.phoneGroup}>
+                <Pressable
+                  onPress={() => handleCall(item.phone)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Gọi điện cho ${item.fullName}`}
+                >
+                  <Text style={styles.phoneTextCompact}>{item.phone}</Text>
+                </Pressable>
+
+                <View style={styles.contactActions}>
+                  {/* Nút 1: Gọi điện thoại */}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.contactBtn,
+                      styles.callBtn,
+                      pressed && styles.contactBtnPressed,
+                    ]}
+                    onPress={() => handleCall(item.phone)}
+                    hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Gọi điện cho ${item.fullName}`}
+                  >
+                    <Feather name="phone" size={11} color="#0284C7" />
+                  </Pressable>
+
+                  {/* Nút 2: Nhắn tin SMS */}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.contactBtn,
+                      styles.smsBtn,
+                      pressed && styles.contactBtnPressed,
+                    ]}
+                    onPress={() => handleSms(item.phone)}
+                    hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Nhắn tin SMS cho ${item.fullName}`}
+                  >
+                    <Feather name="message-square" size={11} color="#16A34A" />
+                  </Pressable>
+
+                  {/* Nút 3: Mở Zalo */}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.contactBtn,
+                      styles.zaloBtn,
+                      pressed && styles.contactBtnPressed,
+                    ]}
+                    onPress={() => handleZalo(item.phone)}
+                    hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Nhắn Zalo cho ${item.fullName}`}
+                  >
+                    <Text style={styles.zaloBtnText}>Zalo</Text>
+                  </Pressable>
+                </View>
+              </View>
             ) : null}
+
             {item.phone ? <Text style={styles.metaDot}>•</Text> : null}
-            <Text style={styles.inbodyCountText}>
-              {item.measurementCount || 0} phiếu InBody
-            </Text>
+
+            <Pressable
+              onPress={() => onPress(item)}
+              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+            >
+              <Text style={styles.inbodyCountText}>
+                {item.measurementCount || 0} phiếu InBody
+              </Text>
+            </Pressable>
           </View>
 
           {/* Mục tiêu rút gọn 1 dòng */}
           {item.initialGoal ? (
-            <Text style={styles.goalTextCompact} numberOfLines={1}>
-              Mục tiêu: {item.initialGoal}
-            </Text>
+            <Pressable onPress={() => onPress(item)}>
+              <Text style={styles.goalTextCompact} numberOfLines={1}>
+                Mục tiêu: {item.initialGoal}
+              </Text>
+            </Pressable>
           ) : null}
         </View>
-      </Pressable>
+      </View>
 
       {/* BOTTOM ROW: 4 NÚT THAO TÁC (GÓI PT -> HỒ SƠ -> SỬA -> XÓA) */}
       <View style={styles.cardActionsCompact}>
@@ -233,13 +334,56 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
     marginBottom: 2,
   },
+  phoneGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  contactActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  contactBtn: {
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactBtnPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.92 }],
+  },
+  callBtn: {
+    width: 24,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  smsBtn: {
+    width: 24,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  zaloBtn: {
+    paddingHorizontal: 7,
+    backgroundColor: '#0068FF',
+  },
+  zaloBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
   phoneTextCompact: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+    fontWeight: '600',
+    color: '#475569',
   },
   metaDot: {
     fontSize: 11,
