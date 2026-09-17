@@ -5,10 +5,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme';
 
 interface TabDef {
@@ -16,6 +17,7 @@ interface TabDef {
   label: string;
   activeIcon: keyof typeof Ionicons.glyphMap;
   inactiveIcon: keyof typeof Ionicons.glyphMap;
+  route?: string;
 }
 
 const TABS: TabDef[] = [
@@ -51,8 +53,51 @@ const TABS: TabDef[] = [
   },
 ];
 
+const ADMIN_TABS: TabDef[] = [
+  {
+    name: 'transfer',
+    label: 'Điều chuyển',
+    activeIcon: 'swap-horizontal',
+    inactiveIcon: 'swap-horizontal-outline',
+    route: '/(app)/customers',
+  },
+  {
+    name: 'accounts',
+    label: 'Tài khoản',
+    activeIcon: 'people-circle',
+    inactiveIcon: 'people-circle-outline',
+    route: '/(app)/customers',
+  },
+  {
+    name: 'index',
+    label: 'Tổng quan',
+    activeIcon: 'home',
+    inactiveIcon: 'home-outline',
+    route: 'index',
+  },
+  {
+    name: 'wallet',
+    label: 'Ví Credit',
+    activeIcon: 'wallet',
+    inactiveIcon: 'wallet-outline',
+    route: '/(app)/wallet',
+  },
+  {
+    name: 'settings',
+    label: 'Cài đặt',
+    activeIcon: 'settings-sharp',
+    inactiveIcon: 'settings-outline',
+    route: '/(app)/profile',
+  },
+];
+
 function FixedTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
+  const role = session?.user?.role;
+  const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+  const activeTabs = isAdmin ? ADMIN_TABS : TABS;
+
   // Safe padding vừa vặn, cân xứng cho cả iPhone lẫn Android
   const bottomPadding =
     Platform.OS === 'android'
@@ -62,20 +107,29 @@ function FixedTabBar({ state, navigation }: any) {
   // Xác định tab đang active hiện tại
   const currentRouteName = state.routes[state.index]?.name || 'index';
 
-  const handleTabPress = (tabName: string) => {
-    const targetRoute = state.routes.find((r: any) => r.name === tabName);
-    if (targetRoute) {
-      const event = navigation.emit({
-        type: 'tabPress',
-        target: targetRoute.key,
-        canPreventDefault: true,
-      });
+  const handleTabPress = (tab: TabDef) => {
+    if (tab.name === 'index') {
+      const targetRoute = state.routes.find((r: any) => r.name === 'index');
+      if (targetRoute) {
+        const event = navigation.emit({
+          type: 'tabPress',
+          target: targetRoute.key,
+          canPreventDefault: true,
+        });
 
-      if (!event.defaultPrevented) {
-        navigation.navigate(tabName);
+        if (!event.defaultPrevented) {
+          navigation.navigate('index');
+        }
+      } else {
+        navigation.navigate('index');
       }
+    } else if (tab.route) {
+      router.push(tab.route as any);
     } else {
-      navigation.navigate(tabName);
+      const targetRoute = state.routes.find((r: any) => r.name === tab.name);
+      if (targetRoute) {
+        navigation.navigate(tab.name);
+      }
     }
   };
 
@@ -89,14 +143,14 @@ function FixedTabBar({ state, navigation }: any) {
         },
       ]}
     >
-      {TABS.map((tab) => {
+      {activeTabs.map((tab) => {
         const isCenter = tab.name === 'index';
-        const isFocused = currentRouteName === tab.name;
+        const isFocused = isCenter ? currentRouteName === 'index' : false;
 
         return (
           <Pressable
             key={tab.name}
-            onPress={() => handleTabPress(tab.name)}
+            onPress={() => handleTabPress(tab)}
             style={styles.tabItem}
             hitSlop={8}
           >
