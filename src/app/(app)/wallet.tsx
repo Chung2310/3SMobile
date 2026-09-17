@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,6 +36,21 @@ export interface CreditLedgerItem {
   reason: string;
   createdAt: string;
 }
+
+export type DateFilterType = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'THIS_MONTH';
+
+export interface DateFilterOption {
+  key: DateFilterType;
+  label: string;
+}
+
+export const DATE_FILTER_OPTIONS: DateFilterOption[] = [
+  { key: 'ALL', label: 'Tất cả thời gian' },
+  { key: 'TODAY', label: 'Hôm nay' },
+  { key: 'WEEK', label: '7 ngày gần nhất' },
+  { key: 'MONTH', label: '30 ngày gần nhất' },
+  { key: 'THIS_MONTH', label: 'Tháng này' },
+];
 
 interface PresetOption {
   amount: number;
@@ -86,6 +102,10 @@ export default function WalletScreen() {
 
   // Popup thông báo tính năng QR thanh toán
   const [showUnderDevModal, setShowUnderDevModal] = useState<boolean>(false);
+
+  // Lọc theo ngày tháng trong lịch sử giao dịch
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('ALL');
+  const [showDateFilterModal, setShowDateFilterModal] = useState<boolean>(false);
 
   // Tính số credit nhận được tương ứng với số tiền (100đ = 1 credit)
   const calculatedCredits = useMemo(() => {
@@ -198,6 +218,39 @@ export default function WalletScreen() {
     setFilterType(newType);
     fetchLedgerData(newType);
   };
+
+  // Danh sách lịch sử giao dịch sau khi lọc theo ngày tháng
+  const filteredLedgerItems = useMemo(() => {
+    if (!ledgerItems || ledgerItems.length === 0) return [];
+    if (dateFilter === 'ALL') return ledgerItems;
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    return ledgerItems.filter((item) => {
+      if (!item.createdAt) return false;
+      const itemTime = new Date(item.createdAt).getTime();
+      if (isNaN(itemTime)) return false;
+
+      switch (dateFilter) {
+        case 'TODAY':
+          return itemTime >= startOfToday;
+        case 'WEEK':
+          return itemTime >= now.getTime() - 7 * 24 * 60 * 60 * 1000;
+        case 'MONTH':
+          return itemTime >= now.getTime() - 30 * 24 * 60 * 60 * 1000;
+        case 'THIS_MONTH': {
+          const itemDate = new Date(item.createdAt);
+          return (
+            itemDate.getMonth() === now.getMonth() &&
+            itemDate.getFullYear() === now.getFullYear()
+          );
+        }
+        default:
+          return true;
+      }
+    });
+  }, [ledgerItems, dateFilter]);
 
   // Xử lý chọn mức nạp có sẵn
   const handleSelectPreset = (amount: number) => {
@@ -352,12 +405,12 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          {/* Phương thức chuyển khoản QR tự động */}
+          {/* Phương thức thanh toán bằng mã QR */}
           <View style={styles.paymentMethodBox}>
             <View style={styles.methodHeaderRow}>
               <View style={styles.methodHeaderLeft}>
                 <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
-                <Text style={styles.methodTitle}>Chuyển khoản QR tự động</Text>
+                <Text style={styles.methodTitle}>Thanh toán bằng mã QR</Text>
               </View>
             </View>
             <Text style={styles.bankSupportText}>
@@ -395,9 +448,27 @@ export default function WalletScreen() {
         {/* ================= 3. LỊCH SỬ GIAO DỊCH TỪ BE ================= */}
         <View style={styles.historyCard}>
           <View style={styles.historyHeader}>
-            <View style={styles.historyHeaderLeft}>
-              <Feather name="clock" size={15} color="#0284C7" style={{ marginRight: 6 }} />
-              <Text style={styles.sectionHeading}>Lịch sử giao dịch credit</Text>
+            <View style={styles.historyTitleRow}>
+              <View style={styles.historyHeaderLeft}>
+                <Feather name="clock" size={15} color="#0284C7" style={{ marginRight: 6 }} />
+                <Text style={styles.sectionHeading}>Lịch sử giao dịch credit</Text>
+              </View>
+              <Pressable
+                style={[
+                  styles.filterIconButton,
+                  dateFilter !== 'ALL' && styles.filterIconButtonActive,
+                ]}
+                onPress={() => setShowDateFilterModal(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Lọc theo ngày tháng"
+              >
+                <Ionicons
+                  name="filter"
+                  size={15}
+                  color={dateFilter !== 'ALL' ? '#FFFFFF' : '#475569'}
+                />
+              </Pressable>
             </View>
 
             {/* Filter pills */}
@@ -435,6 +506,27 @@ export default function WalletScreen() {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Chip hiển thị bộ lọc ngày tháng khi đang kích hoạt */}
+            {dateFilter !== 'ALL' && (
+              <View style={styles.activeFilterChipRow}>
+                <View style={styles.activeFilterChip}>
+                  <Ionicons name="calendar-outline" size={12} color="#0284C7" style={{ marginRight: 4 }} />
+                  <Text style={styles.activeFilterChipText}>
+                    {DATE_FILTER_OPTIONS.find((o) => o.key === dateFilter)?.label}
+                  </Text>
+                  <Pressable
+                    onPress={() => setDateFilter('ALL')}
+                    style={styles.clearDateFilterBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Bỏ lọc ngày"
+                  >
+                    <Ionicons name="close-circle" size={14} color="#0284C7" />
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </View>
 
           {loadingLedger ? (
@@ -442,14 +534,18 @@ export default function WalletScreen() {
               <ActivityIndicator size="small" color="#0284C7" />
               <Text style={styles.loadingLedgerText}>Đang tải lịch sử giao dịch từ máy chủ...</Text>
             </View>
-          ) : !ledgerItems || ledgerItems.length === 0 ? (
+          ) : !filteredLedgerItems || filteredLedgerItems.length === 0 ? (
             <View style={styles.emptyHistoryBox}>
               <Feather name="inbox" size={24} color="#94A3B8" style={{ marginBottom: 6 }} />
-              <Text style={styles.emptyHistoryText}>Chưa có giao dịch credit nào trong mục này.</Text>
+              <Text style={styles.emptyHistoryText}>
+                {dateFilter !== 'ALL'
+                  ? 'Không có giao dịch nào trong khoảng thời gian đã chọn.'
+                  : 'Chưa có giao dịch credit nào trong mục này.'}
+              </Text>
             </View>
           ) : (
             <View style={styles.txList}>
-              {ledgerItems.map((tx, idx) => {
+              {filteredLedgerItems.map((tx, idx) => {
                 const isNegative = tx.availableDelta < 0 || tx.reservedDelta < 0;
                 const deltaNum = tx.availableDelta !== 0 ? tx.availableDelta : tx.reservedDelta;
                 const deltaSign = deltaNum > 0 ? `+${deltaNum}` : `${deltaNum}`;
@@ -529,6 +625,67 @@ export default function WalletScreen() {
         confirmLabel="Đã hiểu"
         onConfirm={() => setShowUnderDevModal(false)}
       />
+
+      {/* Modal lọc theo ngày tháng */}
+      <Modal
+        visible={showDateFilterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDateFilterModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowDateFilterModal(false)}>
+          <Pressable style={styles.filterModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.filterModalHeader}>
+              <View style={styles.filterModalHeaderLeft}>
+                <Ionicons name="calendar-outline" size={18} color="#0284C7" style={{ marginRight: 8 }} />
+                <Text style={styles.filterModalTitle}>Lọc theo thời gian</Text>
+              </View>
+              <Pressable
+                style={styles.filterModalCloseBtn}
+                onPress={() => setShowDateFilterModal(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Đóng bộ lọc"
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <View style={styles.filterOptionsList}>
+              {DATE_FILTER_OPTIONS.map((opt) => {
+                const isSelected = dateFilter === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    style={[
+                      styles.filterOptionItem,
+                      isSelected && styles.filterOptionItemSelected,
+                    ]}
+                    onPress={() => {
+                      setDateFilter(opt.key);
+                      setShowDateFilterModal(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={opt.label}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionLabel,
+                        isSelected && styles.filterOptionLabelSelected,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -918,16 +1075,131 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   historyHeader: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  historyTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 8,
+    width: '100%',
   },
   historyHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  filterIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterIconButtonActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
+  },
+  activeFilterChipRow: {
+    width: '100%',
+    marginTop: 4,
+  },
+  activeFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activeFilterChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+    marginRight: 4,
+  },
+  clearDateFilterBtn: {
+    padding: 2,
+  },
+
+  /* MODAL LỌC THEO NGÀY THÁNG */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  filterModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  filterModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterModalTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  filterModalCloseBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+  },
+  filterOptionsList: {
+    gap: 8,
+  },
+  filterOptionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    minHeight: 44,
+  },
+  filterOptionItemSelected: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#0284C7',
+  },
+  filterOptionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  filterOptionLabelSelected: {
+    color: '#0284C7',
+    fontWeight: '700',
   },
   filterRow: {
     flexDirection: 'row',
