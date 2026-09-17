@@ -1469,9 +1469,9 @@ export function PtNutritionWorkspace() {
           <View style={styles.tabSection}>
             {/* Tab 3 Top Action Header: Tiêu đề + Nút Thêm Món + Khôi phục */}
             <View style={styles.mealManagerTopBar}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tabHeadingTitle}>KHO MÓN ĂN & DINH DƯỠNG</Text>
-                <Text style={styles.tabHeadingSub}>
+              <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">KHO MÓN ĂN & DINH DƯỠNG</Text>
+                <Text style={styles.tabHeadingSub} numberOfLines={1} ellipsizeMode="tail">
                   {filteredFoods.length} món • Chuẩn dinh dưỡng thể hình 3S Gym
                 </Text>
               </View>
@@ -1490,7 +1490,7 @@ export function PtNutritionWorkspace() {
                   onPress={handleOpenCreateFood}
                 >
                   <Plus size={15} color="#ffffff" />
-                  <Text style={styles.addFoodPrimaryBtnText}>+ Thêm món mới</Text>
+                  <Text style={styles.addFoodPrimaryBtnText}>Thêm món</Text>
                 </Pressable>
               </View>
             </View>
@@ -1687,7 +1687,7 @@ export function PtNutritionWorkspace() {
                     onPress={handleOpenCreateFood}
                   >
                     <Plus size={15} color="#ffffff" />
-                    <Text style={styles.addFoodPrimaryBtnText}>+ Thêm món mới ngay</Text>
+                    <Text style={styles.addFoodPrimaryBtnText}>Thêm món mới ngay</Text>
                   </Pressable>
                 </View>
               ) : (
@@ -1978,9 +1978,9 @@ export function PtNutritionWorkspace() {
 
             {/* 3. Thanh Công Cụ & Thống Kê Kho Hoạt Động (CRUD HEADER) */}
             <View style={styles.mealManagerTopBar}>
-              <View>
-                <Text style={styles.tabHeadingTitle}>DANH MỤC BỘ MÔN VẬN ĐỘNG</Text>
-                <Text style={styles.tabHeadingSub}>
+              <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">DANH MỤC BỘ MÔN VẬN ĐỘNG</Text>
+                <Text style={styles.tabHeadingSub} numberOfLines={1} ellipsizeMode="tail">
                   {filteredActivities.length} / {allActivities.length} hoạt động trong hệ thống
                 </Text>
               </View>
@@ -1999,7 +1999,7 @@ export function PtNutritionWorkspace() {
                   onPress={handleOpenCreateActivity}
                 >
                   <Plus size={14} color="#ffffff" />
-                  <Text style={styles.addFoodPrimaryBtnText}>+ Thêm hoạt động mới</Text>
+                  <Text style={styles.addFoodPrimaryBtnText}>Thêm hoạt động</Text>
                 </Pressable>
               </View>
             </View>
@@ -2103,7 +2103,7 @@ export function PtNutritionWorkspace() {
                   <Text style={styles.emptyFoodsTitle}>Không tìm thấy hoạt động nào</Text>
                   <Text style={styles.emptyFoodsDesc}>
                     {selectedActivityCategory === 'custom'
-                      ? 'Bạn chưa tạo bài tập tùy biến nào. Hãy bấm "+ Thêm hoạt động mới" để tạo bài tập!'
+                      ? 'Bạn chưa tạo bài tập tùy biến nào. Hãy bấm "Thêm hoạt động" để tạo bài tập!'
                       : 'Thử tìm với từ khóa khác hoặc bấm khôi phục danh mục.'}
                   </Text>
                   <Pressable
@@ -2111,7 +2111,7 @@ export function PtNutritionWorkspace() {
                     onPress={handleOpenCreateActivity}
                   >
                     <Plus size={15} color="#ffffff" />
-                    <Text style={styles.addFoodPrimaryBtnText}>+ Thêm hoạt động mới ngay</Text>
+                    <Text style={styles.addFoodPrimaryBtnText}>Thêm hoạt động mới ngay</Text>
                   </Pressable>
                 </View>
               ) : (
@@ -2284,11 +2284,11 @@ export function PtNutritionWorkspace() {
 
             {/* Daily Logs Header Row & Add Log Button */}
             <View style={styles.sectionHeaderRow}>
-              <View>
-                <Text style={styles.sectionTitleClean}>
+              <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <Text style={styles.sectionTitleClean} numberOfLines={1} ellipsizeMode="tail">
                   Nhật Ký Dinh Dưỡng & Vận Động
                 </Text>
-                <Text style={styles.tabHeadingSub}>
+                <Text style={styles.tabHeadingSub} numberOfLines={1} ellipsizeMode="tail">
                   {selectedCustomer
                     ? `Hồ sơ học viên: ${selectedCustomer.fullName} (${logs.length} bản ghi)`
                     : 'Toàn bộ bản ghi'}
@@ -2300,7 +2300,7 @@ export function PtNutritionWorkspace() {
                 onPress={handleOpenCreateLog}
               >
                 <Plus size={14} color="#ffffff" />
-                <Text style={styles.addFoodPrimaryBtnText}>+ Ghi nhật ký mới</Text>
+                <Text style={styles.addFoodPrimaryBtnText}>Ghi nhật ký</Text>
               </Pressable>
             </View>
 
@@ -3826,13 +3826,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
-    gap: 10,
+    gap: 8,
   },
   tabHeadingTitle: {
     fontSize: 13,
     fontWeight: '800',
     color: colors.text,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   tabHeadingSub: {
     fontSize: 11,
@@ -3842,29 +3842,32 @@ const styles = StyleSheet.create({
   mealManagerTopActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   resetFoodsBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    flexShrink: 0,
   },
   addFoodPrimaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: '#0284c7',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: radius.md,
+    flexShrink: 0,
   },
   addFoodPrimaryBtnText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '700',
     color: '#ffffff',
   },
