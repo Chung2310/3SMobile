@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
   },
   bankBannerImage: {
     width: '100%',
-    height: 100,
+    height: 140,
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
   },
