@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -12,12 +14,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
+import { CustomerTodayNutritionModal } from '@/components/CustomerTodayNutritionModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { MetricChart } from '@/components/progress/ProgressVisuals';
 import { api } from '@/services/api/client';
@@ -34,15 +37,24 @@ import {
   MEASUREMENTS,
   sessionTitle,
 } from '@/services/progress';
-import { recordId } from '@/services/workouts';
+import { recordId, workoutDays, LEVELS } from '@/services/workouts';
+import { PlanDetails } from '@/components/workouts/PlanDetails';
+import { WorkoutTemplatePickerModal } from '@/components/WorkoutTemplatePickerModal';
+import {
+  fetchCustomerWorkoutPlans,
+  assignCustomerWorkoutPlan,
+} from '@/services/customerWorkoutPlanService';
 import { colors } from '@/theme/colors';
 import type {
   CustomerJourney,
   CustomerProfile,
+  JsonRecord,
 } from '@/types/domain';
 
 const MASCOT_COACH = require('../../assets/public/3s-coach.png');
 const MASCOT_CHEF = require('../../assets/public/3s-chef.png');
+const ICON_GMAIL = require('../../assets/public/gmail-icon.png');
+const ICON_ZALO = require('../../assets/public/zalo-icon.png');
 
 type DetailTabKey =
   | 'overview'
@@ -69,6 +81,42 @@ interface CustomerDetailModalProps {
   onEdit?: () => void;
   onManagePackages?: () => void;
 }
+
+const handleCall = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
+  });
+};
+
+const handleSms = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
+  });
+};
+
+const handleZalo = (phone?: string) => {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return;
+  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
+  });
+};
+
+const handleEmail = (email?: string) => {
+  if (!email) return;
+  const cleanEmail = email.trim();
+  if (!cleanEmail) return;
+  Linking.openURL(`mailto:${cleanEmail}`).catch(() => {
+    Alert.alert('Không thể mở ứng dụng Email', `Thiết bị không thể mở ứng dụng soạn email cho: ${cleanEmail}`);
+  });
+};
 
 const formatDateDisplay = (isoStr?: string | null): string => {
   if (!isoStr) return 'Chưa cập nhật';
@@ -152,6 +200,44 @@ export function CustomerDetailModal({
   const [submittingConsult, setSubmittingConsult] = useState(false);
   const [editingConsultId, setEditingConsultId] = useState<string | null>(null);
 
+  // Workout plans state & modals
+  const [workoutPlansState, setWorkoutPlansState] = useState<{
+    active: JsonRecord | null;
+    history: JsonRecord[];
+    loading: boolean;
+    error: string | null;
+  }>({
+    active: null,
+    history: [],
+    loading: false,
+    error: null,
+  });
+  const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
+  const [viewingPlanDetail, setViewingPlanDetail] = useState<JsonRecord | null>(null);
+
+  // Nutrition plans state & realtime modal
+  const [extraNutritionPlans, setExtraNutritionPlans] = useState<any[] | null>(null);
+  const [selectedRealtimePlan, setSelectedRealtimePlan] = useState<any | null>(null);
+
+  const reloadWorkoutPlans = useCallback(async (customerId: string) => {
+    setWorkoutPlansState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const plans = await fetchCustomerWorkoutPlans(customerId);
+      setWorkoutPlansState({
+        active: plans.active,
+        history: plans.history,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      setWorkoutPlansState((prev) => ({
+        ...prev,
+        loading: false,
+        error: err instanceof Error ? err.message : 'Không thể tải giáo án của khách hàng.',
+      }));
+    }
+  }, []);
+
   const loadingJourney = Boolean(
     visible && customer?.id && loadedCustomerId !== customer.id
   );
@@ -189,6 +275,21 @@ export function CustomerDetailModal({
         setExtraConsultations(list);
       })
       .catch(() => setExtraConsultations(null));
+
+    // Fetch nutrition plans
+    api
+      .get<any>(`/api/nutrition-plans?customerId=${encodeURIComponent(targetId)}&limit=50`)
+      .then((res) => {
+        const list = Array.isArray(res) ? res : res?.data || res?.items || [];
+        setExtraNutritionPlans(list);
+      })
+      .catch((err) => {
+        console.warn('Fetch nutrition plans error:', err);
+        setExtraNutritionPlans(null);
+      });
+
+    // Fetch workout plans
+    reloadWorkoutPlans(targetId);
   };
 
   useEffect(() => {
@@ -234,17 +335,39 @@ export function CustomerDetailModal({
     return Array.isArray(extraPhotos) ? extraPhotos : [];
   }, [extraPhotos, journey?.photos]);
 
-  const activePlan = useMemo(() => {
+  const activeWorkoutPlan = useMemo(() => {
+    if (workoutPlansState.active && Object.keys(workoutPlansState.active).length > 0) {
+      return workoutPlansState.active;
+    }
     const p = journey?.plans;
     if (p && typeof p === 'object' && !Array.isArray(p)) {
-      return asRecord((p as Record<string, unknown>).active);
+      const act = asRecord((p as Record<string, unknown>).active);
+      if (Object.keys(act).length > 0) return act;
     }
-    return {};
-  }, [journey?.plans]);
+    return null;
+  }, [workoutPlansState.active, journey?.plans]);
+
+  const historyWorkoutPlans = useMemo(() => {
+    if (workoutPlansState.history && workoutPlansState.history.length > 0) {
+      return workoutPlansState.history;
+    }
+    const p = journey?.plans;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      return asRecords((p as Record<string, unknown>).history);
+    }
+    return [];
+  }, [workoutPlansState.history, journey?.plans]);
 
   const nutritionPlans = useMemo(() => {
-    return asRecords(journey?.nutritionPlans);
-  }, [journey?.nutritionPlans]);
+    if (extraNutritionPlans && extraNutritionPlans.length > 0) return extraNutritionPlans;
+    const jPlans = asRecords(journey?.nutritionPlans);
+    if (jPlans.length > 0) return jPlans;
+    return Array.isArray(extraNutritionPlans) ? extraNutritionPlans : [];
+  }, [extraNutritionPlans, journey?.nutritionPlans]);
+
+  const publishedNutritionPlans = useMemo(() => {
+    return nutritionPlans.filter((p: any) => p.status === 'PUBLISHED');
+  }, [nutritionPlans]);
 
   // Merge consultations
   const consultations = useMemo(() => {
@@ -291,12 +414,10 @@ export function CustomerDetailModal({
         setAlertConfig((prev) => ({ ...prev, visible: false }));
         cfg.onConfirm?.();
       },
-      onCancel: cfg.onCancel
-        ? () => {
-            setAlertConfig((prev) => ({ ...prev, visible: false }));
-            cfg.onCancel?.();
-          }
-        : undefined,
+      onCancel: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        cfg.onCancel?.();
+      },
     });
   };
 
@@ -571,13 +692,13 @@ export function CustomerDetailModal({
       key: 'plans',
       label: 'Giáo án',
       icon: 'file-text',
-      count: Object.keys(activePlan).length ? 1 : 0,
+      count: activeWorkoutPlan ? 1 : 0,
     },
     {
       key: 'nutrition',
       label: 'Thực đơn Dinh dưỡng',
       icon: 'coffee',
-      count: nutritionPlans.length,
+      count: publishedNutritionPlans.length,
     },
     {
       key: 'consultations',
@@ -643,6 +764,16 @@ export function CustomerDetailModal({
       <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
         {/* TOP HEADER */}
         <View style={styles.topHeader}>
+          <Pressable
+            onPress={onClose}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại"
+          >
+            <Feather name="arrow-left" size={20} color="#0F172A" />
+          </Pressable>
+
           <View style={styles.headerLeft}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
@@ -677,21 +808,13 @@ export function CustomerDetailModal({
                 }}
                 hitSlop={8}
                 style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
+                accessibilityRole="button"
                 accessibilityLabel="Sửa thông tin khách hàng"
               >
                 <Feather name="edit-2" size={13} color="#475569" />
                 <Text style={styles.editBtnText}>Sửa</Text>
               </Pressable>
             )}
-
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              style={({ pressed }) => [styles.closeBtn, pressed && styles.btnPressed]}
-              accessibilityLabel="Đóng chi tiết hồ sơ"
-            >
-              <Feather name="x" size={20} color="#0F172A" />
-            </Pressable>
           </View>
         </View>
 
@@ -807,7 +930,7 @@ export function CustomerDetailModal({
                 {/* Thẻ Mục tiêu tập luyện */}
                 <View style={styles.contentCard}>
                   <View style={styles.cardHeaderRow}>
-                    <Feather name="target" size={16} color="#0284C7" />
+                    <MaterialCommunityIcons name="bullseye-arrow" size={18} color="#EF4444" />
                     <Text style={styles.cardTitle}>Mục tiêu tập luyện</Text>
                   </View>
                   <Text style={styles.cardBodyText}>
@@ -873,13 +996,75 @@ export function CustomerDetailModal({
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Số điện thoại:</Text>
-                    <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                    <View style={styles.infoPhoneWrap}>
+                      <Text style={styles.infoVal}>{customer.phone || 'Chưa cập nhật'}</Text>
+                      {customer.phone ? (
+                        <View style={styles.overviewPhoneActions}>
+                          <Pressable
+                            style={styles.overviewCallBtn}
+                            onPress={() => handleCall(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gọi điện"
+                          >
+                            <Feather name="phone" size={12} color="#0284C7" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewSmsBtn}
+                            onPress={() => handleSms(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Gửi SMS"
+                          >
+                            <Feather name="message-square" size={12} color="#16A34A" />
+                          </Pressable>
+                          <Pressable
+                            style={styles.overviewZaloBtn}
+                            onPress={() => handleZalo(customer.phone)}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Mở Zalo"
+                          >
+                            <Image source={ICON_ZALO} style={styles.overviewZaloIcon} resizeMode="contain" />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Email:</Text>
-                    <Text style={styles.infoVal}>
-                      {customer.email || profile?.email || 'Chưa cập nhật'}
-                    </Text>
+                    {(() => {
+                      const emailVal = (customer.email || profile?.email || '').trim();
+                      const hasEmail = Boolean(emailVal && emailVal.includes('@'));
+                      return (
+                        <View style={styles.infoEmailWrap}>
+                          <Text
+                            style={[
+                              styles.infoVal,
+                              !hasEmail && styles.infoValMuted,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {emailVal || 'Chưa cập nhật'}
+                          </Text>
+                          {hasEmail ? (
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.emailSendBtn,
+                                pressed && styles.emailSendBtnPressed,
+                              ]}
+                              onPress={() => handleEmail(emailVal)}
+                              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Gửi email cho ${emailVal}`}
+                            >
+                              <Image source={ICON_GMAIL} style={styles.gmailBtnIcon} resizeMode="contain" />
+                              <Text style={styles.emailSendBtnText}>Gửi Gmail</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      );
+                    })()}
                   </View>
                   <View style={styles.infoLine}>
                     <Text style={styles.infoKey}>Ngày sinh:</Text>
@@ -1423,52 +1608,180 @@ export function CustomerDetailModal({
             {/* 5. TAB: GIÁO ÁN */}
             {activeTab === 'plans' && (
               <View style={styles.sectionWrap}>
-                {Object.keys(activePlan).length > 0 ? (
-                  <View style={styles.contentCard}>
-                    <View style={styles.cardHeaderRow}>
-                      <Feather name="file-text" size={18} color="#0284C7" />
-                      <Text style={styles.cardTitle}>
-                        {readText(activePlan, ['title'], 'Giáo án đang áp dụng')}
-                      </Text>
-                    </View>
-                    <Text style={styles.cardBodyText}>
-                      {readText(
-                        activePlan,
-                        ['description'],
-                        'Giáo án huấn luyện cá nhân hóa theo mục tiêu thể lực của học viên.'
-                      )}
-                    </Text>
+                {workoutPlansState.loading && !activeWorkoutPlan ? (
+                  <View style={styles.planLoadingBox}>
+                    <ActivityIndicator size="large" color="#0284C7" />
+                    <Text style={styles.planLoadingText}>Đang tải giáo án học viên...</Text>
+                  </View>
+                ) : workoutPlansState.error && !activeWorkoutPlan ? (
+                  <View style={styles.planErrorBox}>
+                    <Feather name="alert-circle" size={28} color="#EF4444" />
+                    <Text style={styles.planErrorText}>{workoutPlansState.error}</Text>
                     <Pressable
-                      style={styles.primaryActionBtn}
-                      onPress={() => {
-                        onClose();
-                        router.push('/(app)/plans');
-                      }}
+                      style={styles.planRetryBtn}
+                      onPress={() => customer?.id && reloadWorkoutPlans(customer.id)}
                     >
-                      <Feather name="external-link" size={15} color="#FFFFFF" />
-                      <Text style={styles.primaryActionBtnText}>Xem chi tiết giáo án</Text>
+                      <Text style={styles.planRetryBtnText}>Thử lại</Text>
                     </Pressable>
                   </View>
                 ) : (
-                  <View style={styles.emptyCard}>
-                    <Image
-                      source={MASCOT_COACH}
-                      style={styles.emptyMascotImg}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.emptyTitle}>Chưa có giáo án</Text>
-                    <Text style={styles.emptyDesc}>Gán giáo án mẫu để bắt đầu lộ trình.</Text>
-                    <Pressable
-                      style={styles.primaryActionBtn}
-                      onPress={() => {
-                        onClose();
-                        router.push('/(app)/plans');
-                      }}
-                    >
-                      <Feather name="plus" size={15} color="#FFFFFF" />
-                      <Text style={styles.primaryActionBtnText}>Gán giáo án</Text>
-                    </Pressable>
-                  </View>
+                  <>
+                    {/* GIÁO ÁN ĐANG ÁP DỤNG */}
+                    {activeWorkoutPlan ? (
+                      <View style={styles.activePlanCard}>
+                        <View style={styles.activePlanHeaderRow}>
+                          <View style={styles.activePlanBadge}>
+                            <Feather name="check-circle" size={12} color="#0284C7" />
+                            <Text style={styles.activePlanBadgeText}>
+                              GIÁO ÁN ĐANG ÁP DỤNG
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.activePlanTitle}>
+                          {readText(activeWorkoutPlan, ['title'], 'Giáo án tập luyện')}
+                        </Text>
+
+                        {!!readText(activeWorkoutPlan, ['goal', 'description']) && (
+                          <Text
+                            style={styles.activePlanDesc}
+                            numberOfLines={3}
+                            ellipsizeMode="tail"
+                          >
+                            {readText(activeWorkoutPlan, ['goal', 'description'])}
+                          </Text>
+                        )}
+
+                        {/* Meta Tags Row */}
+                        <View style={styles.activePlanMetaRow}>
+                          <View style={styles.planMetaPill}>
+                            <Feather name="award" size={12} color="#0284C7" />
+                            <Text style={styles.planMetaPillText}>
+                              {LEVELS[readText(activeWorkoutPlan, ['level']) as keyof typeof LEVELS] ||
+                                readText(activeWorkoutPlan, ['level']) ||
+                                'Cá nhân hóa'}
+                            </Text>
+                          </View>
+
+                          {readNumber(activeWorkoutPlan, ['durationDays']) ? (
+                            <View style={styles.planMetaPill}>
+                              <Feather name="calendar" size={12} color="#475569" />
+                              <Text style={styles.planMetaPillText}>
+                                {readNumber(activeWorkoutPlan, ['durationDays'])} ngày
+                              </Text>
+                            </View>
+                          ) : null}
+
+                          <View style={styles.planMetaPill}>
+                            <Feather name="layers" size={12} color="#475569" />
+                            <Text style={styles.planMetaPillText}>
+                              {workoutDays(activeWorkoutPlan).length} buổi tập
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Action Buttons */}
+                        <View style={styles.activePlanActionsRow}>
+                          <Pressable
+                            style={styles.planSecondaryBtn}
+                            onPress={() => setTemplatePickerVisible(true)}
+                          >
+                            <Feather name="refresh-cw" size={14} color="#0284C7" />
+                            <Text style={styles.planSecondaryBtnText}>Thay giáo án</Text>
+                          </Pressable>
+
+                          <Pressable
+                            style={styles.planPrimaryBtn}
+                            onPress={() => setViewingPlanDetail(activeWorkoutPlan)}
+                          >
+                            <Feather name="eye" size={14} color="#FFFFFF" />
+                            <Text style={styles.planPrimaryBtnText}>Xem chi tiết</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : (
+                      /* Empty State */
+                      <View style={styles.emptyCard}>
+                        <Image
+                          source={MASCOT_COACH}
+                          style={styles.emptyMascotImg}
+                          resizeMode="contain"
+                        />
+                        <Text style={styles.emptyTitle}>Chưa có giáo án</Text>
+                        <Text style={styles.emptyDesc}>
+                          Gán một giáo án mẫu để bắt đầu lộ trình huấn luyện cho học viên.
+                        </Text>
+                        <Pressable
+                          style={styles.primaryActionBtn}
+                          onPress={() => setTemplatePickerVisible(true)}
+                        >
+                          <Feather name="plus" size={15} color="#FFFFFF" />
+                          <Text style={styles.primaryActionBtnText}>Gán giáo án</Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {/* LỊCH SỬ GIÁO ÁN */}
+                    {historyWorkoutPlans.length > 0 && (
+                      <View style={styles.planHistorySection}>
+                        <View style={styles.tabSectionHeader}>
+                          <Text style={styles.tabSectionTitle}>
+                            LỊCH SỬ GIÁO ÁN ({historyWorkoutPlans.length})
+                          </Text>
+                        </View>
+
+                        <View style={styles.planHistoryList}>
+                          {historyWorkoutPlans.map((histPlan, idx) => {
+                            const histDays = workoutDays(histPlan);
+                            const histDuration = readNumber(histPlan, ['durationDays']);
+                            return (
+                              <View
+                                key={recordId(histPlan) || idx}
+                                style={styles.planHistoryCard}
+                              >
+                                <View style={styles.planHistoryMain}>
+                                  <View style={styles.planHistoryTopRow}>
+                                    <Text
+                                      style={styles.planHistoryTitle}
+                                      numberOfLines={1}
+                                      ellipsizeMode="tail"
+                                    >
+                                      {readText(histPlan, ['title'], 'Giáo án cũ')}
+                                    </Text>
+                                    <View style={styles.planArchivedBadge}>
+                                      <Text style={styles.planArchivedBadgeText}>
+                                        Đã lưu trữ
+                                      </Text>
+                                    </View>
+                                  </View>
+
+                                  <View style={styles.planHistoryMetaRow}>
+                                    <Text style={styles.planHistoryMetaText}>
+                                      {histDuration ? `${histDuration} ngày` : ''}
+                                      {histDuration && histDays.length ? ' · ' : ''}
+                                      {histDays.length ? `${histDays.length} buổi` : ''}
+                                      {readText(histPlan, ['archivedAt'])
+                                        ? ` · ${formatDateDisplay(readText(histPlan, ['archivedAt']))}`
+                                        : ''}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <Pressable
+                                  style={styles.planHistoryViewBtn}
+                                  onPress={() => setViewingPlanDetail(histPlan)}
+                                  hitSlop={8}
+                                >
+                                  <Feather name="eye" size={14} color="#0284C7" />
+                                  <Text style={styles.planHistoryViewBtnText}>Xem</Text>
+                                </Pressable>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
             )}
@@ -1476,24 +1789,90 @@ export function CustomerDetailModal({
             {/* 6. TAB: THỰC ĐƠN DINH DƯỠNG */}
             {activeTab === 'nutrition' && (
               <View style={styles.sectionWrap}>
-                {nutritionPlans.length > 0 ? (
-                  nutritionPlans.map((plan, idx) => (
-                    <View key={readText(plan, ['id', 'uuid'], String(idx))} style={styles.contentCard}>
-                      <View style={styles.cardHeaderRow}>
-                        <Feather name="coffee" size={18} color="#0284C7" />
-                        <Text style={styles.cardTitle}>
-                          {readText(plan, ['name', 'title'], `Thực đơn ${idx + 1}`)}
-                        </Text>
-                      </View>
-                      <Text style={styles.cardBodyText}>
-                        {readText(
-                          plan,
-                          ['description'],
-                          'Kế hoạch dinh dưỡng theo mục tiêu tăng cơ / giảm mỡ.'
-                        )}
-                      </Text>
-                    </View>
-                  ))
+                <View style={styles.nutritionTabHeader}>
+                  <Text style={styles.tabSectionTitle}>
+                    Kế hoạch Thực đơn Dinh dưỡng ({publishedNutritionPlans.length})
+                  </Text>
+                </View>
+
+                {publishedNutritionPlans.length > 0 ? (
+                  publishedNutritionPlans.map((plan: any, idx: number) => {
+                    const planId = plan._id || plan.id || String(idx);
+                    const targetCalories = Number(plan.targetCalories) || 0;
+                    const macros = plan.macros || {};
+                    const createdAt = plan.createdAt;
+                    let formattedDate = '—';
+                    if (createdAt) {
+                      const d = new Date(createdAt);
+                      if (!isNaN(d.getTime())) {
+                        formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                      }
+                    }
+
+                    return (
+                      <Pressable
+                        key={planId}
+                        style={styles.nutritionPlanCard}
+                        onPress={() => setSelectedRealtimePlan(plan)}
+                      >
+                        <View style={styles.nutritionCardHeaderRow}>
+                          <Text style={styles.nutritionPlanTitle} numberOfLines={1}>
+                            {plan.title || 'Thực đơn Dinh dưỡng'}
+                          </Text>
+                          <View style={styles.publishedBadge}>
+                            <Text style={styles.publishedBadgeText}>Đã công bố</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.nutritionMetaRow}>
+                          {targetCalories > 0 && (
+                            <View style={styles.caloriesBadge}>
+                              <Ionicons name="flame" size={14} color="#E11D48" style={{ marginRight: 3 }} />
+                              <Text style={styles.caloriesBadgeText}>
+                                {targetCalories.toLocaleString()} kcal/ngày
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.protein != null && (
+                            <View style={styles.macroPillProtein}>
+                              <Text style={styles.macroPillProteinText}>
+                                Protein: {macros.protein}g
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.carbs != null && (
+                            <View style={styles.macroPillCarbs}>
+                              <Text style={styles.macroPillCarbsText}>
+                                Carbs: {macros.carbs}g
+                              </Text>
+                            </View>
+                          )}
+
+                          {macros.fat != null && (
+                            <View style={styles.macroPillFat}>
+                              <Text style={styles.macroPillFatText}>
+                                Fat: {macros.fat}g
+                              </Text>
+                            </View>
+                          )}
+
+                          <Text style={styles.nutritionCreatedDate}>Tạo: {formattedDate}</Text>
+                        </View>
+
+                        <View style={styles.nutritionCardFooter}>
+                          <Pressable
+                            style={styles.realtimeCardBtn}
+                            onPress={() => setSelectedRealtimePlan(plan)}
+                          >
+                            <Ionicons name="restaurant-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                            <Text style={styles.realtimeCardBtnText}>Xem Hôm Nay Ăn Gì</Text>
+                          </Pressable>
+                        </View>
+                      </Pressable>
+                    );
+                  })
                 ) : (
                   <View style={styles.emptyCard}>
                     <Image
@@ -1502,7 +1881,9 @@ export function CustomerDetailModal({
                       resizeMode="contain"
                     />
                     <Text style={styles.emptyTitle}>Chưa có thực đơn</Text>
-                    <Text style={styles.emptyDesc}>Thực đơn dinh dưỡng sẽ hiển thị tại đây.</Text>
+                    <Text style={styles.emptyDesc}>
+                      Học viên chưa có thực đơn dinh dưỡng nào được công bố áp dụng.
+                    </Text>
                     <Pressable
                       style={styles.primaryActionBtn}
                       onPress={() => {
@@ -1530,7 +1911,7 @@ export function CustomerDetailModal({
                     onPress={handleOpenCreateConsultation}
                   >
                     <Feather name="plus" size={14} color="#FFFFFF" />
-                    <Text style={styles.createConsultBtnText}>Thêm buổi tư vấn</Text>
+                    <Text style={styles.createConsultBtnText}></Text>
                   </Pressable>
                 </View>
 
@@ -1778,6 +2159,92 @@ export function CustomerDetailModal({
           }}
         />
 
+        {/* WORKOUT TEMPLATE PICKER MODAL */}
+        <WorkoutTemplatePickerModal
+          visible={templatePickerVisible}
+          customerName={customer?.fullName || 'học viên'}
+          onClose={() => setTemplatePickerVisible(false)}
+          onConfirm={async (templateId) => {
+            if (!customer?.id) return;
+            try {
+              await assignCustomerWorkoutPlan(customer.id, templateId);
+              await reloadWorkoutPlans(customer.id);
+              setAlertConfig({
+                visible: true,
+                type: 'success',
+                title: 'Gán giáo án thành công',
+                message: `Đã áp dụng giáo án mẫu cho học viên ${customer.fullName}.`,
+                confirmLabel: 'Đóng',
+                onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+              });
+            } catch (error) {
+              setAlertConfig({
+                visible: true,
+                type: 'error',
+                title: 'Lỗi gán giáo án',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : 'Không thể gán giáo án cho học viên.',
+                confirmLabel: 'Đã hiểu',
+                onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+              });
+              throw error;
+            }
+          }}
+        />
+
+        {/* WORKOUT PLAN DETAIL MODAL */}
+        <Modal
+          visible={Boolean(viewingPlanDetail)}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setViewingPlanDetail(null)}
+        >
+          <View style={styles.planDetailModalContainer}>
+            <View style={styles.planDetailModalHeader}>
+              <View style={styles.planDetailModalHeaderInfo}>
+                <Text style={styles.planDetailModalHeaderTitle} numberOfLines={1}>
+                  {readText(viewingPlanDetail, ['title'], 'Chi tiết giáo án')}
+                </Text>
+                <Text style={styles.planDetailModalHeaderSubtitle}>
+                  {customer?.fullName} ·{' '}
+                  {viewingPlanDetail?.lifecycleStatus === 'ARCHIVED'
+                    ? 'Đã lưu trữ'
+                    : 'Đang áp dụng'}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.planDetailModalCloseBtn}
+                onPress={() => setViewingPlanDetail(null)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Đóng chi tiết giáo án"
+              >
+                <Feather name="x" size={20} color="#0F172A" />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.planDetailModalBody}
+              contentContainerStyle={styles.planDetailModalBodyContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {viewingPlanDetail && <PlanDetails plan={viewingPlanDetail} />}
+            </ScrollView>
+          </View>
+        </Modal>
+
+        {/* MODAL THỰC ĐƠN DINH DƯỠNG THỜI GIAN THỰC */}
+        {selectedRealtimePlan && (
+          <CustomerTodayNutritionModal
+            visible={Boolean(selectedRealtimePlan)}
+            plan={selectedRealtimePlan}
+            customerName={customer?.fullName || 'Học viên'}
+            onClose={() => setSelectedRealtimePlan(null)}
+          />
+        )}
+
         {/* CUSTOM ALERT MODAL BO GÓC 24PX */}
         <AppAlertModal
           visible={alertConfig.visible}
@@ -1801,6 +2268,126 @@ const styles = StyleSheet.create({
   },
   btnPressed: {
     opacity: 0.7,
+  },
+
+  /* NUTRITION TAB STYLES */
+  nutritionTabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  nutritionPlanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  nutritionCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+  },
+  nutritionPlanTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    flex: 1,
+  },
+  publishedBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  publishedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  nutritionMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  caloriesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  caloriesBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E11D48',
+  },
+  macroPillProtein: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillProteinText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  macroPillCarbs: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillCarbsText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  macroPillFat: {
+    backgroundColor: '#FCE7F3',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  macroPillFatText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9D174D',
+  },
+  nutritionCreatedDate: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  nutritionCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  realtimeCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  realtimeCardBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   /* TOP HEADER */
@@ -1867,6 +2454,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
   metaText: {
     fontSize: 12,
@@ -2094,6 +2692,88 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0F172A',
     flex: 1,
+  },
+  infoPhoneWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overviewPhoneActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  overviewCallBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewSmsBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overviewZaloBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    overflow: 'hidden',
+  },
+  overviewZaloIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+  },
+  infoEmailWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  infoValMuted: {
+    color: '#94A3B8',
+  },
+  gmailBtnIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 5,
+  },
+  emailSendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    minHeight: 28,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  emailSendBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+  emailSendBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
   },
 
   /* INBODY TAB */
@@ -2837,5 +3517,265 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     fontWeight: '500',
+  },
+
+  /* PLAN TAB STYLES */
+  planLoadingBox: {
+    paddingVertical: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+  },
+  planLoadingText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  planErrorBox: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    gap: 10,
+  },
+  planErrorText: {
+    fontSize: 13,
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  planRetryBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  planRetryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  activePlanCard: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+    borderRadius: 20,
+    padding: 18,
+    gap: 10,
+  },
+  activePlanHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activePlanBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  activePlanBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.5,
+  },
+  activePlanTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: 0.2,
+  },
+  activePlanDesc: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  activePlanMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  planMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  planMetaPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  activePlanActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  planSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#0284C7',
+  },
+  planSecondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  planPrimaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#0284C7',
+  },
+  planPrimaryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* PLAN HISTORY */
+  planHistorySection: {
+    marginTop: 12,
+    gap: 8,
+  },
+  planHistoryList: {
+    gap: 8,
+  },
+  planHistoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  planHistoryMain: {
+    flex: 1,
+    marginRight: 10,
+    gap: 4,
+  },
+  planHistoryTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planHistoryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
+  },
+  planArchivedBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  planArchivedBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  planHistoryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planHistoryMetaText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  planHistoryViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  planHistoryViewBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+
+  /* PLAN DETAIL MODAL */
+  planDetailModalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  planDetailModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  planDetailModalHeaderInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  planDetailModalHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  planDetailModalHeaderSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  planDetailModalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planDetailModalBody: {
+    flex: 1,
+  },
+  planDetailModalBodyContent: {
+    padding: 16,
+    paddingBottom: 40,
   },
 });

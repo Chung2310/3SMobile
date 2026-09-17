@@ -1,17 +1,58 @@
 import { useState, useEffect } from 'react';
 import { Text, View, Pressable, ScrollView, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Circle, Line, Polyline, Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Defs, LinearGradient, Stop, Rect, Text as SvgText, G } from 'react-native-svg';
 import { colors, typography } from '@/theme';
 import { dayKey, metricSeries } from '@/services/progress';
 import { readText, formatDate } from '@/services/journey';
 import type { JsonRecord } from '@/types/domain';
 import { Button, Notice } from '../workouts/Controls';
 
+function createSmoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length === 0) return '';
+  if (pts.length === 1) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  if (pts.length === 2) {
+    return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`;
+  }
+
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+
+  return d;
+}
+
+function createAreaPath(pts: { x: number; y: number }[], baseY = 140): string {
+  if (pts.length < 2) return '';
+  const lineD = createSmoothPath(pts);
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  return `${lineD} L ${last.x.toFixed(1)} ${baseY} L ${first.x.toFixed(1)} ${baseY} Z`;
+}
+
 export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; metric: string; unit: string }) {
   const points = metricSeries(records, metric);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const [animVal] = useState(() => new Animated.Value(0));
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [translateYAnim] = useState(() => new Animated.Value(8));
+  const [heroScaleAnim] = useState(() => new Animated.Value(1));
   const [progress, setProgress] = useState(0);
 
+  // Entrance wave animation
   useEffect(() => {
     animVal.setValue(0);
     const id = animVal.addListener(({ value }) => {
@@ -19,8 +60,8 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
     });
     Animated.timing(animVal, {
       toValue: 1,
-      duration: 850,
-      easing: Easing.out(Easing.cubic),
+      duration: 800,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
       useNativeDriver: false,
     }).start();
 
@@ -29,14 +70,50 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
     };
   }, [metric, records, animVal]);
 
+  // Card fade & slide entrance
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    translateYAnim.setValue(8);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [metric, fadeAnim, translateYAnim]);
+
+  // Hero number spring bounce on selection or metric change
+  useEffect(() => {
+    heroScaleAnim.setValue(0.92);
+    Animated.spring(heroScaleAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedDate, metric, heroScaleAnim]);
+
   if (!points.length) return <Notice text="Chưa có số đo cho chỉ số này." />;
 
   const values = points.map((p) => p.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const latestValue = values[values.length - 1];
   const firstValue = values[0];
-  const diff = points.length > 1 ? Number((latestValue - firstValue).toFixed(1)) : 0;
+
+  const foundIdx = selectedDate ? points.findIndex((p) => p.date === selectedDate) : -1;
+  const activeIndex = foundIdx !== -1 ? foundIdx : points.length - 1;
+  const activeItem = points[activeIndex];
+  const isInspecting = foundIdx !== -1 && foundIdx !== points.length - 1;
+
+  const diff = points.length > 1 ? Number((activeItem.value - firstValue).toFixed(1)) : 0;
 
   const first = Date.parse(points[0].date);
   const last = Date.parse(points[points.length - 1].date);
@@ -50,8 +127,8 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
   });
 
   const animatedPlot = plot.map((p, i) => {
-    const staggerDelay = plot.length > 1 ? (i / (plot.length - 1)) * 0.35 : 0;
-    const pointProgress = Math.min(1, Math.max(0, (progress - staggerDelay) / 0.65));
+    const staggerDelay = plot.length > 1 ? (i / (plot.length - 1)) * 0.25 : 0;
+    const pointProgress = Math.min(1, Math.max(0, (progress - staggerDelay) / 0.75));
     const currentY = 140 - (140 - p.y) * pointProgress;
     return {
       ...p,
@@ -61,22 +138,35 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
     };
   });
 
-  const areaPoints =
-    animatedPlot.length > 1
-      ? [
-          ...animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`),
-          `${animatedPlot[animatedPlot.length - 1].x.toFixed(1)},140`,
-          `${animatedPlot[0].x.toFixed(1)},140`,
-        ].join(' ')
-      : '';
+  const activePoint = animatedPlot[activeIndex] || animatedPlot[animatedPlot.length - 1];
+  const areaPathString = createAreaPath(animatedPlot, 140);
+  const linePathString = createSmoothPath(animatedPlot);
+
+  const tooltipX = Math.max(45, Math.min(275, activePoint.x));
+  const tooltipY = activePoint.y < 45 ? activePoint.y + 26 : activePoint.y - 20;
 
   return (
-    <View style={styles.chartCard}>
+    <Animated.View style={[styles.chartCard, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
       <View style={styles.chartHeader}>
         <View style={styles.statLeft}>
-          <Text style={styles.chartBadge}>Chỉ số mới nhất</Text>
-          <View style={styles.valueRow}>
-            <Text numberOfLines={1} style={styles.heroNumber}>{latestValue}</Text>
+          <View style={styles.headerLabelRow}>
+            <Text style={styles.chartBadge}>
+              {isInspecting ? `Đo ngày ${formatDate(activeItem.date)}` : 'Chỉ số mới nhất'}
+            </Text>
+            {isInspecting && (
+              <Pressable
+                onPress={() => setSelectedDate(null)}
+                style={styles.resetBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Xem chỉ số mới nhất"
+              >
+                <Text style={styles.resetBtnText}>Mới nhất</Text>
+              </Pressable>
+            )}
+          </View>
+
+          <Animated.View style={[styles.valueRow, { transform: [{ scale: heroScaleAnim }] }]}>
+            <Text numberOfLines={1} style={styles.heroNumber}>{activeItem.value}</Text>
             <Text style={styles.unitText}>{unit}</Text>
             {points.length > 1 && (
               <View style={[styles.diffBadge, diff < 0 ? styles.diffDown : styles.diffUp]}>
@@ -85,7 +175,7 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
         </View>
 
         <View style={styles.rangePill}>
@@ -96,48 +186,128 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
 
       <View
         accessible
-        accessibilityLabel={`Biểu đồ gồm ${points.length} số đo, từ ${values[0]} đến ${latestValue} ${unit}`}
+        accessibilityLabel={`Biểu đồ gồm ${points.length} số đo, từ ${values[0]} đến ${activeItem.value} ${unit}`}
         style={styles.svgContainer}
       >
         <Svg width="100%" height={150} viewBox="0 0 320 150">
           <Defs>
             <LinearGradient id="metricChartGrad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.22} />
-              <Stop offset="100%" stopColor={colors.primary} stopOpacity={0.01} />
+              <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.25} />
+              <Stop offset="80%" stopColor={colors.primary} stopOpacity={0.04} />
+              <Stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
             </LinearGradient>
           </Defs>
+
           {/* Background guide lines */}
           <Line x1={20} y1={40} x2={300} y2={40} stroke={colors.borderSoft} strokeDasharray="4 4" strokeWidth={1} />
           <Line x1={20} y1={85} x2={300} y2={85} stroke={colors.borderSoft} strokeDasharray="4 4" strokeWidth={1} />
           <Line x1={20} y1={130} x2={300} y2={130} stroke={colors.border} strokeWidth={1} />
 
           {/* Area gradient under line */}
-          {animatedPlot.length > 1 && (
-            <Polygon points={areaPoints} fill="url(#metricChartGrad)" />
-          )}
+          {animatedPlot.length > 1 && areaPathString ? (
+            <Path d={areaPathString} fill="url(#metricChartGrad)" />
+          ) : null}
 
-          {/* Polyline line chart */}
-          {points.length > 1 && (
-            <Polyline
-              points={animatedPlot.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
+          {/* Smooth curved line chart */}
+          {points.length > 1 && linePathString ? (
+            <Path
+              d={linePathString}
               fill="none"
               stroke={colors.primary}
               strokeWidth={3}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+          ) : null}
+
+          {/* Active point vertical guideline & tooltip */}
+          {activePoint && points.length > 1 && (
+            <G>
+              <Line
+                x1={activePoint.x}
+                y1={35}
+                x2={activePoint.x}
+                y2={130}
+                stroke={colors.primary}
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                opacity={0.6}
+              />
+              <Rect
+                x={tooltipX - 40}
+                y={tooltipY - 12}
+                width={80}
+                height={22}
+                rx={11}
+                fill={colors.text}
+                opacity={0.92}
+              />
+              <SvgText
+                x={tooltipX}
+                y={tooltipY + 3}
+                fontSize={10}
+                fontWeight="700"
+                fill="#FFFFFF"
+                textAnchor="middle"
+              >
+                {activeItem.value} {unit}
+              </SvgText>
+            </G>
           )}
 
-          {/* Points */}
+          {/* Regular Points */}
+          {animatedPlot.map((p, i) => {
+            if (i === activeIndex) return null;
+            return (
+              <Circle
+                key={`pt-${i}`}
+                cx={p.x}
+                cy={p.y}
+                r={4}
+                fill="#FFFFFF"
+                stroke={colors.primary}
+                strokeWidth={2}
+              />
+            );
+          })}
+
+          {/* Active Highlight Point with halo */}
+          {activePoint && (
+            <G>
+              <Circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r={13}
+                fill={colors.primary}
+                opacity={0.16}
+              />
+              <Circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r={7.5}
+                fill="#FFFFFF"
+                stroke={colors.primary}
+                strokeWidth={3}
+              />
+              <Circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r={3.5}
+                fill={colors.primary}
+              />
+            </G>
+          )}
+
+          {/* Hit targets for easy finger tapping */}
           {animatedPlot.map((p, i) => (
-            <Circle
-              key={i}
-              cx={p.x}
-              cy={p.y}
-              r={i === plot.length - 1 ? 6 : 4.5}
-              fill={i === plot.length - 1 ? colors.primary : '#FFFFFF'}
-              stroke={colors.primary}
-              strokeWidth={2.5}
+            <Rect
+              key={`hit-${i}`}
+              x={Math.max(0, p.x - 20)}
+              y={0}
+              width={40}
+              height={150}
+              fill="transparent"
+              onPress={() => setSelectedDate(p.date)}
             />
           ))}
         </Svg>
@@ -155,7 +325,7 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
           <Text style={styles.footerHint}>Thêm lần đo tiếp theo để thấy biểu đồ xu hướng</Text>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -276,6 +446,22 @@ const styles = StyleSheet.create({
   },
   statLeft: {
     gap: 4,
+  },
+  headerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resetBtn: {
+    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  resetBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   chartBadge: {
     ...typography.caption,

@@ -12,7 +12,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   fetchCustomerGoals,
   createGoal,
@@ -370,8 +370,8 @@ export function CustomerGoalsModal({
           {/* MODAL HEADER */}
           <View style={styles.header}>
             <View style={styles.headerInfo}>
-              <View style={styles.headerIconCircle}>
-                <Feather name="target" size={20} color="#0284C7" />
+              <View style={[styles.headerIconCircle, { backgroundColor: '#FEE2E2' }]}>
+                <MaterialCommunityIcons name="bullseye-arrow" size={22} color="#EF4444" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.headerTitle} numberOfLines={1}>

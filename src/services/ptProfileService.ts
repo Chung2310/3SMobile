@@ -11,9 +11,32 @@ export interface PtProfileInfo {
   email: string | null;
   phone: string | null;
   avatarUrl: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  address?: string | null;
+  specialization?: string | null;
+  yearsOfExperience?: number;
+  certificates?: string[] | string;
+  bio?: string | null;
   totalCustomers: number;
   goodProgressCount: number;
   openAlerts: number;
+}
+
+export interface UpdateProfilePayload {
+  fullName?: string;
+  phone?: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string;
+  address?: string;
+  specialization?: string;
+  yearsOfExperience?: number;
+  certificates?: string[];
+  bio?: string;
+  currentPassword?: string;
+  password?: string;
 }
 
 /**
@@ -31,6 +54,13 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
     email: (user?.email as string) || null,
     phone: (user?.phone as string) || null,
     avatarUrl: (user?.avatarUrl as string) || null,
+    dateOfBirth: (user?.dateOfBirth as string) || null,
+    gender: (user?.gender as string) || 'OTHER',
+    address: (user?.address as string) || '',
+    specialization: (user?.specialization as string) || '',
+    yearsOfExperience: Number(user?.yearsOfExperience || 0),
+    certificates: (user?.certificates as string[] | string) || '',
+    bio: (user?.bio as string) || '',
     totalCustomers: 0,
     goodProgressCount: 0,
     openAlerts: 0,
@@ -65,6 +95,13 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
       if (typeof me.email === 'string') profile.email = me.email;
       if (typeof me.phone === 'string') profile.phone = me.phone;
       if (typeof me.avatarUrl === 'string' && me.avatarUrl.trim()) profile.avatarUrl = me.avatarUrl.trim();
+      if (me.dateOfBirth) profile.dateOfBirth = String(me.dateOfBirth).slice(0, 10);
+      if (typeof me.gender === 'string') profile.gender = me.gender;
+      if (typeof me.address === 'string') profile.address = me.address;
+      if (typeof me.specialization === 'string') profile.specialization = me.specialization;
+      if (me.yearsOfExperience !== undefined) profile.yearsOfExperience = Number(me.yearsOfExperience || 0);
+      if (me.certificates) profile.certificates = me.certificates as string[];
+      if (typeof me.bio === 'string') profile.bio = me.bio;
 
       // Đồng bộ thông tin mới nhất vào session lưu trữ
       try {
@@ -89,4 +126,70 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
   }
 
   return profile;
+}
+
+/**
+ * Cập nhật thông tin hồ sơ của PT (gọi PATCH /api/auth/me)
+ */
+export async function updatePtProfile(payload: UpdateProfilePayload): Promise<User> {
+  const res = await api.patch<{ success?: boolean; message?: string; data?: User } | User>(
+    '/api/auth/me',
+    payload
+  );
+  const updatedUser = (res && typeof res === 'object' && 'data' in res ? (res as any).data : res) as User;
+
+  // Cập nhật session storage
+  try {
+    const stored = await getStoredSession();
+    if (stored && stored.user) {
+      stored.user = {
+        ...stored.user,
+        ...updatedUser,
+      };
+      await saveSession(stored);
+    }
+  } catch {
+    // Bỏ qua lỗi session storage
+  }
+
+  return updatedUser;
+}
+
+/**
+ * Upload ảnh đại diện PT lên server (gọi POST /api/upload/image)
+ */
+export async function uploadPtAvatar(asset: {
+  uri: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  base64?: string | null;
+}): Promise<string> {
+  const fd = new FormData();
+  fd.append('image', {
+    uri: asset.uri,
+    name: asset.fileName || 'avatar.jpg',
+    type: asset.mimeType || 'image/jpeg',
+  } as any);
+
+  try {
+    const res = await api.upload<{
+      success?: boolean;
+      data?: { url: string; publicId?: string };
+      url?: string;
+    }>('/api/upload/image', fd);
+
+    const url = res?.data?.url || res?.url;
+    if (url) return url;
+  } catch (err) {
+    if (asset.base64) {
+      return `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+    }
+    throw err;
+  }
+
+  if (asset.base64) {
+    return `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+  }
+
+  throw new Error('Không nhận được URL ảnh sau khi tải lên.');
 }

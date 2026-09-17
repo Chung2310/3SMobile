@@ -1,26 +1,46 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
-import type { Session } from '@/types/domain';
+import type { Session, User } from '@/types/domain';
 
-const SESSION_KEY = '3s-gym.session';
+const TOKEN_KEY = '3s-gym.token';
+const REFRESH_TOKEN_KEY = '3s-gym.refreshToken';
+const USER_KEY = '3s-gym.user';
 
 export async function getStoredSession(): Promise<Session | null> {
   try {
-    const raw = await SecureStore.getItemAsync(SESSION_KEY);
-    if (!raw) return null;
+    const [token, userRaw] = await Promise.all([
+      SecureStore.getItemAsync(TOKEN_KEY),
+      AsyncStorage.getItem(USER_KEY),
+    ]);
 
-    const parsed = JSON.parse(raw) as Session;
-    if (!parsed?.token || !parsed?.user?.id) return null;
-    return parsed;
+    if (!token || !userRaw) return null;
+
+    const user = JSON.parse(userRaw) as User;
+    if (!user?.id) return null;
+
+    const refreshToken = (await SecureStore.getItemAsync(REFRESH_TOKEN_KEY)) ?? undefined;
+
+    return { token, refreshToken, user };
   } catch {
     return null;
   }
 }
 
 export async function saveSession(session: Session): Promise<void> {
-  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session));
+  await Promise.all([
+    SecureStore.setItemAsync(TOKEN_KEY, session.token),
+    session.refreshToken
+      ? SecureStore.setItemAsync(REFRESH_TOKEN_KEY, session.refreshToken)
+      : SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    AsyncStorage.setItem(USER_KEY, JSON.stringify(session.user)),
+  ]);
 }
 
 export async function clearStoredSession(): Promise<void> {
-  await SecureStore.deleteItemAsync(SESSION_KEY);
+  await Promise.all([
+    SecureStore.deleteItemAsync(TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    AsyncStorage.removeItem(USER_KEY),
+  ]);
 }
