@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FlatList,
   Image,
   Modal,
   Platform,
@@ -9,20 +8,24 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { InBodyOcrFlow } from '@/components/inbody/InBodyOcrFlow';
 import { ProgressPieChart } from '@/components/ProgressPieChart';
 import { TopPerformersPodium } from '@/components/TopPerformersPodium';
 import { Card } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
+import { fetchCustomersList } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
 import { resolveImageUrl } from '@/services/imageUtils';
-import { colors, radius, spacing, typography } from '@/theme';
-import type { ProgressCategory, PtCustomerSummary, PtDashboardData } from '@/types/domain';
+import { colors, radius, spacing } from '@/theme';
+import type { CustomerProfile, ProgressCategory, PtCustomerSummary, PtDashboardData } from '@/types/domain';
+import type { InBodyRecordData } from '@/types/inbody';
 
 type FilterType = 'ALL' | ProgressCategory;
 
@@ -88,20 +91,57 @@ const QUICK_FEATURES: QuickFeature[] = [
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { session, refreshProfile } = useAuth();
-  const [avatarLoadError, setAvatarLoadError] = useState(false);
+  const { session } = useAuth();
+  const [avatarErrorUrl, setAvatarErrorUrl] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [dashboard, setDashboard] = useState<PtDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [showComingSoon, setShowComingSoon] = useState(false);
-  const [progressSectionY, setProgressSectionY] = useState(0);
+  const [, setProgressSectionY] = useState(0);
+
+  // Thanh tìm kiếm học viên ở Dashboard
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Quét nhanh phiếu InBody AI
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [ocrCustomer, setOcrCustomer] = useState<PtCustomerSummary | null>(null);
+  const [ocrSessionKey, setOcrSessionKey] = useState(0);
+  const [customersList, setCustomersList] = useState<CustomerProfile[]>([]);
 
   useEffect(() => {
-    setAvatarLoadError(false);
-  }, [session?.user?.avatarUrl]);
+    void fetchCustomersList({ limit: 100 })
+      .then((list) => {
+        if (Array.isArray(list)) setCustomersList(list);
+      })
+      .catch(() => {});
+  }, []);
+
+  const ocrCustomers = useMemo(() => {
+    const list = [...customersList];
+    if (ocrCustomer && !list.some((item) => item._id === ocrCustomer.customerId)) {
+      list.unshift({
+        _id: ocrCustomer.customerId,
+        fullName: ocrCustomer.fullName,
+        phone: ocrCustomer.phone || '',
+        status: 'ACTIVE',
+      });
+    }
+    return list;
+  }, [customersList, ocrCustomer]);
+
+  const handleOpenQuickOcr = (customer: PtCustomerSummary) => {
+    setOcrCustomer(customer);
+    setOcrSessionKey((prev) => prev + 1);
+    setShowOcrModal(true);
+  };
+
+  const handleOcrRecordSaved = (_savedRecord: InBodyRecordData) => {
+    setShowOcrModal(false);
+    void loadData();
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -145,13 +185,27 @@ export default function HomeScreen() {
   const alerts = dashboard?.openAlerts || 0;
   const efficiency = total > 0 ? Math.round((good / total) * 100) : 0;
 
-  // Lọc danh sách khách hàng
+  // Lọc danh sách khách hàng theo trạng thái & từ khóa tìm kiếm
   const filteredCustomers = (dashboard?.customers || []).filter((c) => {
-    if (filter === 'ALL') return true;
-    if (filter === 'INSUFFICIENT_DATA') {
-      return c.progressCategory === 'INSUFFICIENT_DATA' || !c.progressCategory;
+    let matchFilter = true;
+    if (filter === 'ALL') {
+      matchFilter = true;
+    } else if (filter === 'INSUFFICIENT_DATA') {
+      matchFilter = c.progressCategory === 'INSUFFICIENT_DATA' || !c.progressCategory;
+    } else {
+      matchFilter = c.progressCategory === filter;
     }
-    return c.progressCategory === filter;
+    if (!matchFilter) return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const matchName = c.fullName?.toLowerCase().includes(q);
+      const matchPhone = c.phone?.toLowerCase().includes(q);
+      const matchGoal = c.initialGoal?.toLowerCase().includes(q);
+      return Boolean(matchName || matchPhone || matchGoal);
+    }
+
+    return true;
   });
 
   return (
@@ -184,11 +238,11 @@ export default function HomeScreen() {
             hitSlop={8}
             accessibilityLabel="Hồ sơ cá nhân"
           >
-            {session?.user?.avatarUrl && !avatarLoadError ? (
+            {session?.user?.avatarUrl && session.user.avatarUrl !== avatarErrorUrl ? (
               <Image
                 source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
                 style={styles.avatarImg}
-                onError={() => setAvatarLoadError(true)}
+                onError={() => setAvatarErrorUrl(session.user?.avatarUrl || '')}
               />
             ) : (
               <View style={styles.avatarFallback}>
@@ -351,6 +405,30 @@ export default function HomeScreen() {
           <Text style={styles.sectionMeta}>{filteredCustomers.length} người</Text>
         </View>
 
+        {/* Thanh tìm kiếm học viên ở Dashboard */}
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={16} color={colors.textMuted} style={styles.searchIcon} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Tìm theo tên học viên, SĐT, mục tiêu..."
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              style={styles.searchClearBtn}
+              hitSlop={8}
+              accessibilityLabel="Xóa tìm kiếm"
+            >
+              <Feather name="x-circle" size={16} color={colors.textMuted} />
+            </Pressable>
+          )}
+        </View>
+
         {/* Filter Pills ngắn */}
         <ScrollView
           horizontal
@@ -418,8 +496,16 @@ export default function HomeScreen() {
         {/* Customer Items */}
         {filteredCustomers.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <Feather name="check-circle" size={28} color="#22C55E" />
-            <Text style={styles.emptyText}>Không có khách hàng nào ở mục này</Text>
+            <Feather
+              name={searchQuery.trim() ? 'search' : 'check-circle'}
+              size={28}
+              color={searchQuery.trim() ? colors.textMuted : '#22C55E'}
+            />
+            <Text style={styles.emptyText}>
+              {searchQuery.trim()
+                ? `Không tìm thấy học viên "${searchQuery}"`
+                : 'Không có khách hàng nào ở mục này'}
+            </Text>
           </View>
         ) : (
           filteredCustomers.map((c) => {
@@ -459,7 +545,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <View style={styles.customerTop}>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.customerName} numberOfLines={1}>
                       {c.fullName}
                     </Text>
@@ -469,6 +555,22 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={styles.statusTagWrap}>
+                    {/* Nút icon mở nhanh Quét phiếu InBody AI */}
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleOpenQuickOcr(c);
+                      }}
+                      style={({ pressed }) => [
+                        styles.quickScanBtn,
+                        pressed && styles.quickScanBtnPressed,
+                      ]}
+                      hitSlop={8}
+                      accessibilityLabel={`Quét phiếu InBody cho ${c.fullName}`}
+                    >
+                      <Ionicons name="scan-outline" size={17} color={colors.primary} />
+                    </Pressable>
+
                     <View style={[styles.statusTag, { backgroundColor: tagBg }]}>
                       <Text style={[styles.statusTagText, { color: tagColor }]}>{tagLabel}</Text>
                     </View>
@@ -545,6 +647,20 @@ export default function HomeScreen() {
           </View>
         </Pressable>
       </Modal>
+      {/* Modal Quét phiếu InBody AI */}
+      {showOcrModal && ocrCustomer && (
+        <InBodyOcrFlow
+          key={`${ocrCustomer.customerId}-${ocrSessionKey}`}
+          visible={showOcrModal}
+          customers={ocrCustomers}
+          defaultCustomerId={ocrCustomer.customerId}
+          onClose={() => setShowOcrModal(false)}
+          onConfirmed={handleOcrRecordSaved}
+          onCustomerCreated={(newCust) => {
+            setCustomersList((prev) => [newCust, ...prev]);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -772,6 +888,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 42,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  searchClearBtn: {
+    padding: 4,
+  },
+  quickScanBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(2, 132, 199, 0.25)',
+    marginRight: 6,
+  },
+  quickScanBtnPressed: {
+    backgroundColor: '#BAE6FD',
+    transform: [{ scale: 0.92 }],
   },
   filterScrollView: {
     marginHorizontal: -spacing.lg,
