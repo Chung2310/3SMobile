@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { Check, Flame, Info, Sparkles, Utensils, X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { FoodCategory, FoodItem } from '@/types/nutrition';
 import {
   FOOD_CATEGORY_LABELS,
@@ -53,6 +53,7 @@ export function FoodItemEditorModal({
   const [calories, setCalories] = useState('');
   const [prepTip, setPrepTip] = useState('');
   const [saving, setSaving] = useState(false);
+  const { alertConfig, showError, showWarning } = useAppAlert();
 
   useEffect(() => {
     if (editingFood) {
@@ -110,12 +111,12 @@ export function FoodItemEditorModal({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên món ăn.');
+      showWarning('Vui lòng nhập tên món ăn.', 'Thiếu thông tin');
       return;
     }
 
     if (gramsNum <= 0) {
-      Alert.alert('Khối lượng không hợp lệ', 'Khối lượng khẩu phần phải lớn hơn 0g.');
+      showWarning('Khối lượng khẩu phần phải lớn hơn 0g.', 'Khối lượng không hợp lệ');
       return;
     }
 
@@ -169,7 +170,7 @@ export function FoodItemEditorModal({
       }
       onClose();
     } catch (e) {
-      Alert.alert('Lỗi', 'Không thể lưu món ăn vào kho dữ liệu.');
+      showError('Không thể lưu món ăn vào kho dữ liệu.', 'Lỗi');
     } finally {
       setSaving(false);
     }
@@ -419,6 +420,8 @@ export function FoodItemEditorModal({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

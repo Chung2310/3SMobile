@@ -1,7 +1,8 @@
 import React from 'react';
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '../AppAlertModal';
 import {
   CustomerListItem,
   getBadgeColor,
@@ -19,33 +20,6 @@ interface CustomerCardProps {
   onDelete: (item: CustomerListItem) => void;
 }
 
-const handleCall = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9+]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
-  });
-};
-
-const handleSms = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9+]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
-  });
-};
-
-const handleZalo = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
-  });
-};
-
 export function CustomerCard({
   item,
   onPress,
@@ -54,8 +28,36 @@ export function CustomerCard({
   onEdit,
   onDelete,
 }: CustomerCardProps) {
+  const { alertConfig, showError } = useAppAlert();
   const badgeColor = getBadgeColor(item.progressCategory);
   const categoryText = getCategoryText(item.progressCategory);
+
+  const handleCall = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+      showError(`Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`, 'Không thể gọi điện');
+    });
+  };
+
+  const handleSms = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+      showError(`Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`, 'Không thể gửi tin nhắn');
+    });
+  };
+
+  const handleZalo = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+      showError(`Không thể kết nối Zalo cho số: ${cleanPhone}`, 'Không thể mở Zalo');
+    });
+  };
 
   return (
     <View style={styles.customerCard}>
@@ -268,6 +270,8 @@ export function CustomerCard({
           <Feather name="trash-2" size={15} color="#EF4444" />
         </Pressable>
       </View>
+
+      <AppAlertModal {...alertConfig} />
     </View>
   );
 }

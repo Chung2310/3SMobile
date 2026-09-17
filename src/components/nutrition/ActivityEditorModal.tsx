@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { Activity, Dumbbell, Flame, Info, Sparkles, X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import {
   ACTIVITY_CATEGORY_COLORS,
   ACTIVITY_CATEGORY_LABELS,
@@ -54,6 +54,7 @@ export function ActivityEditorModal({
   const [benchmarkText, setBenchmarkText] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   // Điền dữ liệu khi mở modal
   useEffect(() => {
@@ -86,15 +87,15 @@ export function ActivityEditorModal({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên bộ môn hoặc bài tập vận động.');
+      showWarning('Vui lòng nhập tên bộ môn hoặc bài tập vận động.', 'Thiếu thông tin');
       return;
     }
     if (numMet <= 0 || numMet > 30) {
-      Alert.alert('Hệ số MET không hợp lệ', 'Hệ số MET phải lớn hơn 0 và không vượt quá 30.');
+      showWarning('Hệ số MET phải lớn hơn 0 và không vượt quá 30.', 'Hệ số MET không hợp lệ');
       return;
     }
     if (numDuration <= 0) {
-      Alert.alert('Thời lượng không hợp lệ', 'Thời lượng mặc định phải lớn hơn 0 phút.');
+      showWarning('Thời lượng mặc định phải lớn hơn 0 phút.', 'Thời lượng không hợp lệ');
       return;
     }
 
@@ -115,9 +116,10 @@ export function ActivityEditorModal({
           badgeColor: ACTIVITY_CATEGORY_COLORS[category],
         });
         if (updated) {
-          Alert.alert('Thành công', 'Đã cập nhật thông tin bộ môn vận động.');
-          onSaved(updated);
-          onClose();
+          showSuccess('Đã cập nhật thông tin bộ môn vận động.', 'Thành công', () => {
+            onSaved(updated);
+            onClose();
+          });
         }
       } else {
         const created = await addCustomActivity({
@@ -131,12 +133,13 @@ export function ActivityEditorModal({
           description: description.trim() || `Tập luyện ${name.trim()} với hệ số tiêu hao MET ${numMet}`,
           badgeColor: ACTIVITY_CATEGORY_COLORS[category],
         });
-        Alert.alert('Thành công', 'Đã thêm bộ môn mới vào kho vận động.');
-        onSaved(created);
-        onClose();
+        showSuccess('Đã thêm bộ môn mới vào kho vận động.', 'Thành công', () => {
+          onSaved(created);
+          onClose();
+        });
       }
     } catch (err: any) {
-      Alert.alert('Lỗi lưu hoạt động', err?.message || 'Đã có lỗi xảy ra.');
+      showError(err?.message || 'Đã có lỗi xảy ra.', 'Lỗi lưu hoạt động');
     } finally {
       setSaving(false);
     }
@@ -363,6 +366,8 @@ export function ActivityEditorModal({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

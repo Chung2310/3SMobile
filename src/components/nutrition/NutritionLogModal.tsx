@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { CheckCircle2, Flame, Pencil, Utensils, X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { MealType, NutritionLogItem } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
 
@@ -74,6 +74,7 @@ export function NutritionLogModal({
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [saving, setSaving] = useState(false);
+  const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   useEffect(() => {
     if (visible) {
@@ -119,12 +120,12 @@ export function NutritionLogModal({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên món ăn hoặc bài tập vận động.');
+      showWarning('Vui lòng nhập tên món ăn hoặc bài tập vận động.', 'Thiếu thông tin');
       return;
     }
     const calNum = parseFloat(calories);
     if (isNaN(calNum) || calNum <= 0) {
-      Alert.alert('Sai Calo', 'Vui lòng nhập số calories hợp lệ lớn hơn 0.');
+      showWarning('Vui lòng nhập số calories hợp lệ lớn hơn 0.', 'Sai Calo');
       return;
     }
 
@@ -157,287 +158,298 @@ export function NutritionLogModal({
       if (isEditing && editingLog) {
         const logId = editingLog._id || editingLog.id || '';
         resultLog = await nutritionService.updateLog(logId, payload);
-        Alert.alert('Thành công', 'Đã cập nhật bản ghi nhật ký.');
+        showSuccess('Đã cập nhật bản ghi nhật ký.', 'Thành công', () => {
+          onSaved(resultLog);
+          onClose();
+        });
       } else {
         resultLog = await nutritionService.createLog(payload);
-        Alert.alert('Thành công', type === 'FOOD' ? 'Đã ghi nhận món ăn' : 'Đã ghi nhận tiêu hao calo');
+        showSuccess(
+          type === 'FOOD' ? 'Đã ghi nhận món ăn' : 'Đã ghi nhận tiêu hao calo',
+          'Thành công',
+          () => {
+            onSaved(resultLog);
+            onClose();
+          }
+        );
       }
-
-      onSaved(resultLog);
-      onClose();
     } catch (err: any) {
-      Alert.alert('Lỗi lưu nhật ký', err?.message || 'Không thể lưu vào hệ thống.');
+      showError(err?.message || 'Không thể lưu vào hệ thống.', 'Lỗi lưu nhật ký');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalOverlay}
-      >
-        <View style={styles.modalContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerTitleRow}>
-              <View
-                style={[
-                  styles.headerIconCircle,
-                  {
-                    backgroundColor:
-                      type === 'FOOD' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  },
-                ]}
-              >
-                {type === 'FOOD' ? (
-                  <Utensils size={18} color={colors.primary} />
-                ) : (
-                  <Flame size={18} color={colors.danger} />
-                )}
-              </View>
-              <View>
-                <Text style={styles.headerTitle}>
-                  {isEditing ? 'Chỉnh Sửa Nhật Ký' : 'Ghi Nhật Ký Dinh Dưỡng & Vận Động'}
-                </Text>
-                <Text style={styles.headerSubtitle}>
-                  {type === 'FOOD' ? 'Ghi nhận calo nạp vào cơ thể' : 'Ghi nhận năng lượng đốt cháy qua vận động'}
-                </Text>
-              </View>
-            </View>
-            <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-              <X size={20} color={colors.textMuted} />
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
-            {/* Type Selector (Nạp vào vs Tiêu hao) */}
-            <View style={styles.typeSelectorRow}>
-              <Pressable
-                onPress={() => setType('FOOD')}
-                style={[styles.typeTab, type === 'FOOD' && styles.typeTabActiveFood]}
-              >
-                <Utensils
-                  size={16}
-                  color={type === 'FOOD' ? colors.primary : colors.textMuted}
-                />
-                <Text
-                  style={[styles.typeTabText, type === 'FOOD' && styles.typeTabTextActiveFood]}
+    <>
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerTitleRow}>
+                <View
+                  style={[
+                    styles.headerIconCircle,
+                    {
+                      backgroundColor:
+                        type === 'FOOD' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                    },
+                  ]}
                 >
-                  Nạp Vào (Ăn uống)
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setType('ACTIVITY')}
-                style={[styles.typeTab, type === 'ACTIVITY' && styles.typeTabActiveActivity]}
-              >
-                <Flame
-                  size={16}
-                  color={type === 'ACTIVITY' ? colors.danger : colors.textMuted}
-                />
-                <Text
-                  style={[styles.typeTabText, type === 'ACTIVITY' && styles.typeTabTextActiveActivity]}
-                >
-                  Tiêu Hao (Vận động)
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Quick Presets */}
-            <View style={styles.presetSection}>
-              <Text style={styles.sectionSubtitle}>
-                {type === 'FOOD' ? 'Gợi ý nhanh món ăn phổ biến:' : 'Gợi ý nhanh bài tập & vận động:'}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
-                {type === 'FOOD'
-                  ? FOOD_PRESETS.map((p, idx) => (
-                      <Pressable
-                        key={idx}
-                        style={styles.presetPill}
-                        onPress={() => handleApplyFoodPreset(p)}
-                      >
-                        <Text style={styles.presetPillText}>{p.name}</Text>
-                        <Text style={styles.presetPillCal}>+{p.cal} kcal</Text>
-                      </Pressable>
-                    ))
-                  : ACTIVITY_PRESETS.map((a, idx) => (
-                      <Pressable
-                        key={idx}
-                        style={[styles.presetPill, { borderColor: 'rgba(239, 68, 68, 0.3)' }]}
-                        onPress={() => handleApplyActivityPreset(a)}
-                      >
-                        <Text style={styles.presetPillText}>{a.name}</Text>
-                        <Text style={[styles.presetPillCal, { color: colors.danger }]}>-{a.cal} kcal</Text>
-                      </Pressable>
-                    ))}
-              </ScrollView>
-            </View>
-
-            {/* Form Fields */}
-            <View style={styles.formSection}>
-              <Text style={styles.inputLabel}>
-                {type === 'FOOD' ? 'Tên món ăn / đồ uống *' : 'Tên bài tập / hoạt động *'}
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder={type === 'FOOD' ? 'VD: Cơm trưa công ty, Sinh tố bơ...' : 'VD: Chạy bộ máy 30p, Tập tạ ngực...'}
-                placeholderTextColor={colors.textMuted}
-              />
-
-              <View style={styles.twoColRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>
-                    Calories ({type === 'FOOD' ? 'kcal' : '-kcal'}) *
-                  </Text>
-                  <TextInput
-                    style={[styles.input, styles.calInput]}
-                    value={calories}
-                    onChangeText={setCalories}
-                    placeholder="VD: 350"
-                    placeholderTextColor={colors.textMuted}
-                    keyboardType="numeric"
-                  />
+                  {type === 'FOOD' ? (
+                    <Utensils size={18} color={colors.primary} />
+                  ) : (
+                    <Flame size={18} color={colors.danger} />
+                  )}
                 </View>
+                <View>
+                  <Text style={styles.headerTitle}>
+                    {isEditing ? 'Chỉnh Sửa Nhật Ký' : 'Ghi Nhật Ký Dinh Dưỡng & Vận Động'}
+                  </Text>
+                  <Text style={styles.headerSubtitle}>
+                    {type === 'FOOD' ? 'Ghi nhận calo nạp vào cơ thể' : 'Ghi nhận năng lượng đốt cháy qua vận động'}
+                  </Text>
+                </View>
+              </View>
+              <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+                <X size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
 
-                {type === 'FOOD' ? (
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>Bữa ăn</Text>
-                    <View style={styles.mealSelectRow}>
-                      {(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as MealType[]).map((m) => (
+            <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
+              {/* Type Selector (Nạp vào vs Tiêu hao) */}
+              <View style={styles.typeSelectorRow}>
+                <Pressable
+                  onPress={() => setType('FOOD')}
+                  style={[styles.typeTab, type === 'FOOD' && styles.typeTabActiveFood]}
+                >
+                  <Utensils
+                    size={16}
+                    color={type === 'FOOD' ? colors.primary : colors.textMuted}
+                  />
+                  <Text
+                    style={[styles.typeTabText, type === 'FOOD' && styles.typeTabTextActiveFood]}
+                  >
+                    Nạp Vào (Ăn uống)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setType('ACTIVITY')}
+                  style={[styles.typeTab, type === 'ACTIVITY' && styles.typeTabActiveActivity]}
+                >
+                  <Flame
+                    size={16}
+                    color={type === 'ACTIVITY' ? colors.danger : colors.textMuted}
+                  />
+                  <Text
+                    style={[styles.typeTabText, type === 'ACTIVITY' && styles.typeTabTextActiveActivity]}
+                  >
+                    Tiêu Hao (Vận động)
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Quick Presets */}
+              <View style={styles.presetSection}>
+                <Text style={styles.sectionSubtitle}>
+                  {type === 'FOOD' ? 'Gợi ý nhanh món ăn phổ biến:' : 'Gợi ý nhanh bài tập & vận động:'}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
+                  {type === 'FOOD'
+                    ? FOOD_PRESETS.map((p, idx) => (
                         <Pressable
-                          key={m}
-                          style={[
-                            styles.mealMiniBtn,
-                            mealType === m && styles.mealMiniBtnActive,
-                          ]}
-                          onPress={() => setMealType(m)}
+                          key={idx}
+                          style={styles.presetPill}
+                          onPress={() => handleApplyFoodPreset(p)}
                         >
-                          <Text
-                            style={[
-                              styles.mealMiniBtnText,
-                              mealType === m && styles.mealMiniBtnTextActive,
-                            ]}
-                          >
-                            {m === 'BREAKFAST'
-                              ? 'Sáng'
-                              : m === 'LUNCH'
-                              ? 'Trưa'
-                              : m === 'DINNER'
-                              ? 'Tối'
-                              : 'Phụ'}
-                          </Text>
+                          <Text style={styles.presetPillText}>{p.name}</Text>
+                          <Text style={styles.presetPillCal}>+{p.cal} kcal</Text>
+                        </Pressable>
+                      ))
+                    : ACTIVITY_PRESETS.map((a, idx) => (
+                        <Pressable
+                          key={idx}
+                          style={[styles.presetPill, { borderColor: 'rgba(239, 68, 68, 0.3)' }]}
+                          onPress={() => handleApplyActivityPreset(a)}
+                        >
+                          <Text style={styles.presetPillText}>{a.name}</Text>
+                          <Text style={[styles.presetPillCal, { color: colors.danger }]}>-{a.cal} kcal</Text>
                         </Pressable>
                       ))}
-                    </View>
-                  </View>
-                ) : (
+                </ScrollView>
+              </View>
+
+              {/* Form Fields */}
+              <View style={styles.formSection}>
+                <Text style={styles.inputLabel}>
+                  {type === 'FOOD' ? 'Tên món ăn / đồ uống *' : 'Tên bài tập / hoạt động *'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={type === 'FOOD' ? 'VD: Cơm trưa công ty, Sinh tố bơ...' : 'VD: Chạy bộ máy 30p, Tập tạ ngực...'}
+                  placeholderTextColor={colors.textMuted}
+                />
+
+                <View style={styles.twoColRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>Thời lượng (phút)</Text>
+                    <Text style={styles.inputLabel}>
+                      Calories ({type === 'FOOD' ? 'kcal' : '-kcal'}) *
+                    </Text>
                     <TextInput
-                      style={styles.input}
-                      value={durationMinutes}
-                      onChangeText={setDurationMinutes}
-                      placeholder="VD: 45"
+                      style={[styles.input, styles.calInput]}
+                      value={calories}
+                      onChangeText={setCalories}
+                      placeholder="VD: 350"
                       placeholderTextColor={colors.textMuted}
                       keyboardType="numeric"
                     />
                   </View>
-                )}
-              </View>
 
-              {/* Optional Macros for FOOD */}
-              {type === 'FOOD' && (
-                <View style={styles.macroInputsCard}>
-                  <Text style={styles.macroCardTitle}>Thành phần Macro (tùy chọn)</Text>
-                  <View style={styles.macroCols}>
-                    <View style={styles.macroColItem}>
-                      <Text style={[styles.macroColLabel, { color: MACRO_COLORS.protein }]}>Protein (g)</Text>
+                  {type === 'FOOD' ? (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>Bữa ăn</Text>
+                      <View style={styles.mealSelectRow}>
+                        {(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as MealType[]).map((m) => (
+                          <Pressable
+                            key={m}
+                            style={[
+                              styles.mealMiniBtn,
+                              mealType === m && styles.mealMiniBtnActive,
+                            ]}
+                            onPress={() => setMealType(m)}
+                          >
+                            <Text
+                              style={[
+                                styles.mealMiniBtnText,
+                                mealType === m && styles.mealMiniBtnTextActive,
+                              ]}
+                            >
+                              {m === 'BREAKFAST'
+                                ? 'Sáng'
+                                : m === 'LUNCH'
+                                ? 'Trưa'
+                                : m === 'DINNER'
+                                ? 'Tối'
+                                : 'Phụ'}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>Thời lượng (phút)</Text>
                       <TextInput
-                        style={styles.macroInput}
-                        value={protein}
-                        onChangeText={setProtein}
-                        placeholder="0"
+                        style={styles.input}
+                        value={durationMinutes}
+                        onChangeText={setDurationMinutes}
+                        placeholder="VD: 45"
                         placeholderTextColor={colors.textMuted}
                         keyboardType="numeric"
                       />
                     </View>
-                    <View style={styles.macroColItem}>
-                      <Text style={[styles.macroColLabel, { color: MACRO_COLORS.carbs }]}>Carbs (g)</Text>
-                      <TextInput
-                        style={styles.macroInput}
-                        value={carbs}
-                        onChangeText={setCarbs}
-                        placeholder="0"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                    <View style={styles.macroColItem}>
-                      <Text style={[styles.macroColLabel, { color: MACRO_COLORS.fat }]}>Fat (g)</Text>
-                      <TextInput
-                        style={styles.macroInput}
-                        value={fat}
-                        onChangeText={setFat}
-                        placeholder="0"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="numeric"
-                      />
+                  )}
+                </View>
+
+                {/* Optional Macros for FOOD */}
+                {type === 'FOOD' && (
+                  <View style={styles.macroInputsCard}>
+                    <Text style={styles.macroCardTitle}>Thành phần Macro (tùy chọn)</Text>
+                    <View style={styles.macroCols}>
+                      <View style={styles.macroColItem}>
+                        <Text style={[styles.macroColLabel, { color: MACRO_COLORS.protein }]}>Protein (g)</Text>
+                        <TextInput
+                          style={styles.macroInput}
+                          value={protein}
+                          onChangeText={setProtein}
+                          placeholder="0"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="numeric"
+                        />
+                      </View>
+                      <View style={styles.macroColItem}>
+                        <Text style={[styles.macroColLabel, { color: MACRO_COLORS.carbs }]}>Carbs (g)</Text>
+                        <TextInput
+                          style={styles.macroInput}
+                          value={carbs}
+                          onChangeText={setCarbs}
+                          placeholder="0"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="numeric"
+                        />
+                      </View>
+                      <View style={styles.macroColItem}>
+                        <Text style={[styles.macroColLabel, { color: MACRO_COLORS.fat }]}>Fat (g)</Text>
+                        <TextInput
+                          style={styles.macroInput}
+                          value={fat}
+                          onChangeText={setFat}
+                          placeholder="0"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="numeric"
+                        />
+                      </View>
                     </View>
                   </View>
-                </View>
-              )}
+                )}
 
-              {/* Notes */}
-              <Text style={styles.inputLabel}>Ghi chú thêm</Text>
-              <TextInput
-                style={[styles.input, styles.notesInput]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Ghi chú về khối lượng hoặc cảm giác sau tập..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={2}
-              />
+                {/* Notes */}
+                <Text style={styles.inputLabel}>Ghi chú thêm</Text>
+                <TextInput
+                  style={[styles.input, styles.notesInput]}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Ghi chú về khối lượng hoặc cảm giác sau tập..."
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+            </ScrollView>
+
+            {/* Footer actions */}
+            <View style={styles.footer}>
+              <Pressable style={styles.cancelBtn} onPress={onClose} disabled={saving}>
+                <Text style={styles.cancelBtnText}>Hủy bỏ</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.saveBtn,
+                  type === 'ACTIVITY' && { backgroundColor: colors.danger },
+                  saving && styles.saveBtnDisabled,
+                ]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    {isEditing ? (
+                      <Pencil size={17} color="#fff" />
+                    ) : (
+                      <CheckCircle2 size={17} color="#fff" />
+                    )}
+                    <Text style={styles.saveBtnText}>
+                      {isEditing ? 'Lưu Thay Đổi' : 'Lưu Nhật Ký'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
             </View>
-          </ScrollView>
-
-          {/* Footer actions */}
-          <View style={styles.footer}>
-            <Pressable style={styles.cancelBtn} onPress={onClose} disabled={saving}>
-              <Text style={styles.cancelBtnText}>Hủy bỏ</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.saveBtn,
-                type === 'ACTIVITY' && { backgroundColor: colors.danger },
-                saving && styles.saveBtnDisabled,
-              ]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  {isEditing ? (
-                    <Pencil size={17} color="#fff" />
-                  ) : (
-                    <CheckCircle2 size={17} color="#fff" />
-                  )}
-                  <Text style={styles.saveBtnText}>
-                    {isEditing ? 'Lưu Thay Đổi' : 'Lưu Nhật Ký'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <AppAlertModal {...alertConfig} />
+    </>
   );
 }
 

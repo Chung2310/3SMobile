@@ -22,7 +22,7 @@ import { DatePickerModal } from '../DatePickerModal';
 import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodyMetricsFormFields, InBodyMetricsFormValues } from './InBodyMetricsFormFields';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
-import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 
 interface InBodyOcrFlowProps {
   visible: boolean;
@@ -72,6 +72,7 @@ export function InBodyOcrFlow({
   const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<OcrSelectedFile[]>([]);
   const [showDocumentMenu, setShowDocumentMenu] = useState(false);
+  const { alertConfig, showAlert, showSuccess, showError, showWarning, showConfirm } = useAppAlert();
 
   // Quick Add Customer state & local customer sync
   const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>(customers);
@@ -108,50 +109,7 @@ export function InBodyOcrFlow({
   const [bodyWater, setBodyWater] = useState('');
   const [waistHipRatio, setWaistHipRatio] = useState('');
   const [consultationNotes, setConsultationNotes] = useState('');
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type?: AlertModalType;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    onConfirm: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
 
-  const showAlert = (cfg: {
-    type?: AlertModalType;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }) => {
-    setAlertConfig({
-      visible: true,
-      type: cfg.type || 'info',
-      title: cfg.title,
-      message: cfg.message,
-      confirmLabel: cfg.confirmLabel || 'Đã hiểu',
-      cancelLabel: cfg.cancelLabel,
-      onConfirm: () => {
-        setAlertConfig((prev) => ({ ...prev, visible: false }));
-        cfg.onConfirm?.();
-      },
-      onCancel: cfg.onCancel
-        ? () => {
-            setAlertConfig((prev) => ({ ...prev, visible: false }));
-            cfg.onCancel?.();
-          }
-        : undefined,
-    });
-  };
 
   const selectedCustomer = useMemo(() => {
     return allCustomers.find((c) => c._id === customerId);
@@ -242,17 +200,15 @@ export function InBodyOcrFlow({
 
   const handleClose = () => {
     if (loading) {
-      showAlert({
-        type: 'warning',
-        title: 'Đang quét phiếu',
-        message: 'Quá trình AI phân tích đang diễn ra. Bạn có chắc muốn hủy và đóng không?',
-        cancelLabel: 'Tiếp tục chờ',
-        confirmLabel: 'Dừng lại & Đóng',
-        onConfirm: () => {
+      showConfirm(
+        'Đang quét phiếu',
+        'Quá trình AI phân tích đang diễn ra. Bạn có chắc muốn hủy và đóng không?',
+        () => {
           handleReset();
           onClose();
         },
-      });
+        { confirmLabel: 'Dừng lại & Đóng', cancelLabel: 'Tiếp tục chờ', type: 'warning' }
+      );
       return;
     }
     handleReset();
@@ -263,11 +219,10 @@ export function InBodyOcrFlow({
     setSelectedFiles((prev) => {
       const combined = [...prev, ...newFiles];
       if (combined.length > 5) {
-        showAlert({
-          type: 'info',
-          title: 'Giới hạn tệp',
-          message: 'Chỉ hỗ trợ tối đa 5 ảnh hoặc tệp cho mỗi lần quét. Hệ thống đã giữ lại 5 tệp đầu tiên.',
-        });
+        showWarning(
+          'Chỉ hỗ trợ tối đa 5 ảnh hoặc tệp cho mỗi lần quét. Hệ thống đã giữ lại 5 tệp đầu tiên.',
+          'Giới hạn tệp'
+        );
         return combined.slice(0, 5);
       }
       return combined;
@@ -277,21 +232,16 @@ export function InBodyOcrFlow({
   // Launch Camera
   const handleTakePhoto = async () => {
     if (selectedFiles.length >= 5) {
-      showAlert({
-        type: 'warning',
-        title: 'Đã đạt giới hạn',
-        message: 'Bạn đã chọn tối đa 5 tệp/ảnh.',
-      });
+      showWarning('Bạn đã chọn tối đa 5 tệp/ảnh.', 'Đã đạt giới hạn');
       return;
     }
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        showAlert({
-          type: 'warning',
-          title: 'Yêu cầu quyền Camera',
-          message: 'Ứng dụng cần quyền sử dụng máy ảnh để chụp phiếu InBody.',
-        });
+        showWarning(
+          'Ứng dụng cần quyền sử dụng máy ảnh để chụp phiếu InBody.',
+          'Yêu cầu quyền Camera'
+        );
         return;
       }
 
@@ -314,11 +264,7 @@ export function InBodyOcrFlow({
         addFiles([newFile]);
       }
     } catch {
-      showAlert({
-        type: 'error',
-        title: 'Lỗi',
-        message: 'Không thể mở máy ảnh.',
-      });
+      showError('Không thể mở máy ảnh.', 'Lỗi');
     }
   };
 
@@ -326,21 +272,16 @@ export function InBodyOcrFlow({
   const handlePickLibrary = async () => {
     setShowDocumentMenu(false);
     if (selectedFiles.length >= 5) {
-      showAlert({
-        type: 'warning',
-        title: 'Đã đạt giới hạn',
-        message: 'Bạn đã chọn tối đa 5 tệp/ảnh.',
-      });
+      showWarning('Bạn đã chọn tối đa 5 tệp/ảnh.', 'Đã đạt giới hạn');
       return;
     }
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        showAlert({
-          type: 'warning',
-          title: 'Yêu cầu quyền Thư viện',
-          message: 'Ứng dụng cần quyền truy cập ảnh để chọn phiếu InBody.',
-        });
+        showWarning(
+          'Ứng dụng cần quyền truy cập ảnh để chọn phiếu InBody.',
+          'Yêu cầu quyền Thư viện'
+        );
         return;
       }
 
@@ -364,11 +305,7 @@ export function InBodyOcrFlow({
         addFiles(newFiles);
       }
     } catch {
-      showAlert({
-        type: 'error',
-        title: 'Lỗi',
-        message: 'Không thể mở thư viện ảnh.',
-      });
+      showError('Không thể mở thư viện ảnh.', 'Lỗi');
     }
   };
 
@@ -376,11 +313,7 @@ export function InBodyOcrFlow({
   const handlePickDocument = async () => {
     setShowDocumentMenu(false);
     if (selectedFiles.length >= 5) {
-      showAlert({
-        type: 'warning',
-        title: 'Đã đạt giới hạn',
-        message: 'Bạn đã chọn tối đa 5 tệp/ảnh.',
-      });
+      showWarning('Bạn đã chọn tối đa 5 tệp/ảnh.', 'Đã đạt giới hạn');
       return;
     }
     try {
@@ -407,22 +340,14 @@ export function InBodyOcrFlow({
         addFiles(newFiles);
       }
     } catch {
-      showAlert({
-        type: 'error',
-        title: 'Lỗi',
-        message: 'Không thể mở trình chọn tài liệu.',
-      });
+      showError('Không thể mở trình chọn tài liệu.', 'Lỗi');
     }
   };
 
   // Execute OCR Scan
   const handleRunOcr = async () => {
     if (selectedFiles.length === 0) {
-      showAlert({
-        type: 'warning',
-        title: 'Chưa có tệp',
-        message: 'Vui lòng chụp ảnh hoặc chọn tài liệu phiếu InBody.',
-      });
+      showWarning('Vui lòng chụp ảnh hoặc chọn tài liệu phiếu InBody.', 'Chưa có tệp');
       return;
     }
 
@@ -499,11 +424,7 @@ export function InBodyOcrFlow({
       setStep('REVIEW_DRAFT');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Quét OCR thất bại. Vui lòng thử lại với ảnh rõ hơn.';
-      showAlert({
-        type: 'error',
-        title: 'Lỗi nhận diện',
-        message: msg,
-      });
+      showError(msg, 'Lỗi nhận diện');
     } finally {
       if (scanTimerRef.current) {
         clearInterval(scanTimerRef.current);
@@ -558,29 +479,17 @@ export function InBodyOcrFlow({
   // Confirm OCR Draft and save
   const handleConfirmDraft = async () => {
     if (!draft?._id) {
-      showAlert({
-        type: 'error',
-        title: 'Lỗi',
-        message: 'Không tìm thấy bản nháp OCR.',
-      });
+      showError('Không tìm thấy bản nháp OCR.', 'Lỗi');
       return;
     }
 
     if (!customerId) {
-      showAlert({
-        type: 'warning',
-        title: 'Thiếu thông tin',
-        message: 'Vui lòng chọn học viên nhận phiếu InBody.',
-      });
+      showWarning('Vui lòng chọn học viên nhận phiếu InBody.', 'Thiếu thông tin');
       return;
     }
 
     if (!weight || Number.isNaN(Number(weight)) || Number(weight) <= 0) {
-      showAlert({
-        type: 'warning',
-        title: 'Sai cân nặng',
-        message: 'Cân nặng phải là số dương hợp lệ.',
-      });
+      showWarning('Cân nặng phải là số dương hợp lệ.', 'Sai cân nặng');
       return;
     }
 
@@ -605,23 +514,13 @@ export function InBodyOcrFlow({
       };
 
       const confirmed = await inbodyService.confirmOcr(draft._id, payload);
-      showAlert({
-        type: 'success',
-        title: 'Thành công',
-        message: 'Đã xác nhận và lưu phiếu InBody!',
-        confirmLabel: 'OK',
-        onConfirm: () => {
-          onConfirmed(confirmed);
-          handleClose();
-        },
+      showSuccess('Đã xác nhận và lưu phiếu InBody!', 'Thành công', () => {
+        onConfirmed(confirmed);
+        handleClose();
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Xác nhận thất bại.';
-      showAlert({
-        type: 'error',
-        title: 'Lỗi',
-        message: msg,
-      });
+      showError(msg, 'Lỗi');
     } finally {
       setLoading(false);
     }
@@ -1233,17 +1132,7 @@ export function InBodyOcrFlow({
         </Pressable>
       </Modal>
 
-      {/* Alert popup bo góc 24px */}
-      <AppAlertModal
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        confirmLabel={alertConfig.confirmLabel}
-        cancelLabel={alertConfig.cancelLabel}
-        onConfirm={alertConfig.onConfirm}
-        onCancel={alertConfig.onCancel}
-      />
+      <AppAlertModal {...alertConfig} />
     </Modal>
   );
 }

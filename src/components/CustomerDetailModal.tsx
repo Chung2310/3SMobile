@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -81,42 +80,6 @@ interface CustomerDetailModalProps {
   onEdit?: () => void;
   onManagePackages?: () => void;
 }
-
-const handleCall = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9+]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`tel:${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể gọi điện', `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}`);
-  });
-};
-
-const handleSms = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9+]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`sms:${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể gửi tin nhắn', `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}`);
-  });
-};
-
-const handleZalo = (phone?: string) => {
-  if (!phone) return;
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  if (!cleanPhone) return;
-  Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
-    Alert.alert('Không thể mở Zalo', `Không thể kết nối Zalo cho số: ${cleanPhone}`);
-  });
-};
-
-const handleEmail = (email?: string) => {
-  if (!email) return;
-  const cleanEmail = email.trim();
-  if (!cleanEmail) return;
-  Linking.openURL(`mailto:${cleanEmail}`).catch(() => {
-    Alert.alert('Không thể mở ứng dụng Email', `Thiết bị không thể mở ứng dụng soạn email cho: ${cleanEmail}`);
-  });
-};
 
 const formatDateDisplay = (isoStr?: string | null): string => {
   if (!isoStr) return 'Chưa cập nhật';
@@ -418,6 +381,42 @@ export function CustomerDetailModal({
         setAlertConfig((prev) => ({ ...prev, visible: false }));
         cfg.onCancel?.();
       },
+    });
+  };
+
+  const handleCall = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+      showAlert({ type: 'error', title: 'Không thể gọi điện', message: `Không thể mở ứng dụng gọi điện cho số: ${cleanPhone}` });
+    });
+  };
+
+  const handleSms = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`sms:${cleanPhone}`).catch(() => {
+      showAlert({ type: 'error', title: 'Không thể gửi tin nhắn', message: `Không thể mở ứng dụng tin nhắn cho số: ${cleanPhone}` });
+    });
+  };
+
+  const handleZalo = (phone?: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return;
+    Linking.openURL(`https://zalo.me/${cleanPhone}`).catch(() => {
+      showAlert({ type: 'error', title: 'Không thể mở Zalo', message: `Không thể kết nối Zalo cho số: ${cleanPhone}` });
+    });
+  };
+
+  const handleEmail = (email?: string) => {
+    if (!email) return;
+    const cleanEmail = email.trim();
+    if (!cleanEmail) return;
+    Linking.openURL(`mailto:${cleanEmail}`).catch(() => {
+      showAlert({ type: 'error', title: 'Không thể mở ứng dụng Email', message: `Thiết bị không thể mở ứng dụng soạn email cho: ${cleanEmail}` });
     });
   };
 
