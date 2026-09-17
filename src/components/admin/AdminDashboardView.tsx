@@ -447,7 +447,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
 
           <View style={styles.topNavDivider} />
 
-          {/* Cấu hình */}
+          {/* Cài đặt */}
           <Pressable
             style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
             onPress={() => router.push('/(app)/profile')}
@@ -455,7 +455,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             <View style={[styles.topNavIconCircle, { backgroundColor: '#F8FAFC' }]}>
               <Ionicons name="settings-sharp" size={18} color="#475569" />
             </View>
-            <Text style={styles.topNavBtnText}>Cấu hình</Text>
+            <Text style={styles.topNavBtnText}>Cài đặt</Text>
           </Pressable>
         </View>
       </View>
