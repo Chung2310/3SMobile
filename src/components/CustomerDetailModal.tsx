@@ -1689,15 +1689,6 @@ export function CustomerDetailModal({
                   <Text style={styles.tabSectionTitle}>
                     Kế hoạch Thực đơn Dinh dưỡng ({publishedNutritionPlans.length})
                   </Text>
-                  {publishedNutritionPlans.length > 0 && (
-                    <Pressable
-                      style={styles.realtimeTopBtn}
-                      onPress={() => setSelectedRealtimePlan(publishedNutritionPlans[0])}
-                    >
-                      <Ionicons name="restaurant-outline" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                      <Text style={styles.realtimeTopBtnText}>Xem Hôm Nay Ăn Gì</Text>
-                    </Pressable>
-                  )}
                 </View>
 
                 {publishedNutritionPlans.length > 0 ? (
@@ -2183,19 +2174,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexWrap: 'wrap',
     gap: 8,
-  },
-  realtimeTopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  realtimeTopBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   nutritionPlanCard: {
     backgroundColor: '#FFFFFF',

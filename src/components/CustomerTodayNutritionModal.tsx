@@ -279,7 +279,7 @@ export function CustomerTodayNutritionModal({
               </View>
 
               <View style={styles.titleRow}>
-                <Ionicons name="restaurant-outline" size={17} color="#38BDF8" style={{ marginRight: 6 }} />
+                <Ionicons name="restaurant-outline" size={17} color="#BAE6FD" style={{ marginRight: 6 }} />
                 <Text style={styles.headerTitle} numberOfLines={1}>
                   Hôm nay ăn gì: <Text style={styles.headerCustomerName}>{customerName || 'Học viên'}</Text>
                 </Text>
@@ -293,7 +293,7 @@ export function CustomerTodayNutritionModal({
               accessibilityRole="button"
               accessibilityLabel="Đóng popup"
             >
-              <Feather name="x" size={18} color="#94A3B8" />
+              <Feather name="x" size={18} color="#FFFFFF" />
             </Pressable>
           </View>
 
@@ -308,7 +308,7 @@ export function CustomerTodayNutritionModal({
                 <Ionicons
                   name="flash-outline"
                   size={13}
-                  color={viewMode === 'realtime' ? '#0284C7' : '#64748B'}
+                  color={viewMode === 'realtime' ? '#FFFFFF' : '#0369A1'}
                   style={{ marginRight: 4 }}
                 />
                 <Text
@@ -328,7 +328,7 @@ export function CustomerTodayNutritionModal({
                 <Feather
                   name="file-text"
                   size={12}
-                  color={viewMode === 'all' ? '#0284C7' : '#64748B'}
+                  color={viewMode === 'all' ? '#FFFFFF' : '#0369A1'}
                   style={{ marginRight: 4 }}
                 />
                 <Text
@@ -559,7 +559,14 @@ export function CustomerTodayNutritionModal({
                               isCurrent && styles.mealNumberCircleCurrent,
                             ]}
                           >
-                            <Text style={styles.mealNumberText}>{mIdx + 1}</Text>
+                            <Text
+                              style={[
+                                styles.mealNumberText,
+                                isCurrent && styles.mealNumberTextCurrent,
+                              ]}
+                            >
+                              {mIdx + 1}
+                            </Text>
                           </View>
 
                           <View style={styles.mealTitleCol}>
@@ -694,7 +701,7 @@ export function CustomerTodayNutritionModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    backgroundColor: 'rgba(2, 44, 80, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
@@ -708,19 +715,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 12,
   },
   header: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0284C7',
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#0369A1',
   },
   headerLeft: {
     flex: 1,
@@ -735,28 +742,29 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: '#DCFCE7',
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: '#4ADE80',
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4ADE80',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#16A34A',
     marginRight: 6,
   },
   liveBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#4ADE80',
+    fontWeight: '800',
+    color: '#15803D',
   },
   dayOfWeekText: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontWeight: '600',
+    color: '#E0F2FE',
   },
   titleRow: {
     flexDirection: 'row',
@@ -769,13 +777,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerCustomerName: {
-    color: '#7DD3FC',
+    color: '#BAE6FD',
+    fontWeight: '800',
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1E293B',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -793,9 +802,9 @@ const styles = StyleSheet.create({
   },
   modeSegment: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E0F2FE',
     borderRadius: 10,
-    padding: 2,
+    padding: 3,
   },
   modeBtn: {
     flexDirection: 'row',
@@ -805,20 +814,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modeBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: '#0284C7',
+    shadowColor: '#0284C7',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 2,
   },
   modeBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#0369A1',
   },
   modeBtnTextActive: {
-    color: '#0284C7',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   daySelectorWrap: {
@@ -1125,19 +1134,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mealNumberCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#334155',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
   mealNumberCircleCurrent: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#22C55E',
+    borderColor: '#16A34A',
   },
   mealNumberText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
+    color: '#0284C7',
+  },
+  mealNumberTextCurrent: {
     color: '#FFFFFF',
   },
   mealTitleCol: {
@@ -1284,11 +1299,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   footer: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F0F9FF',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderTopColor: '#BAE6FD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1299,20 +1314,26 @@ const styles = StyleSheet.create({
   },
   footerTotalLabel: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#0369A1',
+    fontWeight: '600',
   },
   footerTotalVal: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#0284C7',
   },
   closeActionBtn: {
-    minHeight: 38,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    backgroundColor: '#0F172A',
+    minHeight: 44,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    backgroundColor: '#0284C7',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   closeActionText: {
     fontSize: 13,
