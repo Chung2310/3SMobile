@@ -15,6 +15,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppAlertModal } from '@/components/AppAlertModal';
+import { DatePickerModal } from '@/components/DatePickerModal';
 import { api } from '@/services/api/client';
 
 const BANNER_WALLET = require('../../../assets/public/banner-wallet.png');
@@ -37,7 +38,7 @@ export interface CreditLedgerItem {
   createdAt: string;
 }
 
-export type DateFilterType = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'THIS_MONTH';
+export type DateFilterType = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'THIS_MONTH' | 'CUSTOM';
 
 export interface DateFilterOption {
   key: DateFilterType;
@@ -106,6 +107,13 @@ export default function WalletScreen() {
   // Lọc theo ngày tháng trong lịch sử giao dịch
   const [dateFilter, setDateFilter] = useState<DateFilterType>('ALL');
   const [showDateFilterModal, setShowDateFilterModal] = useState<boolean>(false);
+
+  // Chọn ngày tùy chỉnh (Từ ngày - Đến ngày)
+  const [customStartDate, setCustomStartDate] = useState<string>(''); // YYYY-MM-DD
+  const [customEndDate, setCustomEndDate] = useState<string>(''); // YYYY-MM-DD
+  const [customStartDisplay, setCustomStartDisplay] = useState<string>(''); // DD/MM/YYYY
+  const [customEndDisplay, setCustomEndDisplay] = useState<string>(''); // DD/MM/YYYY
+  const [datePickerTarget, setDatePickerTarget] = useState<'START' | 'END' | null>(null);
 
   // Tính số credit nhận được tương ứng với số tiền (100đ = 1 credit)
   const calculatedCredits = useMemo(() => {
@@ -246,11 +254,74 @@ export default function WalletScreen() {
             itemDate.getFullYear() === now.getFullYear()
           );
         }
+        case 'CUSTOM': {
+          let matches = true;
+          if (customStartDate) {
+            const [y, m, d] = customStartDate.split('-').map(Number);
+            const startTimestamp = new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+            if (itemTime < startTimestamp) matches = false;
+          }
+          if (customEndDate) {
+            const [y, m, d] = customEndDate.split('-').map(Number);
+            const endTimestamp = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+            if (itemTime > endTimestamp) matches = false;
+          }
+          return matches;
+        }
         default:
           return true;
       }
     });
-  }, [ledgerItems, dateFilter]);
+  }, [ledgerItems, dateFilter, customStartDate, customEndDate]);
+
+  // Đặt lại bộ lọc ngày
+  const handleResetDateFilter = () => {
+    setDateFilter('ALL');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setCustomStartDisplay('');
+    setCustomEndDisplay('');
+  };
+
+  // Lấy nhãn hiển thị cho bộ lọc ngày tùy chỉnh
+  const getCustomFilterLabel = () => {
+    if (customStartDate && customEndDate) {
+      if (customStartDate === customEndDate) {
+        return `Ngày: ${customStartDisplay}`;
+      }
+      return `${customStartDisplay} - ${customEndDisplay}`;
+    }
+    if (customStartDisplay) return `Ngày: ${customStartDisplay}`;
+    if (customEndDisplay) return `Đến ngày: ${customEndDisplay}`;
+    return 'Tùy chọn ngày';
+  };
+
+  // Mở modal chọn ngày từ lịch
+  const openDatePicker = (target: 'START' | 'END') => {
+    setDatePickerTarget(target);
+    setShowDateFilterModal(false);
+  };
+
+  // Xử lý khi đã chọn ngày từ lịch
+  const handleDatePicked = (isoDate: string, displayDate: string) => {
+    if (datePickerTarget === 'START') {
+      setCustomStartDate(isoDate);
+      setCustomStartDisplay(displayDate);
+      if (!customEndDate || customEndDate < isoDate) {
+        setCustomEndDate(isoDate);
+        setCustomEndDisplay(displayDate);
+      }
+    } else if (datePickerTarget === 'END') {
+      setCustomEndDate(isoDate);
+      setCustomEndDisplay(displayDate);
+      if (!customStartDate) {
+        setCustomStartDate(isoDate);
+        setCustomStartDisplay(displayDate);
+      }
+    }
+    setDatePickerTarget(null);
+    setShowDateFilterModal(true);
+  };
 
   // Xử lý chọn mức nạp có sẵn
   const handleSelectPreset = (amount: number) => {
@@ -513,10 +584,12 @@ export default function WalletScreen() {
                 <View style={styles.activeFilterChip}>
                   <Ionicons name="calendar-outline" size={12} color="#0284C7" style={{ marginRight: 4 }} />
                   <Text style={styles.activeFilterChipText}>
-                    {DATE_FILTER_OPTIONS.find((o) => o.key === dateFilter)?.label}
+                    {dateFilter === 'CUSTOM'
+                      ? getCustomFilterLabel()
+                      : DATE_FILTER_OPTIONS.find((o) => o.key === dateFilter)?.label}
                   </Text>
                   <Pressable
-                    onPress={() => setDateFilter('ALL')}
+                    onPress={handleResetDateFilter}
                     style={styles.clearDateFilterBtn}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityRole="button"
@@ -651,6 +724,7 @@ export default function WalletScreen() {
               </Pressable>
             </View>
 
+            {/* Danh sách mốc thời gian nhanh */}
             <View style={styles.filterOptionsList}>
               {DATE_FILTER_OPTIONS.map((opt) => {
                 const isSelected = dateFilter === opt.key;
@@ -663,6 +737,10 @@ export default function WalletScreen() {
                     ]}
                     onPress={() => {
                       setDateFilter(opt.key);
+                      setCustomStartDate('');
+                      setCustomEndDate('');
+                      setCustomStartDisplay('');
+                      setCustomEndDisplay('');
                       setShowDateFilterModal(false);
                     }}
                     accessibilityRole="button"
@@ -683,9 +761,105 @@ export default function WalletScreen() {
                 );
               })}
             </View>
+
+            {/* Phân cách */}
+            <View style={styles.customDateDivider} />
+
+            {/* Mục chọn ngày tùy chỉnh */}
+            <View style={styles.customDateSection}>
+              <Text style={styles.customDateSectionTitle}>Hoặc chọn ngày cụ thể:</Text>
+              <View style={styles.customDateRow}>
+                <View style={styles.customDateField}>
+                  <Text style={styles.customDateLabel}>Từ ngày</Text>
+                  <Pressable
+                    style={styles.customDateInputBtn}
+                    onPress={() => openDatePicker('START')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn từ ngày"
+                  >
+                    <Ionicons name="calendar-outline" size={14} color="#0284C7" style={{ marginRight: 6 }} />
+                    <Text
+                      style={[
+                        styles.customDateInputText,
+                        !customStartDisplay && styles.customDatePlaceholder,
+                      ]}
+                    >
+                      {customStartDisplay || 'DD/MM/YYYY'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.customDateField}>
+                  <Text style={styles.customDateLabel}>Đến ngày</Text>
+                  <Pressable
+                    style={styles.customDateInputBtn}
+                    onPress={() => openDatePicker('END')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn đến ngày"
+                  >
+                    <Ionicons name="calendar-outline" size={14} color="#0284C7" style={{ marginRight: 6 }} />
+                    <Text
+                      style={[
+                        styles.customDateInputText,
+                        !customEndDisplay && styles.customDatePlaceholder,
+                      ]}
+                    >
+                      {customEndDisplay || 'DD/MM/YYYY'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Nút thao tác chọn ngày */}
+              <View style={styles.customDateActionRow}>
+                {Boolean(customStartDate || customEndDate) && (
+                  <Pressable
+                    style={styles.customDateResetBtn}
+                    onPress={() => {
+                      setCustomStartDate('');
+                      setCustomEndDate('');
+                      setCustomStartDisplay('');
+                      setCustomEndDisplay('');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Xóa ngày đã chọn"
+                  >
+                    <Text style={styles.customDateResetText}>Xóa ngày</Text>
+                  </Pressable>
+                )}
+
+                <Pressable
+                  style={[
+                    styles.customDateApplyBtn,
+                    !customStartDate && !customEndDate && styles.customDateApplyBtnDisabled,
+                  ]}
+                  disabled={!customStartDate && !customEndDate}
+                  onPress={() => {
+                    setDateFilter('CUSTOM');
+                    setShowDateFilterModal(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Áp dụng ngày chọn"
+                >
+                  <Text style={styles.customDateApplyBtnText}>Áp dụng ngày chọn</Text>
+                </Pressable>
+              </View>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* DatePickerModal chọn ngày cụ thể từ lịch */}
+      <DatePickerModal
+        visible={datePickerTarget !== null}
+        title={datePickerTarget === 'START' ? 'Chọn từ ngày' : 'Chọn đến ngày'}
+        value={datePickerTarget === 'START' ? customStartDate : customEndDate}
+        onClose={() => {
+          setDatePickerTarget(null);
+          setShowDateFilterModal(true);
+        }}
+        onSelect={handleDatePicked}
+      />
     </View>
   );
 }
@@ -1200,6 +1374,83 @@ const styles = StyleSheet.create({
   filterOptionLabelSelected: {
     color: '#0284C7',
     fontWeight: '700',
+  },
+  customDateDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 12,
+  },
+  customDateSection: {
+    gap: 8,
+  },
+  customDateSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  customDateField: {
+    flex: 1,
+  },
+  customDateLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  customDateInputBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  customDateInputText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  customDatePlaceholder: {
+    color: '#94A3B8',
+  },
+  customDateActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  customDateResetBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  customDateResetText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  customDateApplyBtn: {
+    backgroundColor: '#0284C7',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    minHeight: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customDateApplyBtnDisabled: {
+    backgroundColor: '#94A3B8',
+    opacity: 0.6,
+  },
+  customDateApplyBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   filterRow: {
     flexDirection: 'row',

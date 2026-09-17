@@ -764,7 +764,7 @@ export default function ProfileScreen() {
                 </View>
                 <View>
                   <Text style={styles.securityBarTitle}>Bảo mật & Đổi mật khẩu</Text>
-                  <Text style={styles.securityBarSubtitle}>Mật khẩu số 6 chữ số tài khoản HLV</Text>
+                  
                 </View>
               </View>
               <Feather name="chevron-right" size={18} color={colors.textMuted} />
@@ -1106,7 +1106,7 @@ export default function ProfileScreen() {
                         style={styles.passwordInput}
                         value={form.currentPassword}
                         onChangeText={(val) => setForm((prev) => ({ ...prev, currentPassword: val }))}
-                        placeholder="Nhập 6 số mật khẩu hiện tại..."
+                        placeholder="Nhập mật khẩu hiện tại..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showCurrentPassword}
                         keyboardType="number-pad"
@@ -1136,7 +1136,7 @@ export default function ProfileScreen() {
                         style={styles.passwordInput}
                         value={form.newPassword}
                         onChangeText={(val) => setForm((prev) => ({ ...prev, newPassword: val }))}
-                        placeholder="Nhập 6 số mật khẩu mới..."
+                        placeholder="Nhập mật khẩu mới..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showNewPassword}
                         keyboardType="number-pad"
@@ -1166,7 +1166,7 @@ export default function ProfileScreen() {
                         style={styles.passwordInput}
                         value={form.confirmPassword}
                         onChangeText={(val) => setForm((prev) => ({ ...prev, confirmPassword: val }))}
-                        placeholder="Nhập lại 6 số mật khẩu mới..."
+                        placeholder="Nhập lại mật khẩu mới..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showConfirmPassword}
                         keyboardType="number-pad"
