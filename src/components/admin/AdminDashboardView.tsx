@@ -580,10 +580,6 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       <View style={styles.titleFilterHeader}>
         <View style={styles.titleLeftRow}>
           <Text style={styles.sectionHeaderTitle}>TỔNG QUAN HỆ THỐNG</Text>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveBadgeText}>Live</Text>
-          </View>
         </View>
 
         <View style={styles.headerRightBtns}>
@@ -620,6 +616,19 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       </View>
 
+      {/* Active Filter Banner if PT selected */}
+      {selectedPtId !== 'ALL' && (
+        <View style={styles.activePtBanner}>
+          <Ionicons name="person" size={13} color="#0284C7" />
+          <Text style={styles.activePtBannerText} numberOfLines={1}>
+            Đang xem báo cáo HLV: {ptsList.find((p) => p.ptId === selectedPtId)?.fullName || selectedPtId}
+          </Text>
+          <Pressable onPress={() => setSelectedPtId('ALL')} hitSlop={6}>
+            <Ionicons name="close-circle" size={16} color="#0284C7" />
+          </Pressable>
+        </View>
+      )}
+
       {/* Collapsible Filter Strip */}
       {isFilterExpanded && (
         <View style={styles.expandedFilterCard}>
@@ -631,6 +640,48 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
               </Pressable>
             )}
           </View>
+
+          {/* PT Selector Row */}
+          <Text style={styles.fieldLabel}>Chọn Huấn luyện viên (PT):</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
+            <View style={styles.statusPillsRow}>
+              <Pressable
+                onPress={() => setSelectedPtId('ALL')}
+                style={[
+                  styles.statusChip,
+                  selectedPtId === 'ALL' && styles.statusChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    selectedPtId === 'ALL' && styles.statusChipTextActive,
+                  ]}
+                >
+                  Tất cả HLV
+                </Text>
+              </Pressable>
+              {ptsList.map((pt) => (
+                <Pressable
+                  key={pt.ptId}
+                  onPress={() => setSelectedPtId(pt.ptId)}
+                  style={[
+                    styles.statusChip,
+                    selectedPtId === pt.ptId && styles.statusChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusChipText,
+                      selectedPtId === pt.ptId && styles.statusChipTextActive,
+                    ]}
+                  >
+                    {pt.fullName}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Status Pills Selector */}
           <Text style={styles.fieldLabel}>Trạng thái hội viên:</Text>
@@ -1021,25 +1072,22 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.5,
   },
-  liveBadge: {
+  activePtBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
   },
-  liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#16A34A',
-  },
-  liveBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
+  activePtBannerText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#0284C7',
   },
   headerRightBtns: {
     flexDirection: 'row',
