@@ -59,14 +59,12 @@ const ADMIN_TABS: TabDef[] = [
     label: 'Điều chuyển',
     activeIcon: 'swap-horizontal',
     inactiveIcon: 'swap-horizontal-outline',
-    route: '/(app)/customers',
   },
   {
     name: 'accounts',
     label: 'Tài khoản',
     activeIcon: 'people-circle',
     inactiveIcon: 'people-circle-outline',
-    route: '/(app)/customers',
   },
   {
     name: 'index',

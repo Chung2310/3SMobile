@@ -505,10 +505,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           {/* Row 1: HLV, Khách hàng, Gói tập */}
           <View style={styles.topNavRow}>
             {/* 1. HLV */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/customers')}
-            >
+            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
               <View style={[styles.topNavIconCircle, { backgroundColor: '#F0F9FF' }]}>
                 <Ionicons name="people-outline" size={18} color="#0284C7" />
               </View>
@@ -516,10 +513,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             </Pressable>
 
             {/* 2. Khách hàng */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/customers')}
-            >
+            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
               <View style={[styles.topNavIconCircle, { backgroundColor: '#F0FDF4' }]}>
                 <Ionicons name="person-add-outline" size={18} color="#16A34A" />
               </View>
@@ -527,10 +521,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             </Pressable>
 
             {/* 3. Gói tập */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/customers')}
-            >
+            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
               <View style={[styles.topNavIconCircle, { backgroundColor: '#F5F3FF' }]}>
                 <Ionicons name="cube-outline" size={18} color="#7C3AED" />
               </View>
@@ -552,10 +543,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             </Pressable>
 
             {/* 5. Kho tri thức */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/exercises')}
-            >
+            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
               <View style={[styles.topNavIconCircle, { backgroundColor: '#EFF6FF' }]}>
                 <Ionicons name="book-outline" size={18} color="#2563EB" />
               </View>
@@ -740,10 +728,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       {/* 3. 4 METRIC CARDS IN GRID FORMAT (DẠNG LƯỚI 2x2 - KHÔNG TRƯỢT) */}
       <View style={styles.kpiGrid2x2}>
         {/* KPI 1: HLV PT */}
-        <Pressable
-          onPress={() => router.push('/(app)/customers')}
-          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
-        >
+        <View style={styles.kpiGridCard}>
           <View style={styles.kpiCardTopRow}>
             <Text style={styles.kpiCardLabel}>HLV PT</Text>
             <View style={[styles.kpiIconWrap, { backgroundColor: '#F0F9FF' }]}>
@@ -752,13 +737,10 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           </View>
           <Text style={[styles.kpiCardVal, { color: '#0284C7' }]}>{totalPts}</Text>
           <Text style={styles.kpiCardSub}>Đang hoạt động</Text>
-        </Pressable>
+        </View>
 
         {/* KPI 2: HỘI VIÊN */}
-        <Pressable
-          onPress={() => router.push('/(app)/customers')}
-          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
-        >
+        <View style={styles.kpiGridCard}>
           <View style={styles.kpiCardTopRow}>
             <Text style={styles.kpiCardLabel}>HỘI VIÊN</Text>
             <View style={[styles.kpiIconWrap, { backgroundColor: '#F0FDF4' }]}>
@@ -767,13 +749,10 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           </View>
           <Text style={[styles.kpiCardVal, { color: '#16A34A' }]}>{totalCustomers}</Text>
           <Text style={styles.kpiCardSub}>{activeCount} Đang tập</Text>
-        </Pressable>
+        </View>
 
         {/* KPI 3: GÓI MẪU */}
-        <Pressable
-          onPress={() => router.push('/(app)/customers')}
-          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
-        >
+        <View style={styles.kpiGridCard}>
           <View style={styles.kpiCardTopRow}>
             <Text style={styles.kpiCardLabel}>GÓI MẪU</Text>
             <View style={[styles.kpiIconWrap, { backgroundColor: '#F5F3FF' }]}>
@@ -782,12 +761,10 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           </View>
           <Text style={[styles.kpiCardVal, { color: '#7C3AED' }]}>{activePackages}</Text>
           <Text style={styles.kpiCardSub}>Toàn hệ thống</Text>
-        </Pressable>
+        </View>
 
         {/* KPI 4: CẢNH BÁO */}
-        <Pressable
-          style={({ pressed }) => [styles.kpiGridCard, pressed && styles.btnPressed]}
-        >
+        <View style={styles.kpiGridCard}>
           <View style={styles.kpiCardTopRow}>
             <Text style={styles.kpiCardLabel}>CẢNH BÁO</Text>
             <View
@@ -809,7 +786,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           <Text style={styles.kpiCardSub}>
             {openAlerts > 0 ? 'Cần xử lý' : 'An toàn'}
           </Text>
-        </Pressable>
+        </View>
       </View>
 
       {/* 4. VISUAL CHARTS SECTION WITH ANIMATION */}
@@ -897,9 +874,6 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       {/* 5. PT WORKLOAD & LEADERBOARD SECTION */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionHeaderTitle}>HIỆU SUẤT ĐỘI NGŨ HLV PT</Text>
-        <Pressable onPress={() => router.push('/(app)/customers')}>
-          <Text style={styles.linkText}>Chi tiết &gt;</Text>
-        </Pressable>
       </View>
 
       {/* Bar Chart & PT Workload Card with Animation */}
