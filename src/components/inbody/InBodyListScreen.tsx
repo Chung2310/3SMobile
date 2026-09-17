@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -10,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '@/theme';
@@ -67,6 +67,16 @@ export function InBodyListScreen() {
   const [detailRecord, setDetailRecord] = useState<InBodyRecordData | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<InBodyRecordData | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    type?: AlertModalType;
+    title: string;
+    message: string;
+  }>({ visible: false, title: '', message: '' });
+
+  const showAlert = (cfg: { type?: AlertModalType; title: string; message: string }) => {
+    setAlertConfig({ visible: true, ...cfg });
+  };
 
   // Load customers list for filter & forms
   const loadCustomers = async () => {
@@ -202,7 +212,7 @@ export function InBodyListScreen() {
       setDeletingRecord(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể xóa phiếu.';
-      Alert.alert('Lỗi', msg);
+      showAlert({ type: 'error', title: 'Lỗi', message: msg });
     } finally {
       setDeletingLoading(false);
     }
@@ -218,6 +228,7 @@ export function InBodyListScreen() {
   }, [customers, selectedCustomerId]);
 
   return (
+    <>
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* Top Bar Header */}
       <View style={styles.topHeader}>
@@ -488,6 +499,15 @@ export function InBodyListScreen() {
         onSelect={(id) => setSelectedCustomerId(id)}
       />
     </View>
+
+    <AppAlertModal
+      visible={alertConfig.visible}
+      type={alertConfig.type}
+      title={alertConfig.title}
+      message={alertConfig.message}
+      onConfirm={() => setAlertConfig((c) => ({ ...c, visible: false }))}
+    />
+    </>
   );
 }
 

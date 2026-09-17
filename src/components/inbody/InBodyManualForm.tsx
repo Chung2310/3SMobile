@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,6 +21,7 @@ import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodySegmentalInput } from './InBodySegmentalInput';
 import { InBodyMetricsFormFields, InBodyMetricsFormValues } from './InBodyMetricsFormFields';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
+import { AppAlertModal, AlertModalType } from '@/components/AppAlertModal';
 
 interface InBodyManualFormProps {
   visible: boolean;
@@ -48,6 +48,50 @@ export function InBodyManualForm({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showSegmental, setShowSegmental] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    type?: AlertModalType;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const showAlert = (cfg: {
+    type?: AlertModalType;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  }) => {
+    setAlertConfig({
+      visible: true,
+      type: cfg.type || 'info',
+      title: cfg.title,
+      message: cfg.message,
+      confirmLabel: cfg.confirmLabel || 'Đã hiểu',
+      cancelLabel: cfg.cancelLabel,
+      onConfirm: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        cfg.onConfirm?.();
+      },
+      onCancel: cfg.onCancel
+        ? () => {
+            setAlertConfig((prev) => ({ ...prev, visible: false }));
+            cfg.onCancel?.();
+          }
+        : undefined,
+    });
+  };
 
   // Quick Add Customer state & local customer sync
   const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>(customers);
@@ -265,12 +309,20 @@ export function InBodyManualForm({
 
   const handleSubmit = async () => {
     if (!customerId) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng chọn học viên.');
+      showAlert({
+        type: 'warning',
+        title: 'Thiếu thông tin',
+        message: 'Vui lòng chọn học viên.',
+      });
       return;
     }
     const w = numVal(weight);
     if (!w || w <= 0) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập cân nặng hợp lệ (> 0 kg).');
+      showAlert({
+        type: 'warning',
+        title: 'Thiếu thông tin',
+        message: 'Vui lòng nhập cân nặng hợp lệ (> 0 kg).',
+      });
       return;
     }
 
@@ -324,11 +376,23 @@ export function InBodyManualForm({
         saved = await inbodyService.createRecord(payload);
       }
 
-      onSaved(saved);
-      onClose();
+      showAlert({
+        type: 'success',
+        title: 'Thành công',
+        message: editingRecord?._id ? 'Đã cập nhật phiếu InBody!' : 'Đã lưu phiếu InBody thành công!',
+        confirmLabel: 'OK',
+        onConfirm: () => {
+          onSaved(saved);
+          onClose();
+        },
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể lưu phiếu InBody.';
-      Alert.alert('Lỗi', msg);
+      showAlert({
+        type: 'error',
+        title: 'Lỗi',
+        message: msg,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -516,6 +580,18 @@ export function InBodyManualForm({
         }}
         onClose={() => setShowQuickAddCustomer(false)}
         onCreated={handleCustomerCreated}
+      />
+
+      {/* Alert popup bo góc 24px */}
+      <AppAlertModal
+        visible={alertConfig.visible}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        confirmLabel={alertConfig.confirmLabel}
+        cancelLabel={alertConfig.cancelLabel}
+        onConfirm={alertConfig.onConfirm}
+        onCancel={alertConfig.onCancel}
       />
     </Modal>
   );

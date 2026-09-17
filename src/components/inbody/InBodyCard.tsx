@@ -109,9 +109,16 @@ export function InBodyCard({ record, onPress, onEdit, onDelete }: InBodyCardProp
 
       {/* Card Footer Actions */}
       <View style={styles.cardFooter}>
-        <Text style={styles.sourceText}>
-          {record.source === 'AI_SCAN' ? '🤖 Quét AI' : '✏️ Nhập tay'}
-        </Text>
+        <View style={styles.sourceRow}>
+          <Ionicons
+            name={record.source === 'AI_SCAN' ? 'sparkles' : 'create-outline'}
+            size={13}
+            color={record.source === 'AI_SCAN' ? colors.primary : colors.textMuted}
+          />
+          <Text style={styles.sourceText}>
+            {record.source === 'AI_SCAN' ? 'Quét AI' : 'Nhập tay'}
+          </Text>
+        </View>
 
         <View style={styles.cardActionsGroup}>
           <Pressable
@@ -233,6 +240,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   sourceText: {
     fontWeight: '400',
