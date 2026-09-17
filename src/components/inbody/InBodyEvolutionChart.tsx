@@ -115,16 +115,17 @@ export function InBodyEvolutionChart({ records, title }: InBodyEvolutionChartPro
   }
 
   // Chart layout dimensions
+  const svgWidth = Math.max(200, containerWidth - 32);
   const chartHeight = 190;
   const paddingLeft = 38;
   const paddingRight = 20;
   const paddingTop = 16;
   const paddingBottom = 30;
-  const plotWidth = Math.max(100, containerWidth - paddingLeft - paddingRight);
+  const plotWidth = Math.max(100, svgWidth - paddingLeft - paddingRight);
   const plotHeight = chartHeight - paddingTop - paddingBottom;
 
   const getX = (idx: number) => {
-    if (sorted.length === 1) return paddingLeft + plotWidth / 2;
+    if (sorted.length <= 1) return paddingLeft + plotWidth / 2;
     return paddingLeft + (idx * plotWidth) / (sorted.length - 1);
   };
 
@@ -370,7 +371,7 @@ export function InBodyEvolutionChart({ records, title }: InBodyEvolutionChartPro
 
       {/* 5. SVG Chart Area */}
       <View style={styles.chartWrapper}>
-        <Svg width={containerWidth - 32} height={chartHeight}>
+        <Svg width={svgWidth} height={chartHeight}>
           <Defs>
             <LinearGradient id="activeGrad" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor={activeMetricColor} stopOpacity="0.25" />
@@ -392,7 +393,7 @@ export function InBodyEvolutionChart({ records, title }: InBodyEvolutionChartPro
                 <Line
                   x1={paddingLeft}
                   y1={y}
-                  x2={containerWidth - 32 - paddingRight}
+                  x2={svgWidth - paddingRight}
                   y2={y}
                   stroke="#E2E8F0"
                   strokeDasharray="4 4"
@@ -418,7 +419,7 @@ export function InBodyEvolutionChart({ records, title }: InBodyEvolutionChartPro
           <Line
             x1={paddingLeft}
             y1={chartHeight - paddingBottom}
-            x2={containerWidth - 32 - paddingRight}
+            x2={svgWidth - paddingRight}
             y2={chartHeight - paddingBottom}
             stroke="#CBD5E1"
             strokeWidth={1}
@@ -503,16 +504,22 @@ export function InBodyEvolutionChart({ records, title }: InBodyEvolutionChartPro
                 />
 
                 {/* Date label on X axis */}
-                <SvgText
-                  x={x}
-                  y={chartHeight - 10}
-                  fill={isSelected ? colors.primaryNavy : colors.textMuted}
-                  fontSize={9.5}
-                  textAnchor="middle"
-                  fontWeight={isSelected ? '700' : '500'}
-                >
-                  {formatDate(item.measurementDate)}
-                </SvgText>
+                {(sorted.length <= 6 ||
+                  idx === 0 ||
+                  idx === sorted.length - 1 ||
+                  isSelected ||
+                  idx % Math.ceil(sorted.length / 5) === 0) && (
+                  <SvgText
+                    x={x}
+                    y={chartHeight - 10}
+                    fill={isSelected ? colors.primaryNavy : colors.textMuted}
+                    fontSize={9.5}
+                    textAnchor="middle"
+                    fontWeight={isSelected ? '700' : '500'}
+                  >
+                    {formatDate(item.measurementDate)}
+                  </SvgText>
+                )}
               </G>
             );
           })}

@@ -87,7 +87,7 @@ export function InBodyListScreen() {
 
         const response = await inbodyService.getRecords({
           page: pageToLoad,
-          limit: 10,
+          limit: selectedCustomerId ? 50 : 10,
           customerId: selectedCustomerId || undefined,
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
         });

@@ -58,13 +58,13 @@ export function classifyBodyFat(pct: number | null | undefined, gender: string =
 export function classifyVisceralFat(level: number | null | undefined): MetricClassification | undefined {
   if (level == null || !Number.isFinite(level) || level <= 0) return undefined;
   if (level <= 5) {
-    return { status: 'NORMAL', label: 'An toàn & Lý tưởng', badgeClass: 'bg-emerald-100 text-emerald-800', color: '#16a34a', description: 'Mỡ nội tạng rất tốt, cơ quan nội tạng hoạt động tối ưu.' };
+    return { status: 'NORMAL', label: 'Lý tưởng', badgeClass: 'bg-emerald-100 text-emerald-800', color: '#16a34a', description: 'Mỡ nội tạng rất tốt, cơ quan nội tạng hoạt động tối ưu.' };
   }
   if (level <= 9) {
-    return { status: 'NORMAL', label: 'Mức chấp nhận được', badgeClass: 'bg-amber-100 text-amber-800', color: '#d97706', description: 'Trong ngưỡng an toàn nhưng cần duy trì lối sống lành mạnh.' };
+    return { status: 'NORMAL', label: 'Bình thường', badgeClass: 'bg-amber-100 text-amber-800', color: '#d97706', description: 'Trong ngưỡng an toàn nhưng cần duy trì lối sống lành mạnh.' };
   }
   if (level <= 14) {
-    return { status: 'OVER', label: 'Cảnh báo nguy cơ cao', badgeClass: 'bg-rose-100 text-rose-800', color: '#dc2626', description: 'Mỡ nội tạng mức báo động, nguy cơ gan nhiễm mỡ & tim mạch.' };
+    return { status: 'OVER', label: 'Nguy cơ cao', badgeClass: 'bg-rose-100 text-rose-800', color: '#dc2626', description: 'Mỡ nội tạng mức báo động, nguy cơ gan nhiễm mỡ & tim mạch.' };
   }
   return { status: 'OVER', label: 'Nguy hiểm', badgeClass: 'bg-rose-200 text-rose-900', color: '#991b1b', description: 'Mỡ nội tạng cực kỳ cao, bắt buộc phải giảm mỡ ngay.' };
 }
