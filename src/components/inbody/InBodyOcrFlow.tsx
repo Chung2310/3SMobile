@@ -22,7 +22,7 @@ import { DatePickerModal } from '../DatePickerModal';
 import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodyMetricsFormFields, InBodyMetricsFormValues } from './InBodyMetricsFormFields';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
-import { AppAlertModal, useAppAlert } from '../AppAlertModal';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 
 interface InBodyOcrFlowProps {
   visible: boolean;
@@ -109,6 +109,7 @@ export function InBodyOcrFlow({
   const [bodyWater, setBodyWater] = useState('');
   const [waistHipRatio, setWaistHipRatio] = useState('');
   const [consultationNotes, setConsultationNotes] = useState('');
+
 
   const selectedCustomer = useMemo(() => {
     return allCustomers.find((c) => c._id === customerId);

@@ -322,7 +322,9 @@ export function MetricChart({ records, metric, unit }: { records: JsonRecord[]; 
             {formatDate(points[points.length - 1].date)} ({points.length} lần đo)
           </Text>
         ) : (
-          <Text style={styles.footerHint}>Thêm lần đo tiếp theo để thấy biểu đồ xu hướng</Text>
+          <Text numberOfLines={2} style={styles.footerHint}>
+            Thêm lần đo tiếp theo để thấy biểu đồ xu hướng
+          </Text>
         )}
       </View>
     </Animated.View>
@@ -527,9 +529,9 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   chartFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
     paddingTop: 10,
@@ -537,11 +539,13 @@ const styles = StyleSheet.create({
   footerDate: {
     ...typography.caption,
     color: colors.textMuted,
+    flexShrink: 1,
   },
   footerHint: {
     ...typography.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
+    flexShrink: 1,
   },
   calendarCard: {
     backgroundColor: colors.surface,

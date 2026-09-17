@@ -3,7 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
-import { Button, Busy, Field, Notice, Picker, Sheet } from '@/components/workouts/Controls';
+import { Button, Busy, Field, Notice, Sheet } from '@/components/workouts/Controls';
 import { ProgressForm } from '@/components/progress/ProgressForm';
 import { MetricChart, SessionCalendar } from '@/components/progress/ProgressVisuals';
 import { useAuth } from '@/context/AuthContext';
@@ -213,30 +213,6 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
 
   return (
     <View style={styles.workspaceContainer}>
-      {/* Staff Customer Selector when not viewing or to switch */}
-      {staff && !customerId && (
-        <Picker
-          label="Chọn học viên"
-          value={customerId}
-          options={{
-            '': 'Chọn học viên để xem tiến độ',
-            ...Object.fromEntries(
-              customers.map((entry) => {
-                const c = asRecord(entry.customer);
-                return [
-                  recordId(c),
-                  `${readText(c, ['fullName'], 'Học viên')} · ${readText(c, ['phone'])}`,
-                ];
-              })
-            ),
-          }}
-          onChange={(id) => {
-            resetView();
-            setCustomerId(id);
-          }}
-        />
-      )}
-
       {/* Staff Dashboard (when no specific student is picked) */}
       {staff && !customerId && !busy && !error && (
         <ProgressDashboard
@@ -256,13 +232,11 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
         <Busy />
       ) : !journey ? (
         !error && (
-          <Notice
-            text={
-              staff && !customers.length
-                ? 'Chưa có học viên nào được phân công cho bạn.'
-                : 'Vui lòng chọn học viên để xem và ghi nhận tiến độ.'
-            }
-          />
+          staff && !customers.length ? (
+            <Notice text="Chưa có học viên nào được phân công cho bạn." />
+          ) : !staff ? (
+            <Notice text="Vui lòng chọn học viên để xem và ghi nhận tiến độ." />
+          ) : null
         )
       ) : (
         <>

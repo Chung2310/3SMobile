@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { api, ApiError } from '@/services/api/client';
@@ -9,7 +10,8 @@ import { asRecord, asRecords, readText } from '@/services/journey';
 import { MEASUREMENTS } from '@/services/progress';
 import { resolveImageUrl } from '@/services/imageUtils';
 import type { JsonRecord } from '@/types/domain';
-import { Button, Field, Notice, Picker, Sheet } from '../workouts/Controls';
+import { LibraryIcon } from '@/components/LibraryIcon';
+import { Button, Field, Notice, Picker } from '../workouts/Controls';
 import { ProgressNotice } from './ProgressNotice';
 
 function base64ToUint8Array(base64: string): Uint8Array {
@@ -278,6 +280,7 @@ export function SessionAttachments({
 
       {signing && (
         <Signature
+          defaultSignerName={readText(value, ['customerName', 'signerName'])}
           onClose={() => setSigning(false)}
           onSave={(signature) => {
             onChange({ ...value, customerSignature: signature });
@@ -339,85 +342,155 @@ function ProgressPhotoPreview({ localUri, remoteUri, label }: {
   );
 }
 function Signature({
+  defaultSignerName,
   onClose,
   onSave,
 }: {
+  defaultSignerName?: string;
   onClose: () => void;
   onSave: (value: JsonRecord) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const svg = useRef<Svg>(null);
   const [paths, setPaths] = useState<string[]>([]);
-  const [name, setName] = useState('');
-  const [width, setWidth] = useState(300);
+  const [layout, setLayout] = useState({ width: 300, height: 400 });
   const [error, setError] = useState('');
 
   return (
-    <Sheet title="Học viên ký xác nhận" onClose={onClose}>
-      <Notice text="Học viên tự ký trực tiếp trong khung bên dưới để xác nhận hoàn thành buổi tập." />
-      <Field
-        label="Họ và tên người ký"
-        placeholder="Nhập tên học viên..."
-        value={name}
-        onChange={setName}
-      />
+    <Modal
+      visible
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <View
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        style={styles.canvasContainer}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderTerminationRequest={() => false}
-        onResponderGrant={(e) => {
-          const { locationX: x, locationY: y } = e.nativeEvent;
-          setPaths((old) => [...old, `M${x},${y} l0.1,0.1`]);
-        }}
-        onResponderMove={(e) => {
-          const { locationX: x, locationY: y } = e.nativeEvent;
-          setPaths((old) =>
-            old.map((p, i) =>
-              i === old.length - 1
-                ? `${p} L${Math.max(0, Math.min(width, x))},${Math.max(0, Math.min(200, y))}`
-                : p
-            )
-          );
-        }}
+        style={[
+          styles.fullScreenSignatureContainer,
+          {
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}
       >
-        <Svg ref={svg} pointerEvents="none" width="100%" height={200} viewBox={`0 0 ${width} 200`}>
-          <Rect width={width} height={200} fill="#FFFFFF" />
-          {paths.map((d, i) => (
-            <Path key={i} d={d} stroke={colors.text} strokeWidth={2.5} fill="none" strokeLinecap="round" />
-          ))}
-        </Svg>
-      </View>
-      {!!error && <Notice error text={error} />}
-      <View style={styles.signatureActions}>
-        <View style={{ flex: 1 }}>
-          <Button secondary label="Xóa và ký lại" onPress={() => setPaths([])} />
+        {/* Header */}
+        <View style={styles.fullScreenSignatureHeader}>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureTitle}>
+              KÝ XÁC NHẬN BUỔI TẬP
+            </Text>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureSubtitle}>
+              Học viên ký trực tiếp vào khung bên dưới để xác nhận
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đóng"
+            onPress={onClose}
+            style={styles.fullScreenCloseButton}
+            hitSlop={8}
+          >
+            <LibraryIcon name="x" size={24} color={colors.text} />
+          </Pressable>
         </View>
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Xác nhận"
-            disabled={!paths.length}
-            onPress={() => {
-              try {
-                svg.current?.toDataURL((data) => {
-                  if (!data) {
-                    setError('Không đọc được chữ ký. Vui lòng ký lại.');
-                    return;
-                  }
-                  onSave({
-                    signatureUrl: `data:image/png;base64,${data}`,
-                    signedAt: new Date().toISOString(),
-                    signerName: name.trim(),
+
+        {/* Full-screen Canvas */}
+        <View
+          style={styles.fullScreenCanvasWrapper}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            if (width > 0 && height > 0) {
+              setLayout({ width, height });
+            }
+          }}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderTerminationRequest={() => false}
+          onResponderGrant={(e) => {
+            const { locationX: x, locationY: y } = e.nativeEvent;
+            setPaths((old) => [...old, `M${x.toFixed(1)},${y.toFixed(1)} l0.1,0.1`]);
+          }}
+          onResponderMove={(e) => {
+            const { locationX: x, locationY: y } = e.nativeEvent;
+            const clampedX = Math.max(0, Math.min(layout.width, x)).toFixed(1);
+            const clampedY = Math.max(0, Math.min(layout.height, y)).toFixed(1);
+            setPaths((old) =>
+              old.map((p, i) =>
+                i === old.length - 1
+                  ? `${p} L${clampedX},${clampedY}`
+                  : p
+              )
+            );
+          }}
+        >
+          <Svg
+            ref={svg}
+            pointerEvents="none"
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${layout.width} ${layout.height}`}
+          >
+            <Rect width={layout.width} height={layout.height} fill="#FFFFFF" />
+            {paths.map((d, i) => (
+              <Path
+                key={i}
+                d={d}
+                stroke={colors.text}
+                strokeWidth={3}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+          </Svg>
+
+          {paths.length === 0 && (
+            <View pointerEvents="none" style={styles.signaturePlaceholderContainer}>
+              <LibraryIcon name="edit-3" size={40} color={colors.textMuted} />
+              <Text style={styles.signaturePlaceholderText}>Ký tên tại đây</Text>
+            </View>
+          )}
+        </View>
+
+        {!!error && <Notice error text={error} />}
+
+        {/* Footer Actions */}
+        <View style={styles.fullScreenSignatureFooter}>
+          <View style={{ flex: 1 }}>
+            <Button
+              secondary
+              icon="rotate-ccw"
+              label="Xóa và ký lại"
+              disabled={paths.length === 0}
+              onPress={() => setPaths([])}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              icon="check"
+              label="Xác nhận"
+              disabled={!paths.length}
+              onPress={() => {
+                try {
+                  svg.current?.toDataURL((data) => {
+                    if (!data) {
+                      setError('Không đọc được chữ ký. Vui lòng ký lại.');
+                      return;
+                    }
+                    onSave({
+                      signatureUrl: `data:image/png;base64,${data}`,
+                      signedAt: new Date().toISOString(),
+                      signerName: defaultSignerName || '',
+                    });
                   });
-                });
-              } catch {
-                setError('Không xuất được chữ ký trên thiết bị này.');
-              }
-            }}
-          />
+                } catch {
+                  setError('Không xuất được chữ ký trên thiết bị này.');
+                }
+              }}
+            />
+          </View>
         </View>
       </View>
-    </Sheet>
+    </Modal>
   );
 }
 
@@ -489,16 +562,65 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
   },
-  canvasContainer: {
-    height: 200,
-    borderWidth: 1.5,
+  fullScreenSignatureContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  fullScreenSignatureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  fullScreenSignatureTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 0.5,
+  },
+  fullScreenSignatureSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  fullScreenCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  fullScreenCanvasWrapper: {
+    flex: 1,
+    borderWidth: 2,
     borderColor: colors.primary,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
+    position: 'relative',
   },
-  signatureActions: {
+  signaturePlaceholderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    opacity: 0.35,
+  },
+  signaturePlaceholderText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textMuted,
+  },
+  fullScreenSignatureFooter: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
+    paddingTop: 4,
   },
 });

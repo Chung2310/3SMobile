@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
-import { AppAlertModal, useAppAlert } from '../AppAlertModal';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerGoalData, InBodyRecordData } from '@/types/inbody';
 import { api } from '@/services/api/client';
 import { analyzeInBody } from '@/services/inbodyAnalytics';

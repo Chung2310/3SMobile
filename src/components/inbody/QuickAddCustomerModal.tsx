@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
-import { AppAlertModal, useAppAlert } from '../AppAlertModal';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import { createCustomer } from '@/services/customerService';
 
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: '90%',
     paddingTop: spacing.md,
     paddingBottom: Platform.OS === 'ios' ? 32 : spacing.md,

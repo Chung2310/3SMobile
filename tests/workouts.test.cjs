@@ -44,8 +44,8 @@ test('customer sees only published plans; deduplicates active and history', () =
   assert.deepEqual(customerPlans(null), []);
 });
 test('renders cardio and zero-weight prescriptions without strength-only fields', () => {
-  assert.ok(exerciseMetrics(exercise).some(([label, value]) => label === 'Mức tạ' && value === '0 kg'));
-  assert.deepEqual(exerciseMetrics({ trackingType: 'CARDIO', prescription: { durationMinutes: 20, distanceKm: 3 } }), [['Thời lượng', '20 phút'], ['Quãng đường', '3 km']]);
+  assert.ok(exerciseMetrics(exercise).some(([label, value]) => label === 'Weight' && value === '0 kg'));
+  assert.deepEqual(exerciseMetrics({ trackingType: 'CARDIO', prescription: { durationMinutes: 20, distanceKm: 3 } }), [['Duration', '20 min'], ['Distance', '3 km']]);
 });
 test('payload excludes server fields, synchronizes legacy values, keeps snapshots untouched', () => {
   const original = { ...plan, _id: 'id', status: 'PUBLISHED', sessions: [{ name: 'Buổi', exercises: [{ ...exercise, sets: 9, weight: '80', _id: 'nested' }] }] };

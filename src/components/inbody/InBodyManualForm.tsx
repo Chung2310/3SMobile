@@ -21,7 +21,7 @@ import { CustomerSelectModal } from '../CustomerSelectModal';
 import { InBodySegmentalInput } from './InBodySegmentalInput';
 import { InBodyMetricsFormFields, InBodyMetricsFormValues } from './InBodyMetricsFormFields';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
-import { AppAlertModal, useAppAlert } from '../AppAlertModal';
+import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 
 interface InBodyManualFormProps {
   visible: boolean;
@@ -45,7 +45,7 @@ export function InBodyManualForm({
   onCustomerCreated,
 }: InBodyManualFormProps) {
   const [submitting, setSubmitting] = useState(false);
-  const { alertConfig, showError, showWarning } = useAppAlert();
+  const { alertConfig, showError, showWarning, showSuccess } = useAppAlert();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showSegmental, setShowSegmental] = useState(false);
@@ -325,8 +325,14 @@ export function InBodyManualForm({
         saved = await inbodyService.createRecord(payload);
       }
 
-      onSaved(saved);
-      onClose();
+      showSuccess(
+        editingRecord?._id ? 'Đã cập nhật phiếu InBody!' : 'Đã lưu phiếu InBody thành công!',
+        'Thành công',
+        () => {
+          onSaved(saved);
+          onClose();
+        }
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể lưu phiếu InBody.';
       showError(msg);

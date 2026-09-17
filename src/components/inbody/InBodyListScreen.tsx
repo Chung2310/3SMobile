@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '@/theme';
