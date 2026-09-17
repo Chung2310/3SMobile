@@ -29,17 +29,71 @@ export class ApiError extends Error {
   }
 }
 
-function getMessage(body: unknown, fallback: string): string {
-  if (!body || typeof body !== 'object') return fallback;
+export const DEFAULT_SERVER_ERROR_MESSAGE = 'Có sự cố không mong muốn từ máy chủ ! Vui lòng thử lại sau.';
+
+function isTechnicalOrGenericError(msg: string): boolean {
+  if (!msg || typeof msg !== 'string') return true;
+  const trimmed = msg.trim();
+  const lower = trimmed.toLowerCase();
+
+  // HTML response (thường từ proxy Nginx, Cloudflare, Express khi 504, 502, 500, 404...)
+  if (lower.startsWith('<!doctype') || lower.startsWith('<html') || lower.includes('</html>') || lower.includes('<body')) {
+    return true;
+  }
+
+  // Các cụm từ lỗi hệ thống / HTTP kỹ thuật
+  const technicalTerms = [
+    'internal server error',
+    'gateway timeout',
+    'gateway time-out',
+    'bad gateway',
+    'service unavailable',
+    'cannot get',
+    'cannot post',
+    'cannot put',
+    'cannot delete',
+    'unhandled exception',
+    'econnrefused',
+    'etimedout',
+    'request failed with status code',
+    'failed to fetch',
+    'network request failed',
+  ];
+
+  if (technicalTerms.some((term) => lower.includes(term))) {
+    return true;
+  }
+
+  // Chứa mã lỗi HTTP như 500, 502, 503, 504, 404
+  if (/\b(400|404|500|502|503|504)\b/.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+}
+
+function getMessage(
+  body: unknown,
+  fallback: string = DEFAULT_SERVER_ERROR_MESSAGE,
+  _status?: number
+): string {
+  if (!body || typeof body !== 'object') {
+    if (typeof body === 'string' && !isTechnicalOrGenericError(body) && body.trim().length > 0 && body.length < 200) {
+      return body.trim();
+    }
+    return fallback;
+  }
   const record = body as ApiEnvelope<unknown>;
 
   // 1. Nếu backend trả về danh sách chi tiết lỗi kiểm tra dữ liệu (Joi / validation issues)
   if (Array.isArray(record.errors) && record.errors.length > 0) {
     const errorDetails = record.errors
       .map((err: any) => {
-        if (typeof err === 'string') return err;
+        if (typeof err === 'string' && !isTechnicalOrGenericError(err)) return err;
         if (err && typeof err === 'object') {
-          if (err.message && typeof err.message === 'string') return err.message;
+          if (err.message && typeof err.message === 'string' && !isTechnicalOrGenericError(err.message)) {
+            return err.message;
+          }
           if (err.field) return `Trường "${err.field}" không hợp lệ.`;
         }
         return null;
@@ -55,8 +109,8 @@ function getMessage(body: unknown, fallback: string): string {
   if (record.errors && typeof record.errors === 'object' && !Array.isArray(record.errors)) {
     const errorDetails = Object.entries(record.errors as Record<string, unknown>)
       .map(([field, val]) => {
-        if (typeof val === 'string') return val;
-        if (val && typeof val === 'object' && (val as any).message) {
+        if (typeof val === 'string' && !isTechnicalOrGenericError(val)) return val;
+        if (val && typeof val === 'object' && (val as any).message && !isTechnicalOrGenericError((val as any).message)) {
           return (val as any).message;
         }
         return `Trường "${field}" không hợp lệ.`;
@@ -68,16 +122,19 @@ function getMessage(body: unknown, fallback: string): string {
     }
   }
 
-  // 3. Nếu message từ server cụ thể và không phải câu thông báo chung chung
+  // 3. Nếu message từ server cụ thể và không phải câu thông báo kỹ thuật / chung chung
+  const candidate = record.message || record.error;
   if (
-    record.message &&
-    record.message !== 'Dữ liệu gửi lên không hợp lệ.' &&
-    record.message !== 'Validation Error'
+    candidate &&
+    typeof candidate === 'string' &&
+    candidate !== 'Dữ liệu gửi lên không hợp lệ.' &&
+    candidate !== 'Validation Error' &&
+    !isTechnicalOrGenericError(candidate)
   ) {
-    return record.message;
+    return candidate;
   }
 
-  return record.message || record.error || fallback;
+  return fallback;
 }
 
 async function parseBody(response: Response): Promise<unknown> {
@@ -124,9 +181,8 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
       headers,
     });
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(`[API Fetch Error] ${init.method || 'GET'} ${targetUrl}:`, err);
-    throw new ApiError(`Không thể kết nối máy chủ (${errorMsg}) tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`, 0);
+    throw new ApiError(DEFAULT_SERVER_ERROR_MESSAGE, 0);
   }
 
   // Tự động gia hạn phiên đăng nhập ngầm nếu gặp 401 và có refreshToken
@@ -162,7 +218,8 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
   const body = await parseBody(response);
   if (!response.ok) {
     const details = body && typeof body === 'object' ? (body as ApiEnvelope<unknown>) : undefined;
-    throw new ApiError(getMessage(body, `Yêu cầu thất bại (${response.status}).`), response.status, details);
+    const finalMessage = getMessage(body, DEFAULT_SERVER_ERROR_MESSAGE, response.status);
+    throw new ApiError(finalMessage, response.status, details);
   }
 
   if (unwrap && body && typeof body === 'object' && 'data' in body) {

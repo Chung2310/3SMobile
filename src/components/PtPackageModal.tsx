@@ -25,18 +25,6 @@ interface PtPackageModalProps {
 
 const getTodayIso = (): string => new Date().toISOString().slice(0, 10);
 
-const calculateEndDate = (startDateIso: string, sessionsCount: number): string => {
-  if (!startDateIso || isNaN(Date.parse(startDateIso))) return '';
-  const sessions = Number(sessionsCount) || 0;
-  if (sessions <= 0) return '';
-  // Chuẩn phòng gym: 12 buổi = 30 ngày (1 tháng), 24 buổi = 60 ngày...
-  const durationDays = Math.max(30, Math.ceil(sessions / 12) * 30);
-  const start = new Date(startDateIso);
-  const end = new Date(start);
-  end.setDate(end.getDate() + durationDays);
-  return end.toISOString().slice(0, 10);
-};
-
 const formatDateDisplay = (isoStr?: string): string => {
   if (!isoStr) return '—';
   const d = new Date(isoStr);
@@ -56,11 +44,13 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const [name, setName] = useState('');
   const [totalSessions, setTotalSessions] = useState('24');
   const [startDate, setStartDate] = useState(getTodayIso());
-  const [endDate, setEndDate] = useState(() => calculateEndDate(getTodayIso(), 24));
+  const [endDate, setEndDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeletePkg, setPendingDeletePkg] = useState<PtPackage | null>(null);
 
   const customerId = customer?.id;
 
@@ -81,10 +71,10 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     setShowAddForm(false);
     setName('');
     setTotalSessions('24');
-    const today = getTodayIso();
-    setStartDate(today);
-    setEndDate(calculateEndDate(today, 24));
+    setStartDate(getTodayIso());
+    setEndDate('');
     setFormError(null);
+    setPendingDeletePkg(null);
     onClose();
   };
 
@@ -115,13 +105,12 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   const handleApplyTemplate = (templateName: string, sessions: number) => {
     setName(templateName);
     setTotalSessions(String(sessions));
-    setEndDate(calculateEndDate(startDate, sessions));
+    if (formError) setFormError(null);
   };
 
   const handleChangeSessions = (val: string) => {
-    const num = parseInt(val, 10) || 0;
     setTotalSessions(val);
-    setEndDate(calculateEndDate(startDate, num));
+    if (formError) setFormError(null);
   };
 
   const handleCreatePackage = async () => {
@@ -137,6 +126,10 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     }
     if (!startDate || !endDate) {
       setFormError('Vui lòng chọn ngày bắt đầu và kết thúc.');
+      return;
+    }
+    if (endDate < startDate) {
+      setFormError('Ngày kết thúc không được trước ngày bắt đầu.');
       return;
     }
 
@@ -161,12 +154,14 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     }
   };
 
-  const handleDeletePackage = async (pkgId: string) => {
-    if (!customerId) return;
+  const handleDeletePackage = async () => {
+    if (!customerId || !pendingDeletePkg) return;
+    const pkgId = pendingDeletePkg._id || (pendingDeletePkg as any).id;
     try {
       setDeletingId(pkgId);
       await deleteCustomerPackage(customerId, pkgId);
       setPackages((prev) => prev.filter((p) => (p._id || (p as any).id) !== pkgId));
+      setPendingDeletePkg(null);
     } catch {
       // Ignore
     } finally {
@@ -272,19 +267,19 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Khởi Động 12 Buổi', 12)}
                   >
-                    <Text style={styles.templatePillText}>12 buổi (1 th)</Text>
+                    <Text style={styles.templatePillText}>12 buổi</Text>
                   </Pressable>
                   <Pressable
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Tăng Cơ 24 Buổi', 24)}
                   >
-                    <Text style={styles.templatePillText}>24 buổi (2 th)</Text>
+                    <Text style={styles.templatePillText}>24 buổi</Text>
                   </Pressable>
                   <Pressable
                     style={styles.templatePill}
                     onPress={() => handleApplyTemplate('Gói Chuyên Sâu 36 Buổi', 36)}
                   >
-                    <Text style={styles.templatePillText}>36 buổi (3 th)</Text>
+                    <Text style={styles.templatePillText}>36 buổi</Text>
                   </Pressable>
                 </View>
 
@@ -336,12 +331,21 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                   </View>
 
                   <View style={[styles.fieldWrap, { flex: 1 }]}>
-                    <Text style={styles.fieldLabel}>Ngày kết thúc (dự kiến)</Text>
-                    <View style={[styles.input, styles.readOnlyInput]}>
-                      <Text style={styles.readOnlyText}>
-                        {formatDateDisplay(endDate)}
+                    <Text style={styles.fieldLabel}>Ngày kết thúc</Text>
+                    <Pressable
+                      style={styles.datePickerTrigger}
+                      onPress={() => setShowEndDatePicker(true)}
+                    >
+                      <Feather name="calendar" size={16} color="#0284C7" />
+                      <Text
+                        style={[
+                          styles.datePickerText,
+                          !endDate && { color: colors.textMuted },
+                        ]}
+                      >
+                        {endDate ? formatDateDisplay(endDate) : 'Chọn ngày'}
                       </Text>
-                    </View>
+                    </Pressable>
                   </View>
                 </View>
 
@@ -385,7 +389,6 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
               packages.map((pkg) => {
                 const pkgId = pkg._id || (pkg as any).id;
                 const badge = getStatusBadge(pkg.status);
-                const isDeleting = deletingId === pkgId;
                 const remaining = pkg.remainingSessions ?? pkg.totalSessions;
 
                 return (
@@ -423,14 +426,10 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                       <Pressable
                         style={styles.deletePkgBtn}
                         hitSlop={8}
-                        onPress={() => handleDeletePackage(pkgId)}
-                        disabled={isDeleting}
+                        onPress={() => setPendingDeletePkg(pkg)}
+                        accessibilityLabel={`Xóa gói tập ${pkg.name}`}
                       >
-                        {isDeleting ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
-                        ) : (
-                          <Feather name="trash-2" size={15} color="#EF4444" />
-                        )}
+                        <Feather name="trash-2" size={15} color="#EF4444" />
                       </Pressable>
                     </View>
                   </View>
@@ -447,11 +446,87 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
             maxDate={null}
             onSelect={(iso) => {
               setStartDate(iso);
-              const num = parseInt(totalSessions, 10) || 0;
-              setEndDate(calculateEndDate(iso, num));
+              if (formError) setFormError(null);
             }}
             onClose={() => setShowStartDatePicker(false)}
           />
+
+          {/* Date Picker Modal for End Date */}
+          <DatePickerModal
+            visible={showEndDatePicker}
+            value={endDate || startDate}
+            title="Chọn ngày kết thúc"
+            maxDate={null}
+            onSelect={(iso) => {
+              setEndDate(iso);
+              if (formError) setFormError(null);
+            }}
+            onClose={() => setShowEndDatePicker(false)}
+          />
+
+          {/* Popup xác nhận xóa gói tập PT */}
+          {pendingDeletePkg && (
+            <View style={styles.confirmOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => {
+                  if (!deletingId) setPendingDeletePkg(null);
+                }}
+                accessibilityLabel="Hủy xóa"
+              />
+              <View style={styles.confirmCard}>
+                <Pressable
+                  style={styles.confirmCloseBtn}
+                  onPress={() => {
+                    if (!deletingId) setPendingDeletePkg(null);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Đóng"
+                >
+                  <Feather name="x" size={18} color="#64748B" />
+                </Pressable>
+
+                <View style={styles.confirmIconWrap}>
+                  <Feather name="alert-triangle" size={26} color="#EF4444" />
+                </View>
+
+                <Text style={styles.confirmTitle}>Xác nhận xóa gói tập</Text>
+                <Text style={styles.confirmDesc}>
+                  Bạn có chắc chắn muốn xóa gói{' '}
+                  <Text style={styles.confirmHighlightName}>&quot;{pendingDeletePkg.name}&quot;</Text>{' '}
+                  của học viên không? Thao tác này không thể hoàn tác.
+                </Text>
+
+                <View style={styles.confirmActionsRow}>
+                  <Pressable
+                    style={styles.confirmCancelBtn}
+                    onPress={() => setPendingDeletePkg(null)}
+                    disabled={!!deletingId}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.confirmCancelText}>Hủy</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.confirmDeleteBtn, !!deletingId && { opacity: 0.7 }]}
+                    onPress={handleDeletePackage}
+                    disabled={!!deletingId}
+                    hitSlop={8}
+                  >
+                    {deletingId ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Feather name="trash-2" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.confirmDeleteText}>Xóa gói tập</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -754,5 +829,103 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    zIndex: 9999,
+  },
+  confirmCard: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  confirmCloseBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  confirmIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  confirmTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  confirmHighlightName: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  confirmActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  confirmDeleteBtn: {
+    flex: 1.2,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  confirmDeleteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
