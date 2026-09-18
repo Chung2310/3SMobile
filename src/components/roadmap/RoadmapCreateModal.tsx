@@ -728,14 +728,6 @@ export function RoadmapCreateModal({
                     <Ionicons name="sparkles" size={18} color="#FFFFFF" />
                     <Text style={styles.btnAiGenerateText}>Tạo Lộ trình bằng AI</Text>
                   </Pressable>
-
-                  <Pressable
-                    onPress={handleApplyInstantSportsScience}
-                    style={({ pressed }) => [styles.btnInstantGenerate, pressed && { opacity: 0.85 }]}
-                  >
-                    <Ionicons name="flash-outline" size={16} color={colors.primary} />
-                    <Text style={styles.btnInstantGenerateText}>Mẫu Khoa học Thể thao (Nhanh)</Text>
-                  </Pressable>
                 </View>
               )}
             </View>
@@ -1371,22 +1363,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
-  },
-  btnInstantGenerate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#EEF2FF',
-    borderRadius: radius.md,
-    paddingVertical: 11,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-  },
-  btnInstantGenerateText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
   },
   draftPreviewSection: {
     backgroundColor: '#FFFFFF',
