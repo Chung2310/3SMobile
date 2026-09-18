@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/services/api/client';
 import { display, recordId, type AdminRecord } from '@/services/adminResources';
@@ -59,6 +58,35 @@ function AdminForceTransferModalInner({
   onSuccess: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const [pts, setPts] = useState<AdminRecord[]>([]);
+  const [loadingPts, setLoadingPts] = useState(true);
+  const [toPtId, setToPtId] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [ptPickerOpen, setPtPickerOpen] = useState(false);
+  const [ptSearch, setPtSearch] = useState('');
+  const lock = useRef(false);
+
+  // Fetch active PT list
+  useEffect(() => {
+    let mounted = true;
+    api.getPage<AdminRecord>('/api/users?role=PT&status=ACTIVE&limit=100')
+      .then((res) => {
+        if (!mounted) return;
+        setPts(res.data || []);
+      })
+      .catch(() => {
+        // bỏ qua lỗi
+      })
+      .finally(() => {
+        if (mounted) setLoadingPts(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const currentPtId = () => {
     if (!customer.assignedPtId) return '';
     if (typeof customer.assignedPtId === 'object') {
@@ -68,42 +96,18 @@ function AdminForceTransferModalInner({
   };
 
   const currentPtName = () => {
-    if (!customer.assignedPtId) return 'Chưa có HLV';
+    if (!customer.assignedPtId) return 'Chưa phân công';
     if (typeof customer.assignedPtId === 'object') {
       const p = customer.assignedPtId as AdminRecord;
       return String(p.fullName || p.username || 'HLV');
     }
+    const found = pts.find((p) => recordId(p) === customer.assignedPtId);
+    if (found) return String(found.fullName || found.username);
     return String(customer.assignedPtId);
   };
 
-  const [toPtId, setToPtId] = useState('');
-  const [reason, setReason] = useState('');
-  const [pts, setPts] = useState<AdminRecord[]>([]);
-  const [loadingPts, setLoadingPts] = useState(true);
-  const [ptPickerOpen, setPtPickerOpen] = useState(false);
-  const [ptSearch, setPtSearch] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const lock = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-    api.getPage<AdminRecord>('/api/users?role=PT&status=ACTIVE&limit=100')
-      .then((res) => {
-        if (!mounted) return;
-        setPts(res.data || []);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (mounted) setLoadingPts(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const selectedPtName = () => {
-    if (!toPtId) return 'Bấm để chọn HLV tiếp nhận…';
+    if (!toPtId) return 'Chưa chọn HLV';
     const found = pts.find((p) => recordId(p) === toPtId);
     if (found) return String(found.fullName || found.username);
     return toPtId;
@@ -114,7 +118,8 @@ function AdminForceTransferModalInner({
     if (!q) return true;
     return (
       String(p.fullName || '').toLowerCase().includes(q) ||
-      String(p.username || '').toLowerCase().includes(q)
+      String(p.username || '').toLowerCase().includes(q) ||
+      String(p.phone || '').includes(q)
     );
   });
 
@@ -123,15 +128,17 @@ function AdminForceTransferModalInner({
     setError('');
 
     if (!toPtId) {
-      setError('Vui lòng chọn HLV mới tiếp nhận khách hàng.');
+      setError('Vui lòng chọn HLV tiếp nhận mới.');
       return;
     }
+
     if (toPtId === currentPtId()) {
-      setError('HLV mới phải khác HLV hiện tại.');
+      setError('HLV mới phải khác HLV đang phụ trách hiện tại.');
       return;
     }
+
     if (!reason.trim()) {
-      setError('Vui lòng nhập lý do chuyển giao.');
+      setError('Vui lòng nhập lý do điều chuyển.');
       return;
     }
 
@@ -182,7 +189,7 @@ function AdminForceTransferModalInner({
               style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
               hitSlop={8}
             >
-              <Feather name="x" size={20} color={colors.text} />
+              <Text style={styles.closeBtnText}>Đóng</Text>
             </Pressable>
           </View>
 
@@ -193,7 +200,6 @@ function AdminForceTransferModalInner({
           >
             {error ? (
               <View style={styles.errorNotice}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorNoticeText}>{error}</Text>
               </View>
             ) : null}
@@ -203,7 +209,6 @@ function AdminForceTransferModalInner({
               <View style={styles.ptCompareCol}>
                 <Text style={styles.ptCompareLabel}>HLV hiện tại</Text>
                 <View style={styles.ptCurrentBadge}>
-                  <Feather name="user" size={13} color="#64748B" />
                   <Text style={styles.ptCurrentText} numberOfLines={1}>
                     {currentPtName()}
                   </Text>
@@ -211,13 +216,12 @@ function AdminForceTransferModalInner({
               </View>
 
               <View style={styles.ptCompareArrow}>
-                <Feather name="arrow-right" size={18} color={colors.primary} />
+                <Text style={styles.arrowText}>→</Text>
               </View>
 
               <View style={styles.ptCompareCol}>
                 <Text style={styles.ptCompareLabel}>HLV tiếp nhận mới</Text>
                 <View style={[styles.ptCurrentBadge, toPtId ? styles.ptTargetActive : null]}>
-                  <Feather name="user-check" size={13} color={toPtId ? colors.primary : '#94A3B8'} />
                   <Text
                     style={[styles.ptCurrentText, toPtId ? { color: colors.primary, fontWeight: '700' } : null]}
                     numberOfLines={1}
@@ -240,7 +244,7 @@ function AdminForceTransferModalInner({
                 <Text style={[styles.selectBtnText, !toPtId && { color: '#94A3B8' }]}>
                   {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
                 </Text>
-                <Feather name="chevron-down" size={18} color="#64748B" />
+                <Text style={styles.selectBtnAction}>Chọn HLV</Text>
               </Pressable>
             </View>
 
@@ -261,7 +265,6 @@ function AdminForceTransferModalInner({
             </View>
 
             <View style={styles.noticeBox}>
-              <Feather name="info" size={15} color={colors.primary} />
               <Text style={styles.noticeBoxText}>
                 Lệnh chuyển giao quyền lực quản lý học viên có hiệu lực ngay lập tức. Toàn bộ lịch tập, hồ sơ InBody và tiến độ sẽ được bàn giao cho HLV mới.
               </Text>
@@ -290,10 +293,7 @@ function AdminForceTransferModalInner({
               {busy ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <>
-                  <Feather name="repeat" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitBtnText}>Xác nhận điều chuyển</Text>
-                </>
+                <Text style={styles.submitBtnText}>Xác nhận điều chuyển</Text>
               )}
             </Pressable>
           </View>
@@ -313,12 +313,11 @@ function AdminForceTransferModalInner({
               <View style={styles.ptPickerHeader}>
                 <Text style={styles.ptPickerTitle}>Chọn HLV tiếp nhận</Text>
                 <Pressable onPress={() => setPtPickerOpen(false)} hitSlop={8}>
-                  <Feather name="x" size={20} color={colors.text} />
+                  <Text style={styles.ptPickerCloseText}>Đóng</Text>
                 </Pressable>
               </View>
 
               <View style={styles.searchBox}>
-                <Feather name="search" size={16} color="#64748B" />
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Tìm theo tên HLV..."
@@ -328,7 +327,7 @@ function AdminForceTransferModalInner({
                 />
                 {ptSearch ? (
                   <Pressable onPress={() => setPtSearch('')} hitSlop={6}>
-                    <Feather name="x" size={14} color="#64748B" />
+                    <Text style={styles.clearSearchText}>Xóa</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -372,7 +371,9 @@ function AdminForceTransferModalInner({
                         </Text>
                       </View>
                       {isSelected && (
-                        <Feather name="check" size={18} color={colors.primary} />
+                        <View style={styles.ptSelectedBadge}>
+                          <Text style={styles.ptSelectedBadgeText}>Đã chọn</Text>
+                        </View>
                       )}
                     </Pressable>
                   );
@@ -426,30 +427,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  closeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   bodyContent: {
     paddingVertical: 16,
     gap: 14,
   },
   errorNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
     borderRadius: 12,
     padding: 12,
-    gap: 8,
   },
   errorNoticeText: {
-    flex: 1,
     fontSize: 13,
     color: '#EF4444',
   },
@@ -475,7 +477,6 @@ const styles = StyleSheet.create({
   ptCurrentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -496,6 +497,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  arrowText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
   },
   fieldGroup: {
     gap: 6,
@@ -523,6 +529,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  selectBtnAction: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
@@ -540,17 +553,13 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   noticeBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
     borderRadius: 12,
     padding: 12,
-    gap: 8,
   },
   noticeBoxText: {
-    flex: 1,
     fontSize: 12,
     color: '#0369A1',
     lineHeight: 17,
@@ -580,7 +589,6 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.primary,
     borderRadius: 14,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -619,6 +627,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
+  ptPickerCloseText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -629,12 +644,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 42,
     marginBottom: 12,
-    gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: colors.text,
+  },
+  clearSearchText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    paddingHorizontal: 4,
   },
   ptListScroll: {
     maxHeight: 320,
@@ -684,5 +704,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 1,
+  },
+  ptSelectedBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ptSelectedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

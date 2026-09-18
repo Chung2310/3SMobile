@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/services/api/client';
 import { formPayload, recordId, resources, type AdminRecord } from '@/services/adminResources';
@@ -66,11 +65,13 @@ function CustomerAdminFormModalInner({
   const [fullName, setFullName] = useState(() => String(item?.fullName || ''));
   const [phone, setPhone] = useState(() => String(item?.phone || ''));
   const [email, setEmail] = useState(() => String(item?.email || ''));
+  const [dateOfBirth, setDateOfBirth] = useState(() => (item?.dateOfBirth ? String(item.dateOfBirth).slice(0, 10) : ''));
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>(() => (item?.gender as any) || 'MALE');
   const [height, setHeight] = useState(() => (item?.height !== undefined && item?.height !== null ? String(item.height) : ''));
   const [initialWeight, setInitialWeight] = useState(() => (item?.initialWeight !== undefined && item?.initialWeight !== null ? String(item.initialWeight) : ''));
   const [initialGoal, setInitialGoal] = useState(() => String(item?.initialGoal || ''));
   const [medicalNotes, setMedicalNotes] = useState(() => String(item?.medicalNotes || ''));
+  const [internalNotes, setInternalNotes] = useState(() => String(item?.internalNotes || ''));
   const [status, setStatus] = useState<'ACTIVE' | 'LEAD' | 'INACTIVE'>(() => (item?.status as any) || 'ACTIVE');
 
   // Assigned PT
@@ -170,11 +171,13 @@ function CustomerAdminFormModalInner({
       phone,
       email,
       assignedPtId,
+      dateOfBirth,
       gender,
       height,
       initialWeight,
       initialGoal,
       medicalNotes,
+      internalNotes,
       status,
     };
 
@@ -193,55 +196,51 @@ function CustomerAdminFormModalInner({
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.modalOverlay}
-    >
+    <View style={styles.modalOverlay}>
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={handleCloseAttempt}
       />
 
-      <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <View style={styles.sheetHandle} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardContainer}
+      >
+        <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {/* Header */}
+          <View style={styles.sheetHeader}>
+            <View style={styles.headerTitleWrap}>
+              <Text style={styles.headerTitle}>
+                {editing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
+              </Text>
+              <Text style={styles.headerSub}>
+                {editing
+                  ? (item?.fullName
+                      ? `Học viên: ${String(item.fullName)}`
+                      : item?.phone
+                      ? `SĐT: ${String(item.phone)}`
+                      : 'Cập nhật thông tin hồ sơ khách hàng')
+                  : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
+              </Text>
+            </View>
 
-        {/* Header */}
-        <View style={styles.sheetHeader}>
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>
-              {editing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
-            </Text>
-            <Text style={styles.headerSub}>
-              {editing
-                ? (item?.fullName
-                    ? `Học viên: ${String(item.fullName)}`
-                    : item?.phone
-                    ? `SĐT: ${String(item.phone)}`
-                    : 'Cập nhật thông tin hồ sơ khách hàng')
-                : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
-            </Text>
+            <Pressable
+              onPress={handleCloseAttempt}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
+              hitSlop={8}
+            >
+              <Text style={styles.closeBtnText}>Đóng</Text>
+            </Pressable>
           </View>
 
-          <Pressable
-            onPress={handleCloseAttempt}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
-            hitSlop={8}
-            accessibilityLabel="Đóng"
+          {/* Form Body */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.formScrollContent}
           >
-            <Feather name="x" size={18} color={colors.text} />
-          </Pressable>
-        </View>
-
-        {/* Form Body */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={styles.formScrollView}
-          contentContainerStyle={styles.formScrollContent}
-        >
-          {error ? (
-            <View style={styles.errorNotice}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+            {error ? (
+              <View style={styles.errorNotice}>
                 <Text style={styles.errorNoticeText}>{error}</Text>
               </View>
             ) : null}
@@ -249,7 +248,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 1: THÔNG TIN CÁ NHÂN */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="user" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
               </View>
 
@@ -305,6 +303,21 @@ function CustomerAdminFormModalInner({
                 </View>
               </View>
 
+              {/* Ngày sinh */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Ngày sinh (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ví dụ: 1995-10-24"
+                  placeholderTextColor="#94A3B8"
+                  value={dateOfBirth}
+                  onChangeText={(val) => {
+                    setDateOfBirth(val);
+                    setDirty(true);
+                  }}
+                />
+              </View>
+
               {/* Giới tính */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Giới tính</Text>
@@ -344,7 +357,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 2: HLV PHỤ TRÁCH & TRẠNG THÁI */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="shield" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>HLV phụ trách & Trạng thái</Text>
               </View>
 
@@ -357,13 +369,10 @@ function CustomerAdminFormModalInner({
                   onPress={() => setPtSelectorOpen(true)}
                   style={styles.ptSelectBtn}
                 >
-                  <View style={styles.ptSelectInfo}>
-                    <Feather name="user-check" size={16} color={colors.primary} />
-                    <Text style={styles.ptSelectText}>
-                      {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
-                    </Text>
-                  </View>
-                  <Feather name="chevron-down" size={18} color="#64748B" />
+                  <Text style={styles.ptSelectText} numberOfLines={1}>
+                    {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
+                  </Text>
+                  <Text style={styles.ptSelectBtnAction}>Chọn HLV</Text>
                 </Pressable>
               </View>
 
@@ -415,7 +424,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 3: CHỈ SỐ THỂ TRẠNG & MỤC TIÊU */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="activity" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Thể trạng & Mục tiêu</Text>
               </View>
 
@@ -482,6 +490,22 @@ function CustomerAdminFormModalInner({
                   numberOfLines={2}
                 />
               </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Ghi chú nội bộ</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Ghi chú nội bộ dành cho HLV và Admin..."
+                  placeholderTextColor="#94A3B8"
+                  value={internalNotes}
+                  onChangeText={(val) => {
+                    setInternalNotes(val);
+                    setDirty(true);
+                  }}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
             </View>
           </ScrollView>
 
@@ -510,16 +534,14 @@ function CustomerAdminFormModalInner({
               {busy ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <>
-                  <Feather name="check" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitBtnText}>
-                    {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
-                  </Text>
-                </>
+                <Text style={styles.submitBtnText}>
+                  {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                </Text>
               )}
             </Pressable>
           </View>
         </View>
+      </KeyboardAvoidingView>
 
       {/* PT SELECTOR MODAL */}
       {ptSelectorOpen && (
@@ -537,12 +559,11 @@ function CustomerAdminFormModalInner({
                   onPress={() => setPtSelectorOpen(false)}
                   hitSlop={8}
                 >
-                  <Feather name="x" size={20} color={colors.text} />
+                  <Text style={styles.ptPickerCloseText}>Đóng</Text>
                 </Pressable>
               </View>
 
               <View style={styles.ptPickerSearch}>
-                <Feather name="search" size={16} color="#64748B" />
                 <TextInput
                   style={styles.ptPickerSearchInput}
                   placeholder="Tìm HLV theo tên, username..."
@@ -551,8 +572,8 @@ function CustomerAdminFormModalInner({
                   onChangeText={setPtSearch}
                 />
                 {ptSearch ? (
-                  <Pressable onPress={() => setPtSearch('')} hitSlop={6}>
-                    <Feather name="x" size={14} color="#64748B" />
+                  <Pressable onPress={() => setPtSearch('')} hitSlop={6} style={styles.clearSearchBtn}>
+                    <Text style={styles.clearSearchText}>Xóa</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -589,7 +610,9 @@ function CustomerAdminFormModalInner({
                           <Text style={styles.ptPickerUser}>@{String(pt.username || '')} · {String(pt.phone || 'Chưa có SĐT')}</Text>
                         </View>
                         {isSelected && (
-                          <Feather name="check" size={18} color={colors.primary} />
+                          <View style={styles.ptPickerCheckBadge}>
+                            <Text style={styles.ptPickerCheckText}>Đã chọn</Text>
+                          </View>
                         )}
                       </Pressable>
                     );
@@ -611,9 +634,6 @@ function CustomerAdminFormModalInner({
         >
           <View style={styles.subModalOverlay}>
             <View style={styles.discardCard}>
-              <View style={styles.discardIcon}>
-                <Ionicons name="alert" size={24} color="#EF4444" />
-              </View>
               <Text style={styles.discardTitle}>Hủy thay đổi?</Text>
               <Text style={styles.discardDesc}>
                 Các thông tin bạn vừa nhập sẽ bị mất và không thể khôi phục.
@@ -639,7 +659,7 @@ function CustomerAdminFormModalInner({
           </View>
         </Modal>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -649,32 +669,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'flex-end',
   },
+  keyboardContainer: {
+    maxHeight: '92%',
+  },
   sheetContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '90%',
-    paddingTop: 8,
-    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingHorizontal: 20,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
   },
-  sheetHandle: {
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#CBD5E1',
-    alignSelf: 'center',
-    marginBottom: 8,
-  },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 10,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -682,75 +696,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
   },
   headerSub: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textMuted,
     marginTop: 2,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 10,
+    marginLeft: 12,
   },
-  formScrollView: {
-    flexShrink: 1,
+  closeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   formScrollContent: {
-    paddingVertical: 12,
-    gap: 12,
+    paddingVertical: 16,
+    gap: 16,
   },
   errorNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    borderRadius: 10,
-    padding: 10,
-    gap: 8,
+    borderRadius: 12,
+    padding: 12,
   },
   errorNoticeText: {
-    flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     color: '#EF4444',
   },
   formSection: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
-    gap: 10,
+    padding: 14,
+    gap: 12,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   fieldGroup: {
-    gap: 4,
+    gap: 6,
   },
   fieldRow: {
     flexDirection: 'row',
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#334155',
   },
@@ -758,21 +767,20 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   textInput: {
-    height: 44,
+    height: 46,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 14,
     color: colors.text,
   },
   textArea: {
-    height: 68,
-    paddingTop: 8,
-    paddingBottom: 8,
+    height: 76,
+    paddingTop: 10,
+    paddingBottom: 10,
     textAlignVertical: 'top',
-    fontSize: 13,
   },
   genderRow: {
     flexDirection: 'row',
@@ -780,11 +788,11 @@ const styles = StyleSheet.create({
   },
   genderPill: {
     flex: 1,
-    height: 38,
+    height: 40,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -793,7 +801,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
   },
   genderPillText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -802,26 +810,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ptSelectBtn: {
-    height: 44,
+    height: 48,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  ptSelectInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
   ptSelectText: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  ptSelectBtnAction: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   statusRow: {
     flexDirection: 'row',
@@ -829,58 +838,57 @@ const styles = StyleSheet.create({
   },
   statusPill: {
     flex: 1,
-    height: 38,
+    height: 42,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 8,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 6,
     paddingHorizontal: 4,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   statusPillText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
   sheetFooter: {
     flexDirection: 'row',
-    gap: 10,
-    paddingTop: 10,
+    gap: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   cancelBtn: {
     flex: 1,
-    height: 44,
+    height: 48,
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtnText: {
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '600',
     color: '#475569',
   },
   submitBtn: {
     flex: 2,
-    height: 44,
+    height: 48,
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    flexDirection: 'row',
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnText: {
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -890,14 +898,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
   },
   ptPickerCard: {
     width: '100%',
     maxHeight: '80%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    padding: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -908,12 +916,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   ptPickerTitle: {
-    fontSize: 14.5,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
+  },
+  ptPickerCloseText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   ptPickerSearch: {
     flexDirection: 'row',
@@ -921,34 +936,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 40,
-    marginBottom: 10,
-    gap: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    marginBottom: 12,
   },
   ptPickerSearchInput: {
     flex: 1,
-    fontSize: 12.5,
+    fontSize: 14,
     color: colors.text,
   },
+  clearSearchBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  clearSearchText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
   ptPickerList: {
-    maxHeight: 300,
+    maxHeight: 320,
   },
   ptPickerEmpty: {
-    paddingVertical: 20,
+    paddingVertical: 24,
     alignItems: 'center',
   },
   ptPickerEmptyText: {
-    fontSize: 12.5,
+    fontSize: 14,
     color: colors.textMuted,
   },
   ptPickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     marginBottom: 6,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -959,16 +982,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
   },
   ptPickerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   ptPickerAvatarText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.primary,
   },
@@ -976,21 +999,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ptPickerName: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
   ptPickerUser: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textMuted,
     marginTop: 1,
+  },
+  ptPickerCheckBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ptPickerCheckText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   discardCard: {
     width: '100%',
     maxWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -998,56 +1032,47 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  discardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
   discardTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   discardDesc: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 14,
-    lineHeight: 16,
+    marginBottom: 18,
+    lineHeight: 18,
   },
   discardActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     width: '100%',
   },
   discardCancelBtn: {
     flex: 1,
-    height: 42,
+    height: 44,
     backgroundColor: '#F1F5F9',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   discardCancelText: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '600',
     color: '#475569',
   },
   discardConfirmBtn: {
     flex: 1,
-    height: 42,
+    height: 44,
     backgroundColor: '#EF4444',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   discardConfirmText: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },
