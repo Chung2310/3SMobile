@@ -25,6 +25,7 @@ import type {
   NutritionPlanData,
   WeekMenuPlan,
 } from '@/types/nutrition';
+import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
 import {
   buildWeeksSchedule,
@@ -64,6 +65,8 @@ export function MealPlannerModal({
   const [fatG, setFatG] = useState('55');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
   const [notes, setNotes] = useState('');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [customAllergy, setCustomAllergy] = useState('');
 
   // Schedule Duration & Date Range (up to 31 days)
   const [startDate, setStartDate] = useState(getTodayYmd());
@@ -105,6 +108,10 @@ export function MealPlannerModal({
         setStatus(editingPlan.status || 'DRAFT');
         setNotes(editingPlan.notes || '');
 
+        const existingNotes = editingPlan.notes || '';
+        const foundAllergies = ALLERGY_CHIPS.filter((chip) => existingNotes.includes(chip));
+        setSelectedAllergies(foundAllergies);
+
         const initialWeeks = normalizePlanToWeeks(editingPlan);
         const sDate = editingPlan.startDate ? formatYmdDate(new Date(editingPlan.startDate)) : getTodayYmd();
         const totalPlanDays =
@@ -145,9 +152,17 @@ export function MealPlannerModal({
         setDurationDays(defDays);
         setEndDate(computedEnd);
         setWeeks(buildWeeksSchedule(today, defDays));
+        setSelectedAllergies([]);
+        setCustomAllergy('');
       }
     }
   }, [visible, editingPlan, customer, initialCalculated]);
+
+  const toggleAllergy = (chip: string) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+    );
+  };
 
   // Duration Presets (7, 14, 21, 28, 30 days)
   const handleDurationPreset = (days: number) => {
@@ -253,9 +268,17 @@ export function MealPlannerModal({
     }
     try {
       setGeneratingAi(true);
+      const allRestrictions = [...selectedAllergies];
+      if (customAllergy.trim()) {
+        allRestrictions.push(customAllergy.trim());
+      }
+      const allergyClause =
+        allRestrictions.length > 0
+          ? `, kiêng kỵ & dị ứng: ${allRestrictions.join(', ')}`
+          : '';
       const draft = await nutritionService.generateAiNutritionDraft(
         cId,
-        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal`, undefined, durationDays
+        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal${allergyClause}`, undefined, durationDays
       );
       setGeneratedPlanId(draft._id || draft.id);
       if (draft.menu && Array.isArray(draft.menu) && draft.menu.length > 0 && draft.menu[0]?.days) {
@@ -342,6 +365,16 @@ export function MealPlannerModal({
         }))
       );
 
+      const allRestrictions = [...selectedAllergies];
+      if (customAllergy.trim()) {
+        allRestrictions.push(customAllergy.trim());
+      }
+      const allergyNote =
+        allRestrictions.length > 0
+          ? `Kiêng kỵ & dị ứng: ${allRestrictions.join(', ')}`
+          : '';
+      const combinedNotes = [notes.trim(), allergyNote].filter(Boolean).join('\n');
+
       const payload: Partial<NutritionPlanData> = {
         customerId: cId,
         title: title.trim(),
@@ -355,7 +388,7 @@ export function MealPlannerModal({
           fat: fNum,
         },
         status,
-        notes: notes.trim(),
+        notes: combinedNotes,
         menu: menuPayload,
         dailyPlans: dailyPlansPayload,
       };
@@ -450,6 +483,54 @@ export function MealPlannerModal({
                     </Text>
                   </Pressable>
                 ))}
+              </View>
+            </View>
+
+            {/* KIÊNG KỴ & DỊ ỨNG */}
+            <View style={styles.allergyCard}>
+              <View style={styles.allergyCardHeader}>
+                <Text style={styles.allergySectionTitle}>KIÊNG KỴ & DỊ ỨNG</Text>
+                {selectedAllergies.length > 0 && (
+                  <Pressable onPress={() => setSelectedAllergies([])} hitSlop={6}>
+                    <Text style={styles.allergyClearText}>Bỏ chọn tất cả</Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.allergyChipsWrap}>
+                {ALLERGY_CHIPS.map((chip) => {
+                  const active = selectedAllergies.includes(chip);
+                  return (
+                    <Pressable
+                      key={chip}
+                      style={[
+                        styles.allergyChip,
+                        active && styles.allergyChipActive,
+                      ]}
+                      onPress={() => toggleAllergy(chip)}
+                    >
+                      <Text
+                        style={[
+                          styles.allergyChipText,
+                          active && styles.allergyChipTextActive,
+                        ]}
+                      >
+                        {active ? '✓ ' : '+ '}
+                        {chip}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Input nhập thêm phần kiêng khác */}
+              <View style={styles.customAllergyWrap}>
+                <TextInput
+                  value={customAllergy}
+                  onChangeText={setCustomAllergy}
+                  placeholder="Nhập thêm đồ kiêng khác (VD: kiêng đậu phộng, đồ ngọt, dầu mỡ...)"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.customAllergyInput}
+                />
               </View>
             </View>
 
@@ -1386,5 +1467,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  allergyCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  allergyCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  allergyClearText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  allergySectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#003B70',
+    letterSpacing: 0.5,
+  },
+  allergyChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  allergyChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6.5,
+  },
+  allergyChipActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1.5,
+  },
+  allergyChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  allergyChipTextActive: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  customAllergyWrap: {
+    marginTop: 4,
+  },
+  customAllergyInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 12,
+    color: colors.text,
   },
 });
