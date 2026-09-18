@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { Screen } from '@/components/Screen';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -141,6 +142,14 @@ export default function RoadmapScreen() {
       await loadStaffData(true);
     } else {
       await refreshCustomerJourney();
+    }
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/(app)/(tabs)');
     }
   };
 
@@ -362,7 +371,7 @@ export default function RoadmapScreen() {
   return (
     <Screen
       title="Lộ trình huấn luyện"
-      onBack={null}
+      onBack={handleBack}
       refreshing={refreshing}
       onRefresh={handleRefresh}
     >

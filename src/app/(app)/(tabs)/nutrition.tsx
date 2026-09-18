@@ -8,7 +8,13 @@ import { CustomerNutritionView, PtNutritionWorkspace } from '@/components/nutrit
 
 export default function NutritionScreen() {
   const { session, loading } = useAuth();
-  const handleBack = () => router.navigate('/(app)/(tabs)');
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/(app)/(tabs)');
+    }
+  };
 
   if (loading) {
     return (
@@ -33,7 +39,7 @@ export default function NutritionScreen() {
     <Screen
       title="Dinh Dưỡng"
       scroll={false}
-      onBack={null}
+      onBack={handleBack}
     >
       <View style={styles.container}>
         {isStaff ? <PtNutritionWorkspace /> : <CustomerNutritionView />}
