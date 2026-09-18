@@ -188,12 +188,21 @@ export default function TabsLayout() {
   return (
     <Tabs
       initialRouteName="index"
+      backBehavior="initialRoute"
       tabBar={(props) => <FixedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
       }}
     >
-      {/* 1. Trợ lý AI */}
+      {/* 1. Tổng quan (ở giữa trên thanh tab, nhưng là màn hình gốc / mặc định khi trở về) */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tổng quan',
+        }}
+      />
+
+      {/* 2. Trợ lý AI */}
       <Tabs.Screen
         name="assistant"
         options={{
@@ -201,19 +210,11 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 2. Dinh dưỡng */}
+      {/* 3. Dinh dưỡng */}
       <Tabs.Screen
         name="nutrition"
         options={{
           title: 'Dinh dưỡng',
-        }}
-      />
-
-      {/* 3. Tổng quan (ở giữa - mặc định) */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tổng quan',
         }}
       />
 

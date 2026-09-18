@@ -705,7 +705,7 @@ export function AdminPtsManagement() {
                 <Ionicons name="trash-outline" size={28} color="#EF4444" />
               </View>
 
-              <Text style={styles.confirmTitle}>Xóa Huấn luyện viên?</Text>
+              <Text style={styles.confirmTitle}>Xóa huấn luyện viên?</Text>
               <Text style={styles.confirmMessage}>
                 {`Bạn có chắc chắn muốn xóa tài khoản của HLV "${display(deletingPt)}"?\nThao tác này không thể hoàn tác. Các học viên phụ trách cần được điều chuyển trước khi xóa.`}
               </Text>

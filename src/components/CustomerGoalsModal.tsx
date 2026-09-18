@@ -867,7 +867,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
-    textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   headerSubtitle: {

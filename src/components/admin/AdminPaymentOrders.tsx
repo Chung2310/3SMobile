@@ -63,7 +63,7 @@ function OrderDetailSheet({
 
           <View style={styles.sheetHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sheetTitle}>Chi tiết đơn nạp Credit</Text>
+              <Text style={styles.sheetTitle}>Chi tiết đơn nạp credit</Text>
               <Text style={styles.sheetSub}>Mã đơn: #{order.orderCode || order._id || order.id}</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={8} style={styles.sheetCloseBtn}>

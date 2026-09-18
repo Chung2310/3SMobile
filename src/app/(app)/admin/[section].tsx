@@ -36,7 +36,7 @@ export default function AdminSection() {
       features: 'Tính năng hệ thống',
       credits: 'Điều chỉnh credit',
       pricing: 'Bảng giá tác vụ AI',
-      creditPackages: 'Gói nạp Credit',
+      creditPackages: 'Gói nạp credit',
       orders: 'Đơn thanh toán',
       ledger: 'Sổ cái giao dịch',
       usage: 'Nhật ký dùng AI',
@@ -47,8 +47,14 @@ export default function AdminSection() {
 
   return (
     <Screen
-      title={title.toLocaleUpperCase('vi-VN')}
-      onBack={() => router.dismissTo({ pathname: '/(app)/admin', params: { tab: 'modules' } })}
+      title={title}
+      onBack={() => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(app)/admin/modules');
+        }
+      }}
     >
       {section === 'pts' ? (
         <AdminPtsManagement />
@@ -87,7 +93,13 @@ export default function AdminSection() {
       ) : (
         <Notice
           message="Không tìm thấy chức năng quản trị."
-          retry={() => router.dismissTo({ pathname: '/(app)/admin', params: { tab: 'modules' } })}
+          retry={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(app)/admin/modules');
+            }
+          }}
         />
       )}
     </Screen>
