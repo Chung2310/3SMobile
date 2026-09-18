@@ -193,51 +193,54 @@ function CustomerAdminFormModalInner({
   };
 
   return (
-    <View style={styles.modalOverlay}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.modalOverlay}
+    >
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={handleCloseAttempt}
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardContainer}
-      >
-        <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          {/* Header */}
-          <View style={styles.sheetHeader}>
-            <View style={styles.headerTitleWrap}>
-              <Text style={styles.headerTitle}>
-                {editing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
-              </Text>
-              <Text style={styles.headerSub}>
-                {editing
-                  ? (item?.fullName
-                      ? `Học viên: ${String(item.fullName)}`
-                      : item?.phone
-                      ? `SĐT: ${String(item.phone)}`
-                      : 'Cập nhật thông tin hồ sơ khách hàng')
-                  : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
-              </Text>
-            </View>
+      <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View style={styles.sheetHandle} />
 
-            <Pressable
-              onPress={handleCloseAttempt}
-              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
-              hitSlop={8}
-            >
-              <Feather name="x" size={20} color={colors.text} />
-            </Pressable>
+        {/* Header */}
+        <View style={styles.sheetHeader}>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>
+              {editing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
+            </Text>
+            <Text style={styles.headerSub}>
+              {editing
+                ? (item?.fullName
+                    ? `Học viên: ${String(item.fullName)}`
+                    : item?.phone
+                    ? `SĐT: ${String(item.phone)}`
+                    : 'Cập nhật thông tin hồ sơ khách hàng')
+                : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
+            </Text>
           </View>
 
-          {/* Form Body */}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.formScrollContent}
+          <Pressable
+            onPress={handleCloseAttempt}
+            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
+            hitSlop={8}
+            accessibilityLabel="Đóng"
           >
-            {error ? (
-              <View style={styles.errorNotice}>
+            <Feather name="x" size={18} color={colors.text} />
+          </Pressable>
+        </View>
+
+        {/* Form Body */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.formScrollView}
+          contentContainerStyle={styles.formScrollContent}
+        >
+          {error ? (
+            <View style={styles.errorNotice}>
                 <Ionicons name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorNoticeText}>{error}</Text>
               </View>
@@ -508,7 +511,7 @@ function CustomerAdminFormModalInner({
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Feather name="check" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
                   <Text style={styles.submitBtnText}>
                     {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
                   </Text>
@@ -517,7 +520,6 @@ function CustomerAdminFormModalInner({
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
 
       {/* PT SELECTOR MODAL */}
       {ptSelectorOpen && (
@@ -637,7 +639,7 @@ function CustomerAdminFormModalInner({
           </View>
         </Modal>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -647,26 +649,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'flex-end',
   },
-  keyboardContainer: {
-    maxHeight: '92%',
-  },
   sheetContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 16,
-    paddingHorizontal: 20,
+    maxHeight: '90%',
+    paddingTop: 8,
+    paddingHorizontal: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
   },
+  sheetHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 14,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -674,27 +682,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
   },
   headerSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: 10,
+  },
+  formScrollView: {
+    flexShrink: 1,
   },
   formScrollContent: {
-    paddingVertical: 16,
-    gap: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
   errorNotice: {
     flexDirection: 'row',
@@ -702,44 +713,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     gap: 8,
   },
   errorNoticeText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: '#EF4444',
   },
   formSection: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
-    gap: 12,
+    padding: 12,
+    gap: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: 6,
+    marginBottom: 2,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   fieldGroup: {
-    gap: 6,
+    gap: 4,
   },
   fieldRow: {
     flexDirection: 'row',
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#334155',
   },
@@ -747,20 +758,21 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   textInput: {
-    height: 46,
+    height: 44,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 14,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 13,
     color: colors.text,
   },
   textArea: {
-    height: 76,
-    paddingTop: 10,
-    paddingBottom: 10,
+    height: 68,
+    paddingTop: 8,
+    paddingBottom: 8,
     textAlignVertical: 'top',
+    fontSize: 13,
   },
   genderRow: {
     flexDirection: 'row',
@@ -768,11 +780,11 @@ const styles = StyleSheet.create({
   },
   genderPill: {
     flex: 1,
-    height: 40,
+    height: 38,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -781,7 +793,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
   },
   genderPillText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -790,12 +802,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ptSelectBtn: {
-    height: 48,
+    height: 44,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -803,11 +815,11 @@ const styles = StyleSheet.create({
   ptSelectInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flex: 1,
   },
   ptSelectText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '600',
     color: colors.text,
   },
@@ -817,58 +829,58 @@ const styles = StyleSheet.create({
   },
   statusPill: {
     flex: 1,
-    height: 42,
+    height: 38,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     paddingHorizontal: 4,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   statusPillText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
   },
   sheetFooter: {
     flexDirection: 'row',
-    gap: 12,
-    paddingTop: 14,
+    gap: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   cancelBtn: {
     flex: 1,
-    height: 48,
+    height: 44,
     backgroundColor: '#F1F5F9',
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtnText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#475569',
   },
   submitBtn: {
     flex: 2,
-    height: 48,
+    height: 44,
     backgroundColor: colors.primary,
-    borderRadius: 14,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -878,14 +890,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
   },
   ptPickerCard: {
     width: '100%',
     maxHeight: '80%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 18,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -896,10 +908,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   ptPickerTitle: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '700',
     color: colors.text,
   },
@@ -909,34 +921,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
-    marginBottom: 12,
-    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+    marginBottom: 10,
+    gap: 6,
   },
   ptPickerSearchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12.5,
     color: colors.text,
   },
   ptPickerList: {
-    maxHeight: 320,
+    maxHeight: 300,
   },
   ptPickerEmpty: {
-    paddingVertical: 24,
+    paddingVertical: 20,
     alignItems: 'center',
   },
   ptPickerEmptyText: {
-    fontSize: 14,
+    fontSize: 12.5,
     color: colors.textMuted,
   },
   ptPickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     marginBottom: 6,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -947,16 +959,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
   },
   ptPickerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   ptPickerAvatarText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
   },
@@ -964,12 +976,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ptPickerName: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '700',
     color: colors.text,
   },
   ptPickerUser: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     marginTop: 1,
   },
@@ -977,8 +989,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 18,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -987,55 +999,55 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   discardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   discardTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   discardDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 18,
-    lineHeight: 18,
+    marginBottom: 14,
+    lineHeight: 16,
   },
   discardActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     width: '100%',
   },
   discardCancelBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   discardCancelText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '600',
     color: '#475569',
   },
   discardConfirmBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     backgroundColor: '#EF4444',
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   discardConfirmText: {
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
