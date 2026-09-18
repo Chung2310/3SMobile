@@ -7,8 +7,8 @@ import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 import { Button, Label, Notice, Sheet, ui } from './AdminUI';
 
-export function RecordPicker({ label, source, selected, onChange, multiple = true, disabled = false }: {
-  label: string; source: string; selected: AdminRecord[]; onChange: (items: AdminRecord[]) => void; multiple?: boolean; disabled?: boolean;
+export function RecordPicker({ label, source, selected, onChange, multiple = true, disabled = false, compact = false }: {
+  label: string; source: string; selected: AdminRecord[]; onChange: (items: AdminRecord[]) => void; multiple?: boolean; disabled?: boolean; compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<AdminRecord[]>([]);
@@ -35,7 +35,7 @@ export function RecordPicker({ label, source, selected, onChange, multiple = tru
   const has = (item: AdminRecord) => draft.some(d => recordId(d) === recordId(item));
   const toggle = (item: AdminRecord) => setDraft(current => current.some(d => recordId(d) === recordId(item)) ? current.filter(d => recordId(d) !== recordId(item)) : multiple ? [...current, item] : [item]);
   const footer = <View style={ui.gap}><Button label={`Áp dụng (${draft.length})`} onPress={() => { onChange(draft); setOpen(false); }} /><Button secondary label="Bỏ chọn tất cả" onPress={() => setDraft([])} /></View>;
-  return <View style={ui.gap}><Label>{label}</Label><Button secondary disabled={disabled} label={selected.length === 1 ? display(selected[0]) : selected.length ? `Đã chọn ${selected.length}` : 'Chọn…'} onPress={() => { setDraft(selected); setQuery(''); setPage(1); setLoading(true); setOpen(true); }} />{open && <Sheet title={label} onClose={() => setOpen(false)} footer={footer}>
+  return <View style={compact ? ui.row : ui.gap}><Label>{label}</Label><Button secondary disabled={disabled} label={selected.length === 1 ? display(selected[0]) : selected.length ? `Đã chọn ${selected.length}` : 'Chọn…'} onPress={() => { setDraft(selected); setQuery(''); setPage(1); setLoading(true); setOpen(true); }} />{open && <Sheet title={label} onClose={() => setOpen(false)} footer={footer}>
     <TextInput accessibilityLabel="Tìm kiếm" style={ui.input} placeholder="Tìm theo tên hoặc số điện thoại…" value={query} onChangeText={text => { setLoading(true); setQuery(text); setPage(1); }} />
     {loading ? <ActivityIndicator color={colors.primary} /> : error ? <Notice message={error} retry={() => setReload(n => n + 1)} /> : <>
       {multiple && items.length > 0 && <Button secondary label={items.every(has) ? 'Bỏ chọn trang này' : 'Chọn tất cả trên trang này'} onPress={() => setDraft(current => items.every(has) ? current.filter(d => !items.some(i => recordId(i) === recordId(d))) : [...current, ...items.filter(i => !has(i))])} />}
