@@ -26,6 +26,21 @@ import { messageOf } from '@/utils/error';
 
 const ICON_ZALO = require('../../../assets/public/zalo-icon.png');
 
+type DateField = 'from' | 'to';
+
+const toIsoDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const displayDate = (value: string) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+};
+
 interface TransferParty {
   _id?: string;
   id?: string;
@@ -52,6 +67,8 @@ export function AdminTransfersManagement() {
   const [toPtId, setToPtId] = useState('');
   const [trainers, setTrainers] = useState<AdminRecord[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [dateField, setDateField] = useState<DateField | null>(null);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
 
   // Selected transfer for detail sheet
   const [selectedTransfer, setSelectedTransfer] = useState<AdminRecord | null>(null);
@@ -160,22 +177,6 @@ export function AdminTransfersManagement() {
     return { name: String(val) };
   };
 
-  // Status mapping
-  const getStatusBadge = (st?: string) => {
-    switch (st) {
-      case 'ACCEPTED':
-        return { label: 'Đã tiếp nhận', color: '#16A34A', bg: '#DCFCE7', icon: 'check-circle' as const };
-      case 'ADMIN_FORCED':
-        return { label: 'Admin điều chuyển', color: '#7C3AED', bg: '#F3E8FF', icon: 'shield' as const };
-      case 'PENDING':
-        return { label: 'Chờ tiếp nhận', color: '#D97706', bg: '#FEF3C7', icon: 'clock' as const };
-      case 'REJECTED':
-        return { label: 'Đã từ chối', color: '#EF4444', bg: '#FEE2E2', icon: 'x-circle' as const };
-      default:
-        return { label: st || 'Chưa rõ', color: '#64748B', bg: '#F1F5F9', icon: 'help-circle' as const };
-    }
-  };
-
   // Format date helper
   const formatDate = (val?: unknown) => {
     if (!val) return '—';
@@ -224,7 +225,29 @@ export function AdminTransfersManagement() {
           <View style={styles.filterSheet}>
             <View style={styles.filterHeader}><Text style={styles.filterTitle}>Lọc lịch sử chuyển giao</Text><Pressable onPress={() => setFilterOpen(false)} hitSlop={10}><Feather name="x" size={20} color={colors.text} /></Pressable></View>
             <Text style={styles.filterLabel}>Khoảng ngày</Text>
-            <View style={styles.dateRow}><TextInput value={fromDate} onChangeText={setFromDate} placeholder="Từ ngày (YYYY-MM-DD)" placeholderTextColor={colors.textMuted} style={styles.dateInput} /><TextInput value={toDate} onChangeText={setToDate} placeholder="Đến ngày (YYYY-MM-DD)" placeholderTextColor={colors.textMuted} style={styles.dateInput} /></View>
+            <View style={styles.dateRow}>
+              {(['from', 'to'] as DateField[]).map((field) => {
+                const value = field === 'from' ? fromDate : toDate;
+                return (
+                  <Pressable
+                    key={field}
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setDateField(field);
+                      const selected = value ? new Date(`${value}T00:00:00`) : new Date();
+                      setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={field === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                  >
+                    <Feather name="calendar" size={16} color="#64748B" />
+                    <Text style={value ? styles.dateValue : styles.datePlaceholder} numberOfLines={1}>
+                      {value ? displayDate(value) : field === 'from' ? 'Từ ngày' : 'Đến ngày'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <Text style={styles.filterLabel}>HLV bàn giao</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choiceRow}><Pressable style={[styles.choicePill, !fromPtId && styles.choicePillActive]} onPress={() => setFromPtId('')}><Text>Tất cả</Text></Pressable>{trainers.map((trainer) => { const id=recordId(trainer); return <Pressable key={id} style={[styles.choicePill, fromPtId===id && styles.choicePillActive]} onPress={() => setFromPtId(id)}><Text numberOfLines={1}>{String(trainer.fullName || trainer.username || id)}</Text></Pressable>; })}</ScrollView>
             <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
@@ -234,6 +257,45 @@ export function AdminTransfersManagement() {
         </View>
       </Modal>}
 
+      {dateField && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setDateField(null)}>
+          <View style={styles.datePickerOverlay}>
+            <View style={styles.datePickerSheet}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterTitle}>{dateField === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}</Text>
+                <Pressable onPress={() => setDateField(null)} hitSlop={10} accessibilityLabel="Đóng bộ chọn ngày">
+                  <Feather name="x" size={20} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.calendarHeader}>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-left" size={18} color={colors.text} />
+                </Pressable>
+                <Text style={styles.calendarMonthLabel}>{`Tháng ${pickerMonth.getMonth() + 1}/${pickerMonth.getFullYear()}`}</Text>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-right" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.weekdayRow}>{['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day) => <Text key={day} style={styles.weekdayText}>{day}</Text>)}</View>
+              <View style={styles.calendarGrid}>
+                {Array.from({ length: new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 0).getDate() + new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay() }).map((_, index) => {
+                  const firstDay = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay();
+                  if (index < firstDay) return <View key={`empty-${index}`} style={styles.calendarDay} />;
+                  const day = index - firstDay + 1;
+                  const date = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), day);
+                  const iso = toIsoDate(date);
+                  const selected = (dateField === 'from' ? fromDate : toDate) === iso;
+                  return (
+                    <Pressable key={iso} style={[styles.calendarDay, selected && styles.calendarDaySelected]} onPress={() => { if (dateField === 'from') setFromDate(iso); else setToDate(iso); setDateField(null); }} accessibilityRole="button" accessibilityLabel={`Chọn ngày ${day}`}>
+                      <Text style={[styles.calendarDayText, selected && styles.calendarDayTextSelected]}>{day}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       {/* 5. TRANSFER LIST */}
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -273,7 +335,6 @@ export function AdminTransfersManagement() {
         ) : (
           items.map((item) => {
             const tId = recordId(item);
-            const badge = getStatusBadge(String(item.status || ''));
             const customer = getPartyInfo(item.customerId);
             const fromPt = getPartyInfo(item.fromPtId);
             const toPt = getPartyInfo(item.toPtId);
@@ -290,18 +351,11 @@ export function AdminTransfersManagement() {
                 accessibilityRole="button"
                 accessibilityLabel={`Chi tiết chuyển giao học viên ${customer.name}`}
               >
-                {/* Top Meta: Time + Status Badge */}
+                {/* Top Meta */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.timeTag}>
                     <Feather name="calendar" size={12} color="#64748B" />
                     <Text style={styles.timeText}>{timeStr}</Text>
-                  </View>
-
-                  <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-                    <Feather name={badge.icon} size={11} color={badge.color} style={{ marginRight: 4 }} />
-                    <Text style={[styles.statusBadgeText, { color: badge.color }]}>
-                      {badge.label}
-                    </Text>
                   </View>
                 </View>
 
@@ -417,22 +471,6 @@ export function AdminTransfersManagement() {
                     </View>
                   </View>
                 </View>
-
-                {/* Reason Block */}
-                {item.reason ? (
-                  <View style={styles.reasonBox}>
-                    <Feather name="file-text" size={13} color="#64748B" style={{ marginTop: 2 }} />
-                    <Text style={styles.reasonText} numberOfLines={2}>
-                      Lý do: {String(item.reason)}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {/* Tap to view detail hint */}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardFooterText}>Chạm để xem chi tiết chuyển giao</Text>
-                  <Feather name="chevron-right" size={14} color="#94A3B8" />
-                </View>
               </Pressable>
             );
           })
@@ -495,9 +533,6 @@ export function AdminTransfersManagement() {
               <View style={styles.sheetHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetTitle}>Chi tiết chuyển giao</Text>
-                  <Text style={styles.sheetSub}>
-                    Mã hồ sơ: {recordId(selectedTransfer)}
-                  </Text>
                 </View>
 
                 <Pressable
@@ -510,32 +545,6 @@ export function AdminTransfersManagement() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={styles.sheetBody}>
-                {/* Status Bar */}
-                <View style={styles.sheetStatusBox}>
-                  <Text style={styles.sheetStatusLabel}>Trạng thái chuyển giao:</Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusBadge(String(selectedTransfer.status)).bg },
-                    ]}
-                  >
-                    <Feather
-                      name={getStatusBadge(String(selectedTransfer.status)).icon}
-                      size={12}
-                      color={getStatusBadge(String(selectedTransfer.status)).color}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        { color: getStatusBadge(String(selectedTransfer.status)).color },
-                      ]}
-                    >
-                      {getStatusBadge(String(selectedTransfer.status)).label}
-                    </Text>
-                  </View>
-                </View>
-
                 {/* Section: Học viên */}
                 <View style={styles.infoSection}>
                   <Text style={styles.infoSectionTitle}>Học viên</Text>
@@ -662,6 +671,20 @@ const styles = StyleSheet.create({
   filterLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 4 },
   dateRow: { flexDirection: 'row', gap: 8 },
   dateInput: { flex: 1, height: 44, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', color: colors.text, fontSize: 12 },
+  dateValue: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.text, fontWeight: '600' },
+  datePlaceholder: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.textMuted },
+  datePickerOverlay: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(15,23,42,0.5)' },
+  datePickerSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, gap: 14 },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  calendarNavButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  calendarMonthLabel: { fontSize: 16, fontWeight: '700', color: colors.text },
+  weekdayRow: { flexDirection: 'row' },
+  weekdayText: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: colors.textMuted },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDay: { width: '14.2857%', height: 44, alignItems: 'center', justifyContent: 'center' },
+  calendarDaySelected: { borderRadius: 22, backgroundColor: colors.primary },
+  calendarDayText: { fontSize: 14, color: colors.text },
+  calendarDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
   choiceRow: { gap: 8, paddingVertical: 2 },
   choicePill: { maxWidth: 180, minHeight: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', justifyContent: 'center' },
   choicePillActive: { borderColor: colors.primary, backgroundColor: '#F0F9FF' },
@@ -727,7 +750,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
