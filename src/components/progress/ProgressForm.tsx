@@ -136,7 +136,7 @@ export function ProgressForm({
     {draftMessage && <Notice tone="success" text={draftMessage} />}
     {kind === 'session' && !confirm && !retry && <Notice text="Lưu nháp giữ dữ liệu chưa nhập xong, không tính buổi tập và không trừ buổi trong gói." />}
     {planChanged && !retry && <><Notice tone="warning" text="Giáo án đã thay đổi kể từ bản nháp. Kết quả cũ vẫn được giữ. Áp dụng giáo án hiện tại sẽ đặt lại kết quả bài tập; ghi chú, ảnh và số đo vẫn được giữ." /><Button secondary label="Áp dụng giáo án hiện tại" disabled={busy || !recordId(plan)} onPress={() => setSwitchPlan(true)} /></>}
-    {confirm || retry ? <Notice tone="warning" text={retry ? 'Chưa xác định máy chủ đã lưu hay chưa. Thử lại sẽ dùng cùng mã buổi tập để tránh ghi trùng. Không tạo buổi mới trước khi kiểm tra lịch sử.' : draft.attendance === 'ABSENT' ? 'Xác nhận ghi nhận khách vắng mặt trong buổi tập này.' : 'Buổi có mặt hoặc đi muộn sẽ được tính vào số buổi đã sử dụng trong gói tập của khách.'} /> : <View pointerEvents={busy || uploading ? 'none' : 'auto'} style={{ gap: 16 }}>
+    {confirm || retry ? <Notice tone="warning" text={retry ? 'Chưa xác định máy chủ đã lưu hay chưa. Thử lại sẽ dùng cùng mã buổi tập để tránh ghi trùng. Không tạo buổi mới trước khi kiểm tra lịch sử.' : draft.attendance === 'ABSENT' ? 'Xác nhận ghi nhận khách vắng mặt trong buổi tập này.' : 'Buổi có mặt hoặc đi muộn sẽ được tính vào số buổi đã sử dụng trong gói tập của khách.'} /> : <View pointerEvents={busy || uploading ? 'none' : 'auto'} style={{ gap: 8 }}>
       {kind === 'session' && <>
         {completedSessionsCount > 0 && sessions.length > 0 && (
           <Notice

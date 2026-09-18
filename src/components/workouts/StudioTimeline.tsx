@@ -48,9 +48,9 @@ export function StudioTimeline({
       <View style={timelineStyles.headerRow}>
         <View style={{ flex: 1 }}>
           <Text numberOfLines={1} ellipsizeMode="tail" style={ws.badge}>
-            {items.length} BÀI TẬP · {totalMinutes} PHÚT
+            {items.length} bài tập · {totalMinutes} phút
           </Text>
-          <Text style={ws.muted}>Chạm bài tập để sửa giờ hoặc thông số</Text>
+          <Text style={[ws.muted, { fontSize: 11 }]}>Chạm bài tập để sửa giờ hoặc thông số</Text>
         </View>
         <Button icon="plus" label="Thêm bài" onPress={onAdd} />
       </View>
@@ -64,14 +64,14 @@ export function StudioTimeline({
           onPress={() => onSelect(index)}
           style={timelineStyles.invalidCard}
         >
-          <LibraryIcon name="alert-triangle" size={20} color={colors.danger} />
+          <LibraryIcon name="alert-triangle" size={18} color={colors.danger} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={[ws.cardTitle, { color: colors.danger, fontSize: 15 }]}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={[ws.cardTitle, { color: colors.danger, fontSize: 13.5 }]}>
               Lỗi giờ: {readText(item, ['name'])}
             </Text>
-            <Text style={[ws.muted, { color: colors.danger }]}>Chạm để định dạng lại khung giờ bắt đầu và thời lượng</Text>
+            <Text style={[ws.muted, { color: colors.danger, fontSize: 11 }]}>Chạm để định dạng lại khung giờ bắt đầu và thời lượng</Text>
           </View>
-          <LibraryIcon name="chevron-right" size={20} color={colors.danger} />
+          <LibraryIcon name="chevron-right" size={18} color={colors.danger} />
         </Pressable>
       ))}
 
@@ -79,9 +79,9 @@ export function StudioTimeline({
       {items.length === 0 && (
         <View style={timelineStyles.emptyCard}>
           <View style={timelineStyles.emptyIconCircle}>
-            <LibraryIcon name="calendar" size={32} color={colors.primary} />
+            <LibraryIcon name="calendar" size={22} color={colors.primary} />
           </View>
-          <Text style={timelineStyles.emptyTitle}>CHƯA CÓ BÀI TẬP</Text>
+          <Text style={timelineStyles.emptyTitle}>Chưa có bài tập</Text>
           <Text style={timelineStyles.emptyDesc}>
             Ngày này chưa có bài tập nào. Hãy thêm bài tập từ thư viện hoặc xếp lịch các bài có sẵn.
           </Text>
@@ -179,37 +179,37 @@ const timelineStyles = StyleSheet.create({
   },
   emptyCard: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 24,
+    padding: 14,
     alignItems: 'center',
-    gap: 12,
-    marginVertical: 8,
+    gap: 8,
+    marginVertical: 4,
   },
   emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   emptyTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 19,
     color: colors.text,
     textAlign: 'center',
   },
   emptyDesc: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   agendaContainer: {
     gap: 12,
@@ -258,11 +258,11 @@ const timelineStyles = StyleSheet.create({
   exerciseCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    gap: 8,
+    padding: 10,
+    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -276,46 +276,45 @@ const timelineStyles = StyleSheet.create({
   },
   durationPill: {
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   durationPillText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
     color: colors.primaryDark,
-    letterSpacing: 0.5,
   },
   editPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
   },
   editPillText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primary,
   },
   exerciseName: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    lineHeight: 22,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13.5,
+    lineHeight: 18,
     color: colors.text,
   },
   prescriptionText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   notesText: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
     color: colors.textMuted,
     fontStyle: 'italic',
   },

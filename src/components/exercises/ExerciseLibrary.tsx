@@ -512,7 +512,7 @@ function ExerciseResults({
                               ? 'sun'
                               : 'target'
                           }
-                          size={26}
+                          size={20}
                           color={colors.primary}
                         />
                       </View>
@@ -714,11 +714,11 @@ function Filters({
         </View>
       }
     >
-      <View style={{ gap: 20 }}>
+      <View style={{ gap: 12 }}>
         {/* Section 1: Nhóm cơ tác động */}
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 6 }}>
           <View style={styles.filterSectionHeader}>
-            <LibraryIcon name="layers" size={16} color={colors.primary} />
+            <LibraryIcon name="layers" size={15} color={colors.primary} />
             <Text style={styles.filterSectionTitle}>Nhóm cơ tác động</Text>
             {!!draft.muscleGroup && (
               <Text numberOfLines={1} style={styles.filterSectionSelected}>
@@ -778,9 +778,9 @@ function Filters({
         </View>
 
         {/* Section 2: Cấp độ bài tập */}
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 6 }}>
           <View style={styles.filterSectionHeader}>
-            <LibraryIcon name="bar-chart-2" size={16} color={colors.primary} />
+            <LibraryIcon name="bar-chart-2" size={15} color={colors.primary} />
             <Text style={styles.filterSectionTitle}>Cấp độ bài tập</Text>
             {!!draft.level && (
               <Text numberOfLines={1} style={styles.filterSectionSelected}>
@@ -817,9 +817,9 @@ function Filters({
         </View>
 
         {/* Section 3: Cách ghi nhận kết quả */}
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 6 }}>
           <View style={styles.filterSectionHeader}>
-            <LibraryIcon name="activity" size={16} color={colors.primary} />
+            <LibraryIcon name="activity" size={15} color={colors.primary} />
             <Text style={styles.filterSectionTitle}>Cách ghi nhận kết quả</Text>
             {!!draft.defaultTrackingType && (
               <Text numberOfLines={1} style={styles.filterSectionSelected}>
@@ -1016,8 +1016,8 @@ const styles = StyleSheet.create({
   },
   searchInputContainer: {
     flex: 1,
-    height: 46,
-    borderRadius: 14,
+    height: 40,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -1034,19 +1034,19 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontSize: 13.5,
     color: colors.text,
   },
   clearBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -1116,13 +1116,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtn: {
-    minHeight: 44,
-    borderRadius: 12,
+    minHeight: 36,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   actionBtnPrimary: {
     flex: 1.25,
@@ -1130,7 +1131,7 @@ const styles = StyleSheet.create({
   },
   actionBtnPrimaryText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFFFFF',
   },
   actionBtnSecondary: {
@@ -1141,7 +1142,7 @@ const styles = StyleSheet.create({
   },
   actionBtnSecondaryText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text,
   },
   resultsHeader: {
@@ -1152,33 +1153,33 @@ const styles = StyleSheet.create({
   },
   resultsCount: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
   },
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
   },
   refreshBtnText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 12,
+    fontSize: 11.5,
     color: colors.textMuted,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    gap: 10,
-    marginBottom: 4,
+    padding: 12,
+    gap: 8,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
   },
@@ -1191,13 +1192,13 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   thumbnailContainer: {
     position: 'relative',
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1212,33 +1213,33 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#FFFFFF',
   },
   cardInfo: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   exerciseName: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 13.5,
+    lineHeight: 18,
     color: colors.text,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   muscleText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primaryDark,
     flexShrink: 1,
   },
@@ -1250,24 +1251,24 @@ const styles = StyleSheet.create({
   },
   levelBadge: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
   levelBadgeText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#475569',
   },
   trackingBadge: {
     backgroundColor: '#E0F2FE',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
   trackingBadgeText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 10.5,
     color: colors.primaryDark,
   },
   detailActionsRow: {
@@ -1334,29 +1335,29 @@ const styles = StyleSheet.create({
   filterSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   filterSectionTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
     color: colors.text,
   },
   filterSectionSelected: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
+    fontSize: 11.5,
     color: colors.primaryDark,
     flexShrink: 1,
   },
   filterChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   filterChip: {
-    minHeight: 38,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 12,
+    minHeight: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1372,7 +1373,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
+    fontSize: 11.5,
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -1382,55 +1383,54 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   detailTitle: {
-    fontFamily: 'Inter_800ExtraBold',
-    fontSize: 22,
-    lineHeight: 28,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.text,
-    textTransform: 'uppercase',
-    letterSpacing: -0.3,
   },
   detailMetaCard: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
+    borderRadius: 12,
+    padding: 10,
+    gap: 6,
   },
   detailMetaRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
   },
   detailMetaLabel: {
     fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
     color: colors.text,
   },
   detailMetaText: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.text,
     flex: 1,
   },
   detailSection: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 16,
-    padding: 14,
-    gap: 6,
+    borderRadius: 12,
+    padding: 10,
+    gap: 4,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   sectionTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 15,
+    fontSize: 13,
     color: colors.text,
   },
   sectionBody: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.text,
   },
   bulletItemRow: {
