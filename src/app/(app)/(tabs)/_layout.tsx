@@ -105,29 +105,25 @@ function FixedTabBar({ state, navigation }: any) {
   // Xác định tab đang active hiện tại
   const currentRouteName = state.routes[state.index]?.name || 'index';
 
-  const handleTabPress = (tab: TabDef) => {
-    if (tab.name === 'index') {
-      const targetRoute = state.routes.find((r: any) => r.name === 'index');
-      if (targetRoute) {
-        const event = navigation.emit({
-          type: 'tabPress',
-          target: targetRoute.key,
-          canPreventDefault: true,
-        });
-
-        if (!event.defaultPrevented) {
-          navigation.navigate('index');
-        }
-      } else {
-        navigation.navigate('index');
-      }
-    } else if (tab.route) {
+  const handleTabPress = (tab: TabDef, isFocused: boolean) => {
+    if (tab.route && tab.route.startsWith('/')) {
       router.push(tab.route as any);
-    } else {
-      const targetRoute = state.routes.find((r: any) => r.name === tab.name);
-      if (targetRoute) {
+      return;
+    }
+
+    const targetRoute = state.routes.find((r: any) => r.name === tab.name);
+    if (targetRoute) {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: targetRoute.key,
+        canPreventDefault: true,
+      });
+
+      if (!isFocused && !event.defaultPrevented) {
         navigation.navigate(tab.name);
       }
+    } else {
+      navigation.navigate(tab.name);
     }
   };
 
@@ -142,28 +138,33 @@ function FixedTabBar({ state, navigation }: any) {
       ]}
     >
       {activeTabs.map((tab) => {
-        const isCenter = tab.name === 'index';
-        const isFocused = isCenter ? currentRouteName === 'index' : false;
+        const isFocused = currentRouteName === tab.name;
 
         return (
           <Pressable
             key={tab.name}
-            onPress={() => handleTabPress(tab)}
-            style={styles.tabItem}
+            onPress={() => handleTabPress(tab, isFocused)}
+            style={({ pressed }) => [
+              styles.tabItem,
+              pressed && { opacity: 0.8 },
+            ]}
             hitSlop={8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
+            accessibilityLabel={tab.label}
           >
-            {isCenter ? (
+            {isFocused ? (
               <View style={styles.centerIconPlaceholder}>
                 <View style={styles.activeCircle}>
-                  <Ionicons name="home" size={20} color="#FFFFFF" />
+                  <Ionicons name={tab.activeIcon} size={20} color="#FFFFFF" />
                 </View>
               </View>
             ) : (
               <View style={styles.iconContainer}>
                 <Ionicons
-                  name={isFocused ? tab.activeIcon : tab.inactiveIcon}
+                  name={tab.inactiveIcon}
                   size={20}
-                  color={isFocused ? colors.primary : colors.textMuted}
+                  color={colors.textMuted}
                 />
               </View>
             )}
