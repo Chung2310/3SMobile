@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -30,7 +30,6 @@ import {
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
-import { canAccessAdmin } from '@/services/adminAccess';
 import { colors, radius, spacing } from '@/theme';
 
 interface ProfileFormState {
@@ -749,26 +748,6 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* NÚT CHUYỂN SANG TRANG QUẢN TRỊ (KHI CÓ QUYỀN ADMIN) */}
-            {canAccessAdmin(session?.user) && (
-              <Pressable
-                style={({ pressed }) => [styles.adminBarBtn, pressed && styles.securityBarBtnPressed]}
-                onPress={() => router.push('/(app)/admin')}
-                accessibilityRole="button"
-                accessibilityLabel="Chuyển sang trang Quản trị"
-              >
-                <View style={styles.securityBarLeft}>
-                  <View style={[styles.securityIconCircle, { backgroundColor: '#E0F2FE' }]}>
-                    <Ionicons name="shield-checkmark" size={17} color="#0284C7" />
-                  </View>
-                  <View>
-                    <Text style={styles.securityBarTitle}>Trang Quản trị hệ thống</Text>
-                    <Text style={styles.adminBarSub}>Quản lý tài khoản, khách hàng & tài chính</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-right" size={18} color={colors.textMuted} />
-              </Pressable>
-            )}
 
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable

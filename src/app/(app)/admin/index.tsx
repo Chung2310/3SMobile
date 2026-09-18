@@ -88,18 +88,6 @@ export default function AdminHomeScreen() {
             </Text>
           </Pressable>
 
-          {/* Nút Chuyển sang Không gian Huấn luyện */}
-          <Pressable
-            onPress={() => router.push('/(app)/(tabs)')}
-            style={({ pressed }) => [
-              styles.headerIconBtn,
-              pressed && styles.headerIconBtnPressed,
-            ]}
-            hitSlop={8}
-            accessibilityLabel="Không gian huấn luyện"
-          >
-            <Ionicons name="fitness-outline" size={19} color={colors.primary} />
-          </Pressable>
 
           {/* Avatar Profile */}
           <Pressable
@@ -204,19 +192,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIconBtnPressed: {
-    backgroundColor: '#E0F2FE',
-  },
+
   avatarWrap: {
     position: 'relative',
   },
