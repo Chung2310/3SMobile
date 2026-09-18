@@ -48,10 +48,10 @@ const QUICK_FEATURES: QuickFeature[] = [
     route: '/(app)/customers',
   },
   {
-    id: 'schedule',
-    title: 'Lịch tập',
-    iconName: 'calendar-outline',
-    route: '/(app)/(tabs)/schedule',
+    id: 'inbody',
+    title: 'InBody',
+    iconName: 'body-outline',
+    route: '/(app)/(tabs)/progress',
   },
   {
     id: 'workouts',
