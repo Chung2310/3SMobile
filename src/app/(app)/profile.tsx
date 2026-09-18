@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -122,8 +122,7 @@ export default function ProfileScreen() {
     onConfirm: () => {},
   });
 
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const applyProfileToForm = (data: PtProfileInfo) => {
     setForm((prev) => ({
@@ -462,19 +461,11 @@ export default function ProfileScreen() {
     }
   };
 
-  async function handleSignOut() {
-    if (!confirmingLogout) {
-      setConfirmingLogout(true);
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-      resetTimer.current = setTimeout(() => {
-        setConfirmingLogout(false);
-      }, 4000);
-      return;
-    }
-    if (resetTimer.current) clearTimeout(resetTimer.current);
+  const handleConfirmSignOut = async () => {
+    setShowLogoutModal(false);
     await signOut();
     router.replace('/(auth)/login');
-  }
+  };
 
   const displayName = profile?.fullName || session?.user?.fullName || session?.user?.username || 'Huấn luyện viên';
   const username = profile?.username || session?.user?.username || 'pt';
@@ -774,21 +765,16 @@ export default function ProfileScreen() {
             <View style={styles.systemCard}>
               <Text style={styles.systemHeading}>HỆ THỐNG</Text>
               <Pressable
-                onPress={() => void handleSignOut()}
+                onPress={() => setShowLogoutModal(true)}
                 style={({ pressed }) => [
                   styles.signOutBtn,
-                  confirmingLogout && styles.signOutBtnConfirming,
                   pressed && styles.signOutBtnPressed,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Đăng xuất tài khoản"
               >
-                <Feather
-                  name={confirmingLogout ? 'alert-triangle' : 'log-out'}
-                  size={18}
-                  color={confirmingLogout ? '#FFFFFF' : '#EF4444'}
-                />
-                <Text style={[styles.signOutText, confirmingLogout && styles.signOutTextConfirming]}>
-                  {confirmingLogout ? 'Chạm lần nữa để xác nhận đăng xuất' : 'Đăng xuất tài khoản'}
-                </Text>
+                <Feather name="log-out" size={18} color="#EF4444" />
+                <Text style={styles.signOutText}>Đăng xuất tài khoản</Text>
               </Pressable>
             </View>
           </>
@@ -1276,6 +1262,58 @@ export default function ProfileScreen() {
         onConfirm={alertConfig.onConfirm}
         onCancel={alertConfig.onCancel}
       />
+
+      {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <Pressable
+          style={styles.logoutModalOverlay}
+          onPress={() => setShowLogoutModal(false)}
+        >
+          <Pressable
+            style={styles.logoutModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.logoutModalIconWrap}>
+              <Feather name="log-out" size={26} color="#EF4444" />
+            </View>
+            <Text style={styles.logoutModalTitle}>Xác nhận đăng xuất</Text>
+            <Text style={styles.logoutModalMessage}>
+              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không? Phiên làm việc của bạn sẽ kết thúc.
+            </Text>
+
+            <View style={styles.logoutModalActions}>
+              <Pressable
+                onPress={() => setShowLogoutModal(false)}
+                style={({ pressed }) => [
+                  styles.logoutModalCancelBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Hủy bỏ"
+              >
+                <Text style={styles.logoutModalCancelText}>Hủy bỏ</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => void handleConfirmSignOut()}
+                style={({ pressed }) => [
+                  styles.logoutModalConfirmBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Xác nhận đăng xuất"
+              >
+                <Text style={styles.logoutModalConfirmText}>Đăng xuất</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1681,10 +1719,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: 14,
     paddingVertical: 13,
-  },
-  signOutBtnConfirming: {
-    backgroundColor: '#EF4444',
-    borderColor: '#DC2626',
+    minHeight: 44,
   },
   signOutBtnPressed: {
     opacity: 0.85,
@@ -1695,7 +1730,84 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#EF4444',
   },
-  signOutTextConfirming: {
+
+  // -------------------------------------------------------------
+  // MODAL XÁC NHẬN ĐĂNG XUẤT
+  // -------------------------------------------------------------
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  logoutModalContent: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  logoutModalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  logoutModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  logoutModalMessage: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  logoutModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  logoutModalCancelBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  logoutModalCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  logoutModalConfirmBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  logoutModalConfirmText: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 
