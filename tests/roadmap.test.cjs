@@ -110,3 +110,66 @@ test('getRoadmapCheckpoints returns checkpoints sorted by week', () => {
   assert.equal(sorted[1].week, 8);
   assert.equal(sorted[2].week, 12);
 });
+
+const { generateSmartRoadmap } = loadTs('src/services/roadmapGenerator.ts');
+const { evaluateGoalFeasibility } = loadTs('src/services/goalFeasibilityService.ts');
+
+test('generateSmartRoadmap generates consistent phases, nutrition, and checkpoints', () => {
+  const proposal = generateSmartRoadmap(
+    { _id: 'cust-1', fullName: 'Nguyen Van A', gender: 'MALE', height: 175, initialWeight: 75 },
+    { weight: 75, bodyFatPercentage: 20, muscleMass: 35, bmr: 1700 },
+    { type: 'FAT_LOSS', targetValue: 5, targetUnit: 'kg', durationWeeks: 12, sessionsPerWeek: 4, customNotes: 'Tránh đau khớp vai' }
+  );
+
+  assert.ok(proposal.title.includes('Lộ trình Giảm mỡ'));
+  assert.ok(proposal.title.includes('Nguyen Van A'));
+  assert.equal(proposal.strategy.estimatedWeeks, 12);
+  assert.equal(proposal.strategy.sessionsPerWeek, 4);
+  assert.ok(proposal.strategy.nutrition.targetCalories > 0);
+  assert.ok(proposal.strategy.nutrition.proteinGrams > 0);
+  assert.ok(proposal.phases.length >= 2);
+  assert.equal(proposal.baseline.initialWeight, 75);
+  assert.equal(proposal.baseline.initialBodyFat, 20);
+
+  // Check phase weeks consistency
+  const totalWeeks = proposal.phases.reduce((sum, p) => sum + p.durationWeeks, 0);
+  assert.equal(totalWeeks, 12);
+});
+
+test('evaluateGoalFeasibility correctly identifies feasible, challenging, and infeasible goals', () => {
+  // Safe realistic fat loss: 5kg in 12 weeks
+  const feasible = evaluateGoalFeasibility({
+    goalType: 'FAT_LOSS',
+    targetValue: 5,
+    targetUnit: 'kg',
+    durationWeeks: 12,
+    sessionsPerWeek: 3,
+    customerMeta: { initialWeight: 75 },
+  });
+  assert.equal(feasible.status, 'FEASIBLE');
+  assert.equal(feasible.badgeLabel, 'HOÀN TOÀN KHẢ THI');
+
+  // Infeasible fat loss: 15kg in 4 weeks
+  const infeasible = evaluateGoalFeasibility({
+    goalType: 'FAT_LOSS',
+    targetValue: 15,
+    targetUnit: 'kg',
+    durationWeeks: 4,
+    sessionsPerWeek: 3,
+    customerMeta: { initialWeight: 75 },
+  });
+  assert.equal(infeasible.status, 'INFEASIBLE');
+  assert.equal(infeasible.badgeLabel, 'BẤT KHẢ THI');
+  assert.ok(infeasible.recommendedWeeks > 4);
+
+  // Recomposition under 8 weeks is infeasible
+  const recompShort = evaluateGoalFeasibility({
+    goalType: 'RECOMPOSITION',
+    targetValue: 3,
+    targetUnit: 'kg',
+    durationWeeks: 4,
+    sessionsPerWeek: 3,
+    customerMeta: { initialWeight: 70 },
+  });
+  assert.equal(recompShort.status, 'INFEASIBLE');
+});
