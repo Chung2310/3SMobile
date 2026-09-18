@@ -21,6 +21,7 @@ import { TopPerformersPodium } from '@/components/TopPerformersPodium';
 import { Card } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api/client';
+import { canAccessAdmin } from '@/services/adminAccess';
 import { AdminDashboardView } from '@/components/admin/AdminDashboardView';
 import { fetchCustomersList } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
@@ -227,7 +228,8 @@ export default function HomeScreen() {
   });
 
   const role = session?.user?.role;
-  const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+  const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN' || role === 'SUPER_ADMIN';
+  const hasAdminPermission = canAccessAdmin(session?.user);
 
   if (isAdmin) {
     return (
@@ -242,6 +244,19 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
+            {hasAdminPermission && (
+              <Pressable
+                onPress={() => router.push('/(app)/admin')}
+                style={({ pressed }) => [styles.headerAdminBtn, pressed && styles.headerAdminBtnPressed]}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Chuyển sang trang Quản trị"
+              >
+                <Ionicons name="shield-checkmark" size={15} color="#0284C7" />
+                <Text style={styles.headerAdminBtnText}>Quản trị</Text>
+              </Pressable>
+            )}
+
             <Pressable
               onPress={() => router.push('/(app)/wallet')}
               style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
@@ -296,6 +311,19 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
+          {hasAdminPermission && (
+            <Pressable
+              onPress={() => router.push('/(app)/admin')}
+              style={({ pressed }) => [styles.headerAdminBtn, pressed && styles.headerAdminBtnPressed]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Chuyển sang trang Quản trị"
+            >
+              <Ionicons name="shield-checkmark" size={15} color="#0284C7" />
+              <Text style={styles.headerAdminBtnText}>Quản trị</Text>
+            </Pressable>
+          )}
+
           {/* Nút Số dư Credit với icon ngôi sao AI (Bấm để mở Ví Credit) */}
           <Pressable
             onPress={() => router.push('/(app)/wallet')}
@@ -786,6 +814,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  headerAdminBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 18,
+    paddingHorizontal: 11,
+    height: 36,
+  },
+  headerAdminBtnPressed: {
+    backgroundColor: '#BAE6FD',
+    transform: [{ scale: 0.95 }],
+  },
+  headerAdminBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0284C7',
   },
   headerCreditBadge: {
     flexDirection: 'row',

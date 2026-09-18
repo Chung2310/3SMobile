@@ -213,9 +213,9 @@ function CustomerAdminFormModalInner({
               <Text style={styles.headerSub}>
                 {editing
                   ? (item?.fullName
-                      ? `Học viên: ${display(item.fullName)}`
+                      ? `Học viên: ${String(item.fullName)}`
                       : item?.phone
-                      ? `SĐT: ${item.phone}`
+                      ? `SĐT: ${String(item.phone)}`
                       : 'Cập nhật thông tin hồ sơ khách hàng')
                   : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
               </Text>

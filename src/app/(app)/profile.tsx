@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -29,6 +29,7 @@ import {
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
+import { canAccessAdmin } from '@/services/adminAccess';
 import { colors, radius, spacing } from '@/theme';
 
 interface ProfileFormState {
@@ -740,6 +741,27 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* NÚT CHUYỂN SANG TRANG QUẢN TRỊ (KHI CÓ QUYỀN ADMIN) */}
+            {canAccessAdmin(session?.user) && (
+              <Pressable
+                style={({ pressed }) => [styles.adminBarBtn, pressed && styles.securityBarBtnPressed]}
+                onPress={() => router.push('/(app)/admin')}
+                accessibilityRole="button"
+                accessibilityLabel="Chuyển sang trang Quản trị"
+              >
+                <View style={styles.securityBarLeft}>
+                  <View style={[styles.securityIconCircle, { backgroundColor: '#E0F2FE' }]}>
+                    <Ionicons name="shield-checkmark" size={17} color="#0284C7" />
+                  </View>
+                  <View>
+                    <Text style={styles.securityBarTitle}>Trang Quản trị hệ thống</Text>
+                    <Text style={styles.adminBarSub}>Quản lý tài khoản, khách hàng & tài chính</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.textMuted} />
+              </Pressable>
+            )}
 
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
@@ -1656,6 +1678,27 @@ const styles = StyleSheet.create({
   },
 
   // Security button bar
+  adminBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 10,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  adminBarSub: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   securityBarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
