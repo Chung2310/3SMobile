@@ -21,6 +21,7 @@ import { TopPerformersPodium } from '@/components/TopPerformersPodium';
 import { Card } from '@/components/UI';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api/client';
+import { AdminDashboardView } from '@/components/admin/AdminDashboardView';
 import { fetchCustomersList } from '@/services/customerService';
 import { fetchPtDashboard } from '@/services/dashboardService';
 import { resolveImageUrl } from '@/services/imageUtils';
@@ -224,6 +225,64 @@ export default function HomeScreen() {
 
     return true;
   });
+
+  const role = session?.user?.role;
+  const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+
+  if (isAdmin) {
+    return (
+      <View style={[styles.screen, { paddingTop: Math.max(insets.top, 16) }]}>
+        {/* TOP HEADER */}
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>Xin chào,</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {userName} (Admin)
+            </Text>
+          </View>
+
+          <View style={styles.headerRightActions}>
+            <Pressable
+              onPress={() => router.push('/(app)/wallet')}
+              style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
+              hitSlop={8}
+              accessibilityLabel="Số dư Credit AI"
+            >
+              <Ionicons name="sparkles" size={14} color="#0284C7" />
+              <Text style={styles.headerCreditValue}>
+                {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/profile')}
+              style={({ pressed }) => [styles.avatarWrap, pressed && styles.avatarPressed]}
+              hitSlop={8}
+              accessibilityLabel="Hồ sơ cá nhân"
+            >
+              {session?.user?.avatarUrl && session.user.avatarUrl !== avatarErrorUrl ? (
+                <Image
+                  source={{ uri: resolveImageUrl(session.user.avatarUrl) || '' }}
+                  style={styles.avatarImg}
+                  onError={() => setAvatarErrorUrl(session.user?.avatarUrl || '')}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitial}>
+                    {(userName || 'AD').slice(0, 1).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.onlineBadge} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* ADMIN DASHBOARD VIEW */}
+        <AdminDashboardView onRefreshParent={loadData} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: Math.max(insets.top, 16) }]}>
