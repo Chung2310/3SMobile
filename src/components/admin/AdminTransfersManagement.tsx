@@ -12,7 +12,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api/client';
 import {
@@ -21,10 +20,26 @@ import {
   resources,
   type AdminRecord,
 } from '@/services/adminResources';
+import { resolveTransferTrainers } from '@/services/transferTrainers';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 
 const ICON_ZALO = require('../../../assets/public/zalo-icon.png');
+
+type DateField = 'from' | 'to';
+
+const toIsoDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const displayDate = (value: string) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+};
 
 interface TransferParty {
   _id?: string;
@@ -41,30 +56,64 @@ export function AdminTransfersManagement() {
   const [items, setItems] = useState<AdminRecord[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [total, setTotal] = useState<number>();
-  const [keyword, setKeyword] = useState('');
-  const [applied, setApplied] = useState('');
-  const [status, setStatus] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [appliedKeyword, setAppliedKeyword] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [fromPtId, setFromPtId] = useState('');
+  const [toPtId, setToPtId] = useState('');
+  const [trainers, setTrainers] = useState<AdminRecord[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [dateField, setDateField] = useState<DateField | null>(null);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
 
   // Selected transfer for detail sheet
   const [selectedTransfer, setSelectedTransfer] = useState<AdminRecord | null>(null);
 
   const version = useRef(0);
 
+  const transferPath = useCallback((currentPage: number) => {
+    const params = new URLSearchParams({ page: String(currentPage), limit: '20' });
+    if (appliedKeyword.trim()) params.set('keyword', appliedKeyword.trim());
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    if (fromPtId) params.set('fromPtId', fromPtId);
+    if (toPtId) params.set('toPtId', toPtId);
+    return resource.path + '?' + params.toString();
+  }, [resource.path, appliedKeyword, fromDate, toDate, fromPtId, toPtId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setAppliedKeyword(keyword.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let active = true;
+    void api.getPage<AdminRecord>(listPath(resources.pts, 1, '', ''))
+      .then((result) => { if (active) setTrainers(result.data || []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const load = useCallback(async () => {
     const request = ++version.current;
     setLoading(true);
     setError('');
     try {
-      const statusParam = status === 'ALL' ? '' : status;
-      const path = listPath(resource, page, applied, statusParam);
+      const path = transferPath(page);
       const result = await api.getPage<AdminRecord>(path);
       if (version.current !== request) return;
-      setItems(result.data || []);
-      setTotal(result.meta?.total ?? result.data?.length ?? 0);
+      const transfers = await resolveTransferTrainers(result.data || [], (trainerPage) =>
+        api.getPage<AdminRecord>(listPath(resources.pts, trainerPage, '', '')),
+      );
+      if (version.current !== request) return;
+      setItems(transfers);
       setPages(Math.max(1, result.meta?.totalPages || 1));
       if (result.meta && page > Math.max(1, result.meta.totalPages)) {
         setPage(Math.max(1, result.meta.totalPages));
@@ -77,13 +126,16 @@ export function AdminTransfersManagement() {
         setRefreshing(false);
       }
     }
-  }, [resource, page, applied, status]);
+  }, [page, transferPath]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void load();
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      version.current += 1;
+    };
   }, [load]);
 
   const onRefresh = useCallback(() => {
@@ -125,22 +177,6 @@ export function AdminTransfersManagement() {
     return { name: String(val) };
   };
 
-  // Status mapping
-  const getStatusBadge = (st?: string) => {
-    switch (st) {
-      case 'ACCEPTED':
-        return { label: 'Đã tiếp nhận', color: '#16A34A', bg: '#DCFCE7', icon: 'check-circle' as const };
-      case 'ADMIN_FORCED':
-        return { label: 'Admin điều chuyển', color: '#7C3AED', bg: '#F3E8FF', icon: 'shield' as const };
-      case 'PENDING':
-        return { label: 'Chờ tiếp nhận', color: '#D97706', bg: '#FEF3C7', icon: 'clock' as const };
-      case 'REJECTED':
-        return { label: 'Đã từ chối', color: '#EF4444', bg: '#FEE2E2', icon: 'x-circle' as const };
-      default:
-        return { label: st || 'Chưa rõ', color: '#64748B', bg: '#F1F5F9', icon: 'help-circle' as const };
-    }
-  };
-
   // Format date helper
   const formatDate = (val?: unknown) => {
     if (!val) return '—';
@@ -158,224 +194,108 @@ export function AdminTransfersManagement() {
     }
   };
 
-  // Quick stats derived from items if total provided
-  const acceptedCount = items.filter((i) => i.status === 'ACCEPTED').length;
-  const forcedCount = items.filter((i) => i.status === 'ADMIN_FORCED').length;
-  const pendingCount = items.filter((i) => i.status === 'PENDING').length;
-  const rejectedCount = items.filter((i) => i.status === 'REJECTED').length;
 
   return (
     <View style={styles.container}>
-      {/* 1. EXECUTIVE STATS BANNER */}
-      <View style={styles.statsCard}>
-        <View style={styles.statsRow}>
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ALL');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="swap-horizontal" size={17} color={colors.primary} />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{total ?? items.length}</Text>
-              <Text style={styles.statLabel}>Tổng lượt</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ACCEPTED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="checkmark-done" size={17} color="#16A34A" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#16A34A' }]}>{acceptedCount}</Text>
-              <Text style={styles.statLabel}>Tiếp nhận</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ADMIN_FORCED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
-              <Ionicons name="shield-checkmark" size={17} color="#7C3AED" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#7C3AED' }]}>{forcedCount}</Text>
-              <Text style={styles.statLabel}>Admin chuyển</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('PENDING');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="time" size={17} color="#D97706" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#D97706' }]}>{pendingCount}</Text>
-              <Text style={styles.statLabel}>Chờ duyệt</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('REJECTED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="close-circle" size={17} color="#EF4444" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#EF4444' }]}>{rejectedCount}</Text>
-              <Text style={styles.statLabel}>Từ chối</Text>
-            </View>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* 2. TOOLBAR: BATCH TRANSFER BUTTON */}
-      <View style={styles.actionToolbar}>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/(app)/admin/[section]',
-              params: { section: 'batchTransfers' },
-            })
-          }
-          style={({ pressed }) => [
-            styles.batchTransferBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-          accessibilityLabel="Chuyển giao hàng loạt"
-        >
-          <Feather name="repeat" size={15} color={colors.primary} />
-          <Text style={styles.batchTransferText}>Chuyển giao hàng loạt</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => void load()}
-          style={({ pressed }) => [
-            styles.refreshBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-          accessibilityLabel="Làm mới dữ liệu"
-        >
-          <Feather name="refresh-cw" size={15} color={colors.text} />
-          <Text style={styles.refreshBtnText}>Làm mới</Text>
-        </Pressable>
-      </View>
-
-      {/* 3. SEARCH BAR */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
-          <Feather name="search" size={16} color="#64748B" style={{ marginLeft: 4 }} />
+          <Feather name="search" size={16} color="#64748B" />
           <TextInput
             value={keyword}
             onChangeText={setKeyword}
-            placeholder="Tìm theo tên học viên, HLV, lý do…"
+            placeholder="Tìm học viên, HLV, lý do..."
             placeholderTextColor="#94A3B8"
             style={styles.searchInput}
-            returnKeyType="search"
-            onSubmitEditing={() => {
-              setApplied(keyword);
-              setPage(1);
-            }}
+            numberOfLines={1}
           />
-          {keyword ? (
-            <Pressable
-              onPress={() => {
-                setKeyword('');
-                setApplied('');
-                setPage(1);
-              }}
-              hitSlop={8}
-            >
-              <Feather name="x" size={16} color="#64748B" />
-            </Pressable>
-          ) : null}
+          {keyword ? <Pressable onPress={() => setKeyword('')} hitSlop={8}><Feather name="x" size={16} color="#64748B" /></Pressable> : null}
         </View>
-
-        <Pressable
-          onPress={() => {
-            setApplied(keyword);
-            setPage(1);
-          }}
-          style={({ pressed }) => [
-            styles.searchTriggerBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          <Text style={styles.searchTriggerText}>Tìm</Text>
+        <Pressable style={styles.filterButton} onPress={() => setFilterOpen(true)} accessibilityLabel="Mở bộ lọc lịch sử chuyển giao">
+          <Feather name="sliders" size={16} color={colors.primary} />
+          <Text style={styles.filterButtonText}>Lọc</Text>
         </Pressable>
       </View>
+      <View style={styles.activeFilterRow}>
+        {(fromDate || toDate || fromPtId || toPtId) ? <Text style={styles.activeFilterText} numberOfLines={1}>Đang áp dụng bộ lọc</Text> : null}
+        {(fromDate || toDate || fromPtId || toPtId) ? <Pressable onPress={() => { setFromDate(''); setToDate(''); setFromPtId(''); setToPtId(''); setPage(1); }}><Text style={styles.clearFilterText}>Xóa lọc</Text></Pressable> : null}
+      </View>
 
-      {/* 4. PILL STATUS FILTERS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterPillsRow}
-      >
-        {(
-          [
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'ACCEPTED', label: 'Đã tiếp nhận' },
-            { key: 'ADMIN_FORCED', label: 'Admin điều chuyển' },
-            { key: 'PENDING', label: 'Chờ duyệt' },
-            { key: 'REJECTED', label: 'Đã từ chối' },
-          ] as const
-        ).map((pill) => {
-          const isActive = status === pill.key;
-          return (
-            <Pressable
-              key={pill.key}
-              onPress={() => {
-                setStatus(pill.key);
-                setPage(1);
-              }}
-              style={[
-                styles.filterPill,
-                isActive && styles.filterPillActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  isActive && styles.filterPillTextActive,
-                ]}
-              >
-                {pill.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      {filterOpen && <Modal transparent animationType="slide" visible onRequestClose={() => setFilterOpen(false)}>
+        <View style={styles.filterOverlay}>
+          <View style={styles.filterSheet}>
+            <View style={styles.filterHeader}><Text style={styles.filterTitle}>Lọc lịch sử chuyển giao</Text><Pressable onPress={() => setFilterOpen(false)} hitSlop={10}><Feather name="x" size={20} color={colors.text} /></Pressable></View>
+            <Text style={styles.filterLabel}>Khoảng ngày</Text>
+            <View style={styles.dateRow}>
+              {(['from', 'to'] as DateField[]).map((field) => {
+                const value = field === 'from' ? fromDate : toDate;
+                return (
+                  <Pressable
+                    key={field}
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setDateField(field);
+                      const selected = value ? new Date(`${value}T00:00:00`) : new Date();
+                      setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={field === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                  >
+                    <Feather name="calendar" size={16} color="#64748B" />
+                    <Text style={value ? styles.dateValue : styles.datePlaceholder} numberOfLines={1}>
+                      {value ? displayDate(value) : field === 'from' ? 'Từ ngày' : 'Đến ngày'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.filterLabel}>HLV bàn giao</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choiceRow}><Pressable style={[styles.choicePill, !fromPtId && styles.choicePillActive]} onPress={() => setFromPtId('')}><Text>Tất cả</Text></Pressable>{trainers.map((trainer) => { const id=recordId(trainer); return <Pressable key={id} style={[styles.choicePill, fromPtId===id && styles.choicePillActive]} onPress={() => setFromPtId(id)}><Text numberOfLines={1}>{String(trainer.fullName || trainer.username || id)}</Text></Pressable>; })}</ScrollView>
+            <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choiceRow}><Pressable style={[styles.choicePill, !toPtId && styles.choicePillActive]} onPress={() => setToPtId('')}><Text>Tất cả</Text></Pressable>{trainers.map((trainer) => { const id=recordId(trainer); return <Pressable key={id} style={[styles.choicePill, toPtId===id && styles.choicePillActive]} onPress={() => setToPtId(id)}><Text numberOfLines={1}>{String(trainer.fullName || trainer.username || id)}</Text></Pressable>; })}</ScrollView>
+            <Pressable style={styles.applyFilterButton} onPress={() => { setPage(1); setFilterOpen(false); }}><Text style={styles.applyFilterText}>Áp dụng</Text></Pressable>
+          </View>
+        </View>
+      </Modal>}
 
+      {dateField && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setDateField(null)}>
+          <View style={styles.datePickerOverlay}>
+            <View style={styles.datePickerSheet}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterTitle}>{dateField === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}</Text>
+                <Pressable onPress={() => setDateField(null)} hitSlop={10} accessibilityLabel="Đóng bộ chọn ngày">
+                  <Feather name="x" size={20} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.calendarHeader}>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-left" size={18} color={colors.text} />
+                </Pressable>
+                <Text style={styles.calendarMonthLabel}>{`Tháng ${pickerMonth.getMonth() + 1}/${pickerMonth.getFullYear()}`}</Text>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-right" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.weekdayRow}>{['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day) => <Text key={day} style={styles.weekdayText}>{day}</Text>)}</View>
+              <View style={styles.calendarGrid}>
+                {Array.from({ length: new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 0).getDate() + new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay() }).map((_, index) => {
+                  const firstDay = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay();
+                  if (index < firstDay) return <View key={`empty-${index}`} style={styles.calendarDay} />;
+                  const day = index - firstDay + 1;
+                  const date = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), day);
+                  const iso = toIsoDate(date);
+                  const selected = (dateField === 'from' ? fromDate : toDate) === iso;
+                  return (
+                    <Pressable key={iso} style={[styles.calendarDay, selected && styles.calendarDaySelected]} onPress={() => { if (dateField === 'from') setFromDate(iso); else setToDate(iso); setDateField(null); }} accessibilityRole="button" accessibilityLabel={`Chọn ngày ${day}`}>
+                      <Text style={[styles.calendarDayText, selected && styles.calendarDayTextSelected]}>{day}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       {/* 5. TRANSFER LIST */}
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -410,22 +330,11 @@ export function AdminTransfersManagement() {
             <Text style={styles.statusBoxText}>
               Chưa có lịch sử chuyển giao nào phù hợp.
             </Text>
-            <Pressable
-              onPress={() => {
-                setKeyword('');
-                setApplied('');
-                setStatus('ALL');
-                setPage(1);
-              }}
-              style={styles.clearFilterBtn}
-            >
-              <Text style={styles.clearFilterText}>Xóa bộ lọc tìm kiếm</Text>
-            </Pressable>
+
           </View>
         ) : (
           items.map((item) => {
             const tId = recordId(item);
-            const badge = getStatusBadge(String(item.status || ''));
             const customer = getPartyInfo(item.customerId);
             const fromPt = getPartyInfo(item.fromPtId);
             const toPt = getPartyInfo(item.toPtId);
@@ -442,18 +351,11 @@ export function AdminTransfersManagement() {
                 accessibilityRole="button"
                 accessibilityLabel={`Chi tiết chuyển giao học viên ${customer.name}`}
               >
-                {/* Top Meta: Time + Status Badge */}
+                {/* Top Meta */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.timeTag}>
                     <Feather name="calendar" size={12} color="#64748B" />
                     <Text style={styles.timeText}>{timeStr}</Text>
-                  </View>
-
-                  <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-                    <Feather name={badge.icon} size={11} color={badge.color} style={{ marginRight: 4 }} />
-                    <Text style={[styles.statusBadgeText, { color: badge.color }]}>
-                      {badge.label}
-                    </Text>
                   </View>
                 </View>
 
@@ -569,22 +471,6 @@ export function AdminTransfersManagement() {
                     </View>
                   </View>
                 </View>
-
-                {/* Reason Block */}
-                {item.reason ? (
-                  <View style={styles.reasonBox}>
-                    <Feather name="file-text" size={13} color="#64748B" style={{ marginTop: 2 }} />
-                    <Text style={styles.reasonText} numberOfLines={2}>
-                      Lý do: {String(item.reason)}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {/* Tap to view detail hint */}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardFooterText}>Chạm để xem chi tiết chuyển giao</Text>
-                  <Feather name="chevron-right" size={14} color="#94A3B8" />
-                </View>
               </Pressable>
             );
           })
@@ -647,9 +533,6 @@ export function AdminTransfersManagement() {
               <View style={styles.sheetHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetTitle}>Chi tiết chuyển giao</Text>
-                  <Text style={styles.sheetSub}>
-                    Mã hồ sơ: {recordId(selectedTransfer)}
-                  </Text>
                 </View>
 
                 <Pressable
@@ -662,32 +545,6 @@ export function AdminTransfersManagement() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={styles.sheetBody}>
-                {/* Status Bar */}
-                <View style={styles.sheetStatusBox}>
-                  <Text style={styles.sheetStatusLabel}>Trạng thái chuyển giao:</Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusBadge(String(selectedTransfer.status)).bg },
-                    ]}
-                  >
-                    <Feather
-                      name={getStatusBadge(String(selectedTransfer.status)).icon}
-                      size={12}
-                      color={getStatusBadge(String(selectedTransfer.status)).color}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        { color: getStatusBadge(String(selectedTransfer.status)).color },
-                      ]}
-                    >
-                      {getStatusBadge(String(selectedTransfer.status)).label}
-                    </Text>
-                  </View>
-                </View>
-
                 {/* Section: Học viên */}
                 <View style={styles.infoSection}>
                   <Text style={styles.infoSectionTitle}>Học viên</Text>
@@ -721,7 +578,7 @@ export function AdminTransfersManagement() {
                         const pt = getPartyInfo(selectedTransfer.fromPtId);
                         return (
                           <View style={styles.comparePartyCard}>
-                            <Text style={styles.comparePartyName}>{pt.name}</Text>
+                            <Text style={styles.comparePartyName} numberOfLines={2} ellipsizeMode="tail">{pt.name}</Text>
                             {pt.user ? <Text style={styles.comparePartyUser}>@{pt.user}</Text> : null}
                             {pt.phone ? <Text style={styles.comparePartyPhone}>{pt.phone}</Text> : null}
                           </View>
@@ -741,7 +598,7 @@ export function AdminTransfersManagement() {
                         const pt = getPartyInfo(selectedTransfer.toPtId);
                         return (
                           <View style={[styles.comparePartyCard, { borderColor: '#BAE6FD', backgroundColor: '#F0F9FF' }]}>
-                            <Text style={[styles.comparePartyName, { color: colors.primary }]}>{pt.name}</Text>
+                            <Text style={[styles.comparePartyName, { color: colors.primary }]} numberOfLines={2} ellipsizeMode="tail">{pt.name}</Text>
                             {pt.user ? <Text style={styles.comparePartyUser}>@{pt.user}</Text> : null}
                             {pt.phone ? <Text style={styles.comparePartyPhone}>{pt.phone}</Text> : null}
                           </View>
@@ -800,164 +657,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  statsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  statLabel: {
-    fontSize: 9.5,
-    color: '#64748B',
-    fontWeight: '600',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  statDivider: {
-    width: 1,
-    height: 34,
-    backgroundColor: '#E2E8F0',
-  },
-  actionToolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    gap: 10,
-  },
-  batchTransferBtn: {
-    flex: 1,
-    height: 44,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  batchTransferText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  refreshBtn: {
-    height: 44,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  refreshBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    gap: 8,
-  },
-  searchBox: {
-    flex: 1,
-    height: 42,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.text,
-    marginLeft: 6,
-  },
-  searchTriggerBtn: {
-    height: 42,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchTriggerText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  filterPillsRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  filterPill: {
-    height: 36,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#F0F9FF',
-  },
-  filterPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterPillTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  searchBox: { flex: 1, minWidth: 0, height: 46, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12 },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 13, color: colors.text, padding: 0 },
+  filterButton: { height: 46, minWidth: 70, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BAE6FD', backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  filterButtonText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  activeFilterRow: { minHeight: 4, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  activeFilterText: { color: colors.textMuted, fontSize: 12 },
+  filterOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.5)' },
+  filterSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 10, maxHeight: '80%' },
+  filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  filterTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  filterLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 4 },
+  dateRow: { flexDirection: 'row', gap: 8 },
+  dateInput: { flex: 1, height: 44, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', color: colors.text, fontSize: 12 },
+  dateValue: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.text, fontWeight: '600' },
+  datePlaceholder: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.textMuted },
+  datePickerOverlay: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(15,23,42,0.5)' },
+  datePickerSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, gap: 14 },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  calendarNavButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  calendarMonthLabel: { fontSize: 16, fontWeight: '700', color: colors.text },
+  weekdayRow: { flexDirection: 'row' },
+  weekdayText: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: colors.textMuted },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDay: { width: '14.2857%', height: 44, alignItems: 'center', justifyContent: 'center' },
+  calendarDaySelected: { borderRadius: 22, backgroundColor: colors.primary },
+  calendarDayText: { fontSize: 14, color: colors.text },
+  calendarDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
+  choiceRow: { gap: 8, paddingVertical: 2 },
+  choicePill: { maxWidth: 180, minHeight: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', justifyContent: 'center' },
+  choicePillActive: { borderColor: colors.primary, backgroundColor: '#F0F9FF' },
+  applyFilterButton: { minHeight: 48, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  applyFilterText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 32,
@@ -1018,7 +750,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',

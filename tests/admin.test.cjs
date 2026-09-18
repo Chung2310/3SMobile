@@ -65,3 +65,29 @@ test('passwords support Unicode and symbols without trimming or bcrypt truncatio
   const input={username:'trainer',password:' password ',fullName:'Trainer',phone:'0901234567',status:'ACTIVE'};
   assert.equal(formPayload(resources.pts.fields,input,false).password,' password ');
 });
+const { resolveTransferTrainers } = loadTs('src/services/transferTrainers.ts');
+test('transfer trainer IDs resolve across pages, including locked trainers', async () => {
+  const rows = [{ fromPtId: 'old', toPtId: { _id: 'new' }, customerId: 'customer' }];
+  const calls = [];
+  const result = await resolveTransferTrainers(rows, async page => {
+    calls.push(page);
+    return { data: page === 1 ? [{ id: 'new', fullName: 'HLV mới' }] : [{ _id: 'old', fullName: 'HLV cũ', status: 'LOCKED' }], meta: { totalPages: 2 } };
+  });
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(result[0].fromPtId.fullName, 'HLV cũ');
+  assert.equal(result[0].toPtId.fullName, 'HLV mới');
+  assert.equal(result[0].customerId, 'customer');
+  assert.equal(rows[0].fromPtId, 'old');
+});
+test('populated trainer names are reused without directory requests', async () => {
+  const rows = [{ fromPtId: { _id: 'pt', fullName: 'Nguyễn Văn An' }, toPtId: 'pt' }];
+  const result = await resolveTransferTrainers(rows, async () => { throw Error('unexpected request'); });
+  assert.equal(result[0].toPtId.fullName, 'Nguyễn Văn An');
+});
+test('missing or unavailable trainer records never render raw IDs', async () => {
+  for (const fetch of [async () => ({ data: [], meta: { totalPages: 1 } }), async () => { throw Error('offline'); }]) {
+    const result = await resolveTransferTrainers([{ fromPtId: '6a9aaf3c00000000000000000', toPtId: null }], fetch);
+    assert.equal(result[0].fromPtId.fullName, 'Chưa có thông tin HLV');
+    assert.equal(result[0].toPtId, null);
+  }
+});
