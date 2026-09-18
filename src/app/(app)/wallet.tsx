@@ -147,12 +147,11 @@ export default function WalletScreen() {
     }
   }, []);
 
-  // Gọi API lấy lịch sử giao dịch từ backend theo loại lọc
-  const fetchLedgerData = useCallback(async (typeFilter: string) => {
+  // Gọi API lấy lịch sử giao dịch từ backend
+  const fetchLedgerData = useCallback(async () => {
     setLoadingLedger(true);
     try {
-      const typeParam = typeFilter !== 'ALL' ? `&type=${typeFilter}` : '';
-      const res = await api.get<any>(`/api/credits/me/ledger?page=1&limit=30${typeParam}`);
+      const res = await api.get<any>(`/api/credits/me/ledger?page=1&limit=100`);
       const payload = res?.data || res;
       const list = Array.isArray(payload) ? payload : payload?.items;
       if (Array.isArray(list)) {
@@ -197,7 +196,7 @@ export default function WalletScreen() {
 
     // 2. Tải lịch sử giao dịch
     api
-      .get<any>('/api/credits/me/ledger?page=1&limit=30')
+      .get<any>('/api/credits/me/ledger?page=1&limit=100')
       .then((res) => {
         if (!active) return;
         const payload = res?.data || res;
@@ -220,7 +219,7 @@ export default function WalletScreen() {
   const handleManualRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([fetchWalletData(), fetchLedgerData(filterType)]);
+      await Promise.all([fetchWalletData(), fetchLedgerData()]);
     } finally {
       setRefreshing(false);
     }
@@ -229,18 +228,36 @@ export default function WalletScreen() {
   // Xử lý thay đổi bộ lọc lịch sử (Chỉ có Nạp credit và Sử dụng AI)
   const handleFilterChange = (newType: 'ALL' | 'TOPUP' | 'USAGE') => {
     setFilterType(newType);
-    fetchLedgerData(newType);
   };
 
-  // Danh sách lịch sử giao dịch sau khi lọc theo ngày tháng
+  // Danh sách lịch sử giao dịch sau khi lọc theo loại và ngày tháng
   const filteredLedgerItems = useMemo(() => {
     if (!ledgerItems || ledgerItems.length === 0) return [];
-    if (dateFilter === 'ALL') return ledgerItems;
+
+    let items = ledgerItems;
+
+    // 1. Lọc theo loại giao dịch (Tất cả / Nạp credit / Sử dụng AI)
+    if (filterType === 'TOPUP') {
+      items = items.filter(
+        (item) => item.type === 'TOPUP' || item.type === 'ADJUSTMENT' || item.availableDelta > 0
+      );
+    } else if (filterType === 'USAGE') {
+      items = items.filter(
+        (item) =>
+          item.type === 'SETTLE' ||
+          item.type === 'RESERVE' ||
+          item.type === 'USAGE' ||
+          item.availableDelta < 0
+      );
+    }
+
+    // 2. Lọc theo ngày tháng
+    if (dateFilter === 'ALL') return items;
 
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    return ledgerItems.filter((item) => {
+    return items.filter((item) => {
       if (!item.createdAt) return false;
       const itemTime = new Date(item.createdAt).getTime();
       if (isNaN(itemTime)) return false;
@@ -277,7 +294,7 @@ export default function WalletScreen() {
           return true;
       }
     });
-  }, [ledgerItems, dateFilter, customStartDate, customEndDate]);
+  }, [ledgerItems, filterType, dateFilter, customStartDate, customEndDate]);
 
   // Đặt lại bộ lọc ngày
   const handleResetDateFilter = () => {
@@ -371,7 +388,7 @@ export default function WalletScreen() {
 
   const handlePaymentSuccess = () => {
     fetchWalletData();
-    fetchLedgerData(filterType);
+    fetchLedgerData();
   };
 
   return (
@@ -614,13 +631,17 @@ export default function WalletScreen() {
                 const deltaNum = tx.availableDelta !== 0 ? tx.availableDelta : tx.reservedDelta;
                 const deltaSign = deltaNum > 0 ? `+${deltaNum}` : `${deltaNum}`;
 
-                let typeLabel = 'Sử dụng AI';
-                if (tx.type === 'TOPUP') typeLabel = 'Nạp credit';
-                else if (tx.type === 'SETTLE' || tx.type === 'RESERVE') typeLabel = 'Sử dụng AI';
-                else if (tx.type === 'RELEASE') typeLabel = 'Hoàn credit';
-                else if (tx.type === 'ADJUSTMENT') typeLabel = 'Điều chỉnh';
+                const isTopup = tx.type === 'TOPUP' || tx.type === 'ADJUSTMENT' || deltaNum > 0;
+                const isUsage = tx.type === 'SETTLE' || tx.type === 'RESERVE' || tx.type === 'USAGE' || deltaNum < 0;
 
-                const isUsage = tx.type === 'SETTLE' || tx.type === 'RESERVE';
+                let typeLabel = 'Nạp credit';
+                if (isTopup) {
+                  typeLabel = 'Nạp credit';
+                } else if (isUsage) {
+                  typeLabel = 'Sử dụng AI';
+                } else if (tx.type === 'RELEASE') {
+                  typeLabel = 'Hoàn credit';
+                }
 
                 return (
                   <View key={tx._id || tx.id || `ledger-${idx}`} style={styles.txItem}>
@@ -630,14 +651,14 @@ export default function WalletScreen() {
                         style={[
                           styles.txTypeBadge,
                           isUsage && styles.txTypeSettle,
-                          tx.type === 'TOPUP' && styles.txTypeTopup,
+                          isTopup && styles.txTypeTopup,
                         ]}
                       >
                         <Text
                           style={[
                             styles.txTypeText,
                             isUsage && styles.txTypeTextSettle,
-                            tx.type === 'TOPUP' && styles.txTypeTextTopup,
+                            isTopup && styles.txTypeTextTopup,
                           ]}
                         >
                           {typeLabel}

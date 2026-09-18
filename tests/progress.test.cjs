@@ -14,7 +14,7 @@ function loadTs(filename, mocks = {}) {
   return mod.exports;
 }
 
-const { dateIso, dayKey, journeyPath, initialResult, cleanResult, sessionPayload, measurementPayload, reportPayload, metricSeries, sessionTitle } = loadTs('src/services/progress.ts');
+const { dateIso, dayKey, journeyPath, initialResult, cleanResult, sessionPayload, measurementPayload, reportPayload, metricSeries, sessionTitle, calculateNextSessionIndex } = loadTs('src/services/progress.ts');
 const exercise = { exerciseId: 'e1', name: 'Squat', trackingType: 'STRENGTH', prescription: { sets: 2, reps: 10, weight: 50 } };
 const plan = { _id: 'p1', version: 3, lifecycleStatus: 'ACTIVE', sessions: [{ name: 'First', exercises: [exercise] }, { name: 'Second', exercises: [{ exerciseId: 'e2', trackingType: 'CARDIO' }] }], scheduledSessions: [{ name: 'Different order' }] };
 const draft = { date: '2026-09-15', time: '09:30', sessionIndex: '0', attendance: 'PRESENT', results: [{ sets: [{ reps: '8', weight: '40', completed: true }] }] };
@@ -100,4 +100,53 @@ test('optional session data rejects unsafe media and invalid measurements', () =
     { customerSignature: { signatureUrl: 'file:///secret' } },
   ]) assert.throws(() => sessionPayload('c1', plan, { ...draft, ...extra }, 'retry-key'));
   assert.equal(sessionPayload('c1', plan, { ...draft, bodyMeasurement: { weight: ' ' } }, 'retry-key').bodyMeasurement, undefined);
+});
+
+test('calculateNextSessionIndex advances to next session and cycles when plan completes', () => {
+  assert.equal(calculateNextSessionIndex({ sessions: [] }, []), 0);
+  assert.equal(calculateNextSessionIndex(plan, []), 0);
+
+  // Completed session 0 -> next is session 1
+  const session1 = { workoutPlanId: 'p1', sessionIndex: 0, performedAt: '2026-09-15T09:00:00Z', attendance: 'PRESENT' };
+  assert.equal(calculateNextSessionIndex(plan, [session1]), 1);
+
+  // Completed session 1 (last in a 2-session plan) -> cycles back to 0
+  const session2 = { workoutPlanId: 'p1', sessionIndex: 1, performedAt: '2026-09-16T09:00:00Z', attendance: 'PRESENT' };
+  assert.equal(calculateNextSessionIndex(plan, [session2, session1]), 0);
+
+  // Absent session does not advance index
+  const absentSession = { workoutPlanId: 'p1', sessionIndex: 1, performedAt: '2026-09-17T09:00:00Z', attendance: 'ABSENT' };
+  assert.equal(calculateNextSessionIndex(plan, [absentSession, session1]), 1);
+
+  // Matches by planSnapshot session name if sessionIndex is missing
+  const snapshotSession = { workoutPlanId: 'p1', planSnapshot: { session: { name: 'First' } }, performedAt: '2026-09-15T09:00:00Z', attendance: 'PRESENT' };
+  assert.equal(calculateNextSessionIndex(plan, [snapshotSession]), 1);
+
+  // Prefers sessions matching the target plan id
+  const oldPlanSession = { workoutPlanId: 'other-plan', sessionIndex: 0, performedAt: '2026-09-18T09:00:00Z', attendance: 'PRESENT' };
+  assert.equal(calculateNextSessionIndex(plan, [oldPlanSession, session1]), 1);
+
+  // 4-session plan with "Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4"
+  const plan4 = {
+    _id: 'p4',
+    sessions: [
+      { name: 'Ngày 1', exercises: [exercise] },
+      { name: 'Ngày 2', exercises: [exercise] },
+      { name: 'Ngày 3', exercises: [exercise] },
+      { name: 'Ngày 4', exercises: [exercise] },
+    ],
+  };
+  const d1 = { workoutPlanId: 'p4', name: 'Ngày 1', performedAt: '2026-09-15T09:00:00Z', attendance: 'PRESENT' };
+  const d2 = { workoutPlanId: 'p4', name: 'Ngày 2', performedAt: '2026-09-16T09:00:00Z', attendance: 'PRESENT' };
+  const d3 = { workoutPlanId: 'p4', name: 'Ngày 3', performedAt: '2026-09-17T09:00:00Z', attendance: 'PRESENT' };
+
+  // When 3 sessions are completed, next session must be index 3 ("Ngày 4")
+  assert.equal(calculateNextSessionIndex(plan4, [d3, d2, d1]), 3);
+
+  // Even if dates are unsorted or sessionIndex missing, 3 completed sessions select index 3
+  assert.equal(calculateNextSessionIndex(plan4, [d1, d2, d3]), 3);
+
+  // When 4 sessions are completed in plan4, cycles back to index 0
+  const d4 = { workoutPlanId: 'p4', name: 'Ngày 4', performedAt: '2026-09-18T09:00:00Z', attendance: 'PRESENT' };
+  assert.equal(calculateNextSessionIndex(plan4, [d4, d3, d2, d1]), 0);
 });

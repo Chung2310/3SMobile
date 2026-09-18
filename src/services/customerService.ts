@@ -83,3 +83,25 @@ export async function createCustomerPackage(
 export async function deleteCustomerPackage(customerId: string, packageId: string): Promise<void> {
   await api.delete(`/api/customers/${customerId}/packages/${packageId}`);
 }
+
+export interface PackageTemplateItem {
+  _id: string;
+  id?: string;
+  name: string;
+  totalSessions: number;
+  durationDays: number;
+  price?: number;
+  description?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export async function fetchPackageTemplates(): Promise<PackageTemplateItem[]> {
+  try {
+    const res = await api.get<any>('/api/package-templates?status=ACTIVE&limit=50');
+    const payload = res?.data || res;
+    const list = Array.isArray(payload) ? payload : payload?.templates || payload?.items;
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}

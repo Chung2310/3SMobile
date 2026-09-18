@@ -13,7 +13,13 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
-import { createCustomerPackage, deleteCustomerPackage, fetchCustomerPackages } from '@/services/customerService';
+import {
+  createCustomerPackage,
+  deleteCustomerPackage,
+  fetchCustomerPackages,
+  fetchPackageTemplates,
+  type PackageTemplateItem,
+} from '@/services/customerService';
 import type { CreatePackagePayload, PtPackage } from '@/types/domain';
 import { DatePickerModal } from './DatePickerModal';
 
@@ -37,6 +43,7 @@ const formatDateDisplay = (isoStr?: string): string => {
 
 export function PtPackageModal({ visible, customer, onClose }: PtPackageModalProps) {
   const [packages, setPackages] = useState<PtPackage[]>([]);
+  const [adminTemplates, setAdminTemplates] = useState<PackageTemplateItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -79,19 +86,25 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
   };
 
   useEffect(() => {
-    if (!visible || !customerId) return;
+    if (!visible) return;
     let active = true;
 
+    // Tải danh sách gói PT của khách hàng & danh sách gói mẫu từ Admin
     void (async () => {
       try {
-        const data = await fetchCustomerPackages(customerId);
+        const [customerPkgs, templates] = await Promise.all([
+          customerId ? fetchCustomerPackages(customerId) : Promise.resolve([]),
+          fetchPackageTemplates(),
+        ]);
         if (active) {
-          setPackages(data);
+          setPackages(customerPkgs);
+          setAdminTemplates(templates);
           setLoading(false);
         }
       } catch {
         if (active) {
           setPackages([]);
+          setAdminTemplates([]);
           setLoading(false);
         }
       }
@@ -102,9 +115,30 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
     };
   }, [visible, customerId]);
 
-  const handleApplyTemplate = (templateName: string, sessions: number) => {
+  const addDaysToIso = (baseIso: string, days: number): string => {
+    const d = new Date(baseIso || getTodayIso());
+    if (isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const handleApplyTemplate = (templateName: string, sessions: number, durationDays?: number) => {
     setName(templateName);
     setTotalSessions(String(sessions));
+    if (durationDays && durationDays > 0) {
+      const calculatedEnd = addDaysToIso(startDate || getTodayIso(), durationDays);
+      if (calculatedEnd) setEndDate(calculatedEnd);
+    }
+    if (formError) setFormError(null);
+  };
+
+  const handleApplyAdminTemplate = (tpl: PackageTemplateItem) => {
+    setName(tpl.name);
+    setTotalSessions(String(tpl.totalSessions));
+    if (tpl.durationDays && tpl.durationDays > 0) {
+      const calculatedEnd = addDaysToIso(startDate || getTodayIso(), tpl.durationDays);
+      if (calculatedEnd) setEndDate(calculatedEnd);
+    }
     if (formError) setFormError(null);
   };
 
@@ -260,28 +294,56 @@ export function PtPackageModal({ visible, customer, onClose }: PtPackageModalPro
                   </View>
                 ) : null}
 
-                {/* Gợi ý mẫu nhanh */}
-                <Text style={styles.fieldLabel}>Chọn mẫu nhanh:</Text>
-                <View style={styles.templatesRow}>
-                  <Pressable
-                    style={styles.templatePill}
-                    onPress={() => handleApplyTemplate('Gói Khởi Động 12 Buổi', 12)}
+                {/* Chọn gói tập mẫu do Admin tạo / Gợi ý mẫu nhanh */}
+                <Text style={styles.fieldLabel}>
+                  {adminTemplates.length > 0 ? 'Gói tập mẫu từ Admin:' : 'Chọn mẫu nhanh:'}
+                </Text>
+                {adminTemplates.length > 0 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.templatesScrollRow}
                   >
-                    <Text style={styles.templatePillText}>12 buổi</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.templatePill}
-                    onPress={() => handleApplyTemplate('Gói Tăng Cơ 24 Buổi', 24)}
-                  >
-                    <Text style={styles.templatePillText}>24 buổi</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.templatePill}
-                    onPress={() => handleApplyTemplate('Gói Chuyên Sâu 36 Buổi', 36)}
-                  >
-                    <Text style={styles.templatePillText}>36 buổi</Text>
-                  </Pressable>
-                </View>
+                    {adminTemplates.map((tpl) => (
+                      <Pressable
+                        key={tpl._id || tpl.id || tpl.name}
+                        style={styles.adminTemplateCard}
+                        onPress={() => handleApplyAdminTemplate(tpl)}
+                      >
+                        <View style={styles.adminTemplateHeader}>
+                          <Feather name="award" size={13} color="#0284C7" />
+                          <Text style={styles.adminTemplateTitle} numberOfLines={1}>
+                            {tpl.name}
+                          </Text>
+                        </View>
+                        <Text style={styles.adminTemplateSubtitle}>
+                          {tpl.totalSessions} buổi • {tpl.durationDays || 30} ngày
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.templatesRow}>
+                    <Pressable
+                      style={styles.templatePill}
+                      onPress={() => handleApplyTemplate('Gói Khởi Động 12 Buổi', 12, 30)}
+                    >
+                      <Text style={styles.templatePillText}>12 buổi (30 ngày)</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.templatePill}
+                      onPress={() => handleApplyTemplate('Gói Tăng Cơ 24 Buổi', 24, 60)}
+                    >
+                      <Text style={styles.templatePillText}>24 buổi (60 ngày)</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.templatePill}
+                      onPress={() => handleApplyTemplate('Gói Chuyên Sâu 36 Buổi', 36, 90)}
+                    >
+                      <Text style={styles.templatePillText}>36 buổi (90 ngày)</Text>
+                    </Pressable>
+                  </View>
+                )}
 
                 {/* Tên gói */}
                 <View style={styles.fieldWrap}>
@@ -648,6 +710,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
+  },
+  templatesScrollRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 4,
+    marginBottom: 12,
+  },
+  adminTemplateCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#0284C7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 140,
+    maxWidth: 220,
+  },
+  adminTemplateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 3,
+  },
+  adminTemplateTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    flexShrink: 1,
+  },
+  adminTemplateSubtitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0284C7',
   },
   templatePill: {
     flex: 1,

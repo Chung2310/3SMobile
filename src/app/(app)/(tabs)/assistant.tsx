@@ -262,9 +262,16 @@ export default function AssistantScreen() {
           requestType: 'GENERAL',
         });
 
-        setActiveConversation(withMsg);
-        setMessages(withMsg.messages || []);
-        setConversations((prev) => [withMsg, ...prev]);
+        const convWithCustomer: AssistantConversation = {
+          ...withMsg,
+          customerId: withMsg.customerId || selectedCustomer?._id,
+        };
+        setActiveConversation(convWithCustomer);
+        setMessages(convWithCustomer.messages || []);
+        setConversations((prev) => [
+          convWithCustomer,
+          ...prev.filter((c) => c._id !== convWithCustomer._id),
+        ]);
       }
     } catch (err) {
       const errText =
@@ -711,6 +718,20 @@ export default function AssistantScreen() {
                     })
                   : '';
                 const msgCount = item.messages?.length || 0;
+                // Resolve linked customer name
+                let customerName: string | undefined;
+                if (item.customerId) {
+                  if (
+                    typeof item.customerId === 'object' &&
+                    item.customerId !== null &&
+                    (item.customerId as any).fullName
+                  ) {
+                    customerName = (item.customerId as any).fullName;
+                  } else if (typeof item.customerId === 'string') {
+                    const found = customers.find((c) => c._id === item.customerId);
+                    if (found) customerName = found.fullName;
+                  }
+                }
 
                 return (
                   <Pressable
@@ -743,9 +764,19 @@ export default function AssistantScreen() {
                         >
                           {item.title || 'Đoạn chat chưa đặt tên'}
                         </Text>
-                        <Text style={styles.historyMeta}>
-                          {dateStr} {msgCount > 0 ? `• ${msgCount} tin nhắn` : ''}
-                        </Text>
+                        <View style={styles.historyMetaRow}>
+                          <Text style={styles.historyMeta}>
+                            {dateStr} {msgCount > 0 ? `• ${msgCount} tin nhắn` : ''}
+                          </Text>
+                          {customerName ? (
+                            <View style={styles.historyCustomerBadge}>
+                              <Ionicons name="person" size={10} color={colors.primary} />
+                              <Text style={styles.historyCustomerName} numberOfLines={1}>
+                                {customerName}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
                     <Feather name="chevron-right" size={16} color={colors.textMuted} />
@@ -1272,10 +1303,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  historyMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 3,
+  },
   historyMeta: {
     fontSize: 11,
     color: colors.textMuted,
-    marginTop: 2,
+  },
+  historyCustomerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    maxWidth: 140,
+  },
+  historyCustomerName: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: colors.primaryNavy,
+    flexShrink: 1,
   },
   emptyHistoryBox: {
     padding: 36,

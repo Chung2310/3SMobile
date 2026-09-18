@@ -41,8 +41,8 @@ export default function LoginScreen() {
 
   // Intro Splash state
   const [showIntro, setShowIntro] = useState(true);
-  const introOpacity = useRef(new Animated.Value(1)).current;
-  const introScale = useRef(new Animated.Value(0.92)).current;
+  const [introOpacity] = useState(() => new Animated.Value(1));
+  const [introScale] = useState(() => new Animated.Value(0.92));
 
   // Slide state
   const [activeSlide, setActiveSlide] = useState(0);
@@ -118,7 +118,7 @@ export default function LoginScreen() {
     try {
       await signIn(trimmedUser, password);
       setModalVisible(false);
-      router.replace('/(app)/(tabs)');
+      router.replace('/');
     } catch (cause) {
       setError(messageOf(cause));
     } finally {
