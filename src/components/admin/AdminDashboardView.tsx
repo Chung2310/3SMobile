@@ -465,23 +465,21 @@ function AdminPtFilterSheet({
             </Pressable>
           </View>
 
-          {ptsList.length > 5 && (
-            <View style={styles.sheetSearchWrap}>
-              <Feather name="search" size={14} color="#94A3B8" />
-              <TextInput
-                style={styles.sheetSearchInput}
-                placeholder="Tìm tên HLV..."
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <Pressable onPress={() => setSearchQuery('')} hitSlop={6}>
-                  <Feather name="x-circle" size={14} color="#94A3B8" />
-                </Pressable>
-              )}
-            </View>
-          )}
+          <View style={styles.sheetSearchWrap}>
+            <Feather name="search" size={14} color="#94A3B8" />
+            <TextInput
+              style={styles.sheetSearchInput}
+              placeholder="Tìm tên HLV..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={6}>
+                <Feather name="x-circle" size={14} color="#94A3B8" />
+              </Pressable>
+            )}
+          </View>
 
           <ScrollView style={styles.sheetScrollList} showsVerticalScrollIndicator={false}>
             {/* Option "Tất cả HLV" */}
@@ -592,21 +590,21 @@ function AdminStatusFilterSheet({
     },
     {
       id: 'ACTIVE',
-      label: 'Đang tập luyện',
+      label: 'Đang tập',
       subText: 'Đang có gói tập / tập thường xuyên',
       count: activeCount,
       dotColor: '#10B981',
     },
     {
       id: 'LEAD',
-      label: 'Tiềm năng / Mới',
+      label: 'Tiềm năng',
       subText: 'Đã tư vấn / chưa chốt gói',
       count: leadCount,
       dotColor: '#F59E0B',
     },
     {
       id: 'INACTIVE',
-      label: 'Tạm dừng / Nghỉ',
+      label: 'Tạm dừng',
       subText: 'Đã hết hạn hoặc tạm bảo lưu',
       count: inactiveCount,
       dotColor: '#64748B',
@@ -692,6 +690,7 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     id: 'pts',
     title: 'HLV',
     iconName: 'people-outline',
+    route: '/(app)/customers',
   },
   {
     id: 'customers',
@@ -792,6 +791,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   const remainingSessions = data?.packageStats?.remainingSessions ?? 0;
 
   const pctCompleted = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
+  const pctRemaining = 100 - pctCompleted;
   const pctActive = totalCustomers > 0 ? Math.round((activeCount / totalCustomers) * 100) : 0;
   const pctLead = totalCustomers > 0 ? Math.round((leadCount / totalCustomers) * 100) : 0;
   const pctInactive = totalCustomers > 0 ? Math.round((inactiveCount / totalCustomers) * 100) : 0;
@@ -811,9 +811,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   };
 
   const handleAdminFeaturePress = (id: string, route?: string) => {
-    if (id === 'pts') {
-      setShowPtSheet(true);
-    } else if (id === 'packages') {
+    if (id === 'packages') {
       setIsFilterExpanded((prev) => !prev);
     } else if (route) {
       router.push(route as any);
@@ -830,7 +828,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       <View style={styles.quickStatsCard}>
         {/* HLV */}
         <Pressable
-          onPress={() => setShowPtSheet(true)}
+          onPress={() => router.push('/(app)/customers')}
           style={({ pressed }) => [
             styles.quickStatCol,
             pressed && styles.quickStatColPressed,
@@ -841,7 +839,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
           </View>
           <View style={styles.statInfo}>
             <Text style={[styles.statValue, { color: '#0284C7' }]}>{totalPts}</Text>
-            <Text style={styles.statLabel}>HLV hệ thống</Text>
+            <Text style={styles.statLabel}>HLV</Text>
           </View>
         </Pressable>
 
@@ -1157,11 +1155,57 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       </View>
 
-      {/* 4. VISUAL CHARTS SECTION WITH ANIMATION */}
+      {/* 4. VISUAL CHARTS SECTION WITH ANIMATION & PT FILTER BUTTON */}
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionHeaderTitle}>TỶ LỆ TƯƠNG TÁC & HOẠT ĐỘNG</Text>
-        <Text style={styles.sectionMetaText}>Cập nhật trực tiếp</Text>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={styles.sectionHeaderTitle}>HOẠT ĐỘNG</Text>
+        </View>
+
+        {/* Nút Tìm kiếm / Lọc HLV đặt ở đây */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.ptSearchFilterBtn,
+            selectedPtId !== 'ALL' && styles.ptSearchFilterBtnActive,
+            pressed && styles.btnPressed,
+          ]}
+          onPress={() => setShowPtSheet(true)}
+        >
+          <Feather
+            name="search"
+            size={13}
+            color={selectedPtId !== 'ALL' ? '#0284C7' : '#475569'}
+          />
+          <Text
+            style={[
+              styles.ptSearchFilterBtnText,
+              selectedPtId !== 'ALL' && styles.ptSearchFilterBtnTextActive,
+            ]}
+            numberOfLines={1}
+          >
+            {selectedPtId === 'ALL'
+              ? 'Lọc HLV'
+              : ptsList.find((p) => p.ptId === selectedPtId)?.fullName || 'HLV đã chọn'}
+          </Text>
+          <Feather
+            name="chevron-down"
+            size={13}
+            color={selectedPtId !== 'ALL' ? '#0284C7' : '#94A3B8'}
+          />
+        </Pressable>
       </View>
+
+      {/* Banner thông báo nếu đang có HLV được chọn */}
+      {selectedPtId !== 'ALL' && (
+        <View style={styles.activePtBanner}>
+          <Ionicons name="person" size={13} color="#0284C7" />
+          <Text style={styles.activePtBannerText} numberOfLines={1}>
+            Đang lọc dữ liệu theo HLV: {ptsList.find((p) => p.ptId === selectedPtId)?.fullName || selectedPtId}
+          </Text>
+          <Pressable onPress={() => setSelectedPtId('ALL')} hitSlop={6}>
+            <Ionicons name="close-circle" size={16} color="#0284C7" />
+          </Pressable>
+        </View>
+      )}
 
       {/* Chart Card 1: Donut + Side-by-Side Status Metrics */}
       <View style={styles.cleanCard}>
@@ -1189,7 +1233,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             <View style={styles.breakdownRowItem}>
               <View style={styles.breakdownLeft}>
                 <View style={[styles.dotIndicator, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.breakdownLabel}>Đang tập luyện</Text>
+                <Text style={styles.breakdownLabel}>Đang tập</Text>
               </View>
               <Text style={[styles.breakdownValue, { color: '#15803D' }]}>
                 {activeCount} <Text style={styles.breakdownSub}>({pctActive}%)</Text>
@@ -1200,7 +1244,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             <View style={styles.breakdownRowItem}>
               <View style={styles.breakdownLeft}>
                 <View style={[styles.dotIndicator, { backgroundColor: '#F59E0B' }]} />
-                <Text style={styles.breakdownLabel}>Tiềm năng / Mới</Text>
+                <Text style={styles.breakdownLabel}>Tiềm năng</Text>
               </View>
               <Text style={[styles.breakdownValue, { color: '#B45309' }]}>
                 {leadCount} <Text style={styles.breakdownSub}>({pctLead}%)</Text>
@@ -1211,7 +1255,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
             <View style={styles.breakdownRowItem}>
               <View style={styles.breakdownLeft}>
                 <View style={[styles.dotIndicator, { backgroundColor: '#64748B' }]} />
-                <Text style={styles.breakdownLabel}>Tạm dừng / Nghỉ</Text>
+                <Text style={styles.breakdownLabel}>Tạm dừng</Text>
               </View>
               <Text style={[styles.breakdownValue, { color: '#475569' }]}>
                 {inactiveCount} <Text style={styles.breakdownSub}>({pctInactive}%)</Text>
@@ -1221,34 +1265,61 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         </View>
       </View>
 
-      {/* Chart Card 2: 7-Day Line Chart with Animation */}
+      {/* CARD: TIẾN ĐỘ THỰC HIỆN BUỔI TẬP (GIỐNG ĐÚNG MẪU ẢNH 2) */}
       <View style={styles.cleanCard}>
         <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.cardTitle}>Xu hướng Tập luyện 7 ngày</Text>
-            <Text style={styles.cardSubtitle}>Tổng lượt tập hoàn thành theo tuần</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sessionProgressTitle}>Tiến độ Thực hiện Buổi tập</Text>
           </View>
-          <View style={[styles.badgePill, { backgroundColor: '#E0F2FE' }]}>
-            <Ionicons name="trending-up" size={12} color="#0284C7" style={{ marginRight: 3 }} />
-            <Text style={[styles.badgePillText, { color: '#0284C7' }]}>Ổn định</Text>
+          <View style={styles.sessionBadgePill}>
+            <Text style={styles.sessionBadgePillText}>{pctCompleted}% Hoàn thành</Text>
           </View>
         </View>
 
-        <View style={{ marginVertical: 4 }}>
-          <AdminWeeklyTrendLineChart completedSessions={completedSessions} />
+        {/* Track & Fill Bar */}
+        <View style={styles.sessionProgressBarTrack}>
+          <View
+            style={[
+              styles.sessionProgressBarFill,
+              { width: `${Math.min(100, Math.max(0, pctCompleted))}%` },
+            ]}
+          />
+        </View>
+
+        {/* 3 Columns Sub-cards Row */}
+        <View style={styles.sessionMetricsRow}>
+          {/* Card 1: Tổng số buổi */}
+          <View style={styles.sessionMetricCardTotal}>
+            <Text style={styles.sessionMetricLabel}>Tổng số buổi</Text>
+            <Text style={styles.sessionMetricValTotal}>{totalSessions}</Text>
+            <Text style={styles.sessionMetricSub}>Toàn hệ thống</Text>
+          </View>
+
+          {/* Card 2: Đã tập luyện */}
+          <View style={styles.sessionMetricCardDone}>
+            <Text style={[styles.sessionMetricLabel, { color: '#0369A1' }]}>Đã tập luyện</Text>
+            <Text style={styles.sessionMetricValDone}>{completedSessions}</Text>
+            <Text style={[styles.sessionMetricSub, { color: '#0284C7' }]}>{pctCompleted}% hoàn tất</Text>
+          </View>
+
+          {/* Card 3: Buổi còn lại */}
+          <View style={styles.sessionMetricCardRemaining}>
+            <Text style={[styles.sessionMetricLabel, { color: '#15803D' }]}>Buổi còn lại</Text>
+            <Text style={styles.sessionMetricValRemaining}>{remainingSessions}</Text>
+            <Text style={[styles.sessionMetricSub, { color: '#16A34A' }]}>{pctRemaining}% chưa tập</Text>
+          </View>
         </View>
       </View>
 
       {/* 5. PT WORKLOAD & LEADERBOARD SECTION */}
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionHeaderTitle}>HIỆU SUẤT ĐỘI NGŨ HLV PT</Text>
+        <Text style={styles.sectionHeaderTitle}>HIỆU SUẤT ĐỘI NGŨ HLV</Text>
       </View>
 
       {/* Bar Chart & PT Workload Card with Animation */}
       <View style={styles.cleanCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Biểu đồ Cột Tải công việc</Text>
-          <Text style={styles.cardSubtitle}>Phân bổ học viên phụ trách</Text>
+          <Text style={styles.cardTitle}>Phân bổ học viên</Text>
         </View>
 
         <View style={{ marginVertical: 4 }}>
@@ -1534,6 +1605,33 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '600',
     color: '#0284C7',
+  },
+
+  /* PT Search/Filter Button in Section Header */
+  ptSearchFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  ptSearchFilterBtnActive: {
+    borderColor: '#0284C7',
+    backgroundColor: '#F0F9FF',
+  },
+  ptSearchFilterBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#475569',
+    maxWidth: 110,
+  },
+  ptSearchFilterBtnTextActive: {
+    color: '#0284C7',
+    fontWeight: '700',
   },
   headerRightBtns: {
     flexDirection: 'row',
@@ -2050,5 +2148,99 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#15803D',
+  },
+
+  /* Tiến độ Thực hiện Buổi tập Card (Match Image 2) */
+  sessionProgressTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  sessionProgressSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+  },
+  sessionBadgePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+  },
+  sessionBadgePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  sessionProgressBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+    overflow: 'hidden',
+    marginTop: 12,
+    marginBottom: 14,
+  },
+  sessionProgressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#4F46E5',
+  },
+  sessionMetricsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sessionMetricCardTotal: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 10,
+  },
+  sessionMetricCardDone: {
+    flex: 1,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 14,
+    padding: 10,
+  },
+  sessionMetricCardRemaining: {
+    flex: 1,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 14,
+    padding: 10,
+  },
+  sessionMetricLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  sessionMetricValTotal: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  sessionMetricValDone: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0284C7',
+    marginBottom: 4,
+  },
+  sessionMetricValRemaining: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#16A34A',
+    marginBottom: 4,
+  },
+  sessionMetricSub: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#94A3B8',
   },
 });
