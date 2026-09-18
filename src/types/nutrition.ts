@@ -155,3 +155,15 @@ export interface NutritionDaySummary {
   carbs: number;
   fat: number;
 }
+
+export const ALLERGY_CHIPS = [
+  'Dị ứng hải sản (tôm, cua)',
+  'Không dung nạp lactose (sữa bò)',
+  'Không ăn thịt đỏ (bò/heo)',
+  'Không ăn cay / tiêu',
+  'Không ăn trứng gà',
+  'Không ăn đồ sống',
+] as const;
+
+export type AllergyChip = (typeof ALLERGY_CHIPS)[number];
+
