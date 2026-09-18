@@ -680,6 +680,49 @@ function AdminStatusFilterSheet({
   );
 }
 
+interface AdminQuickFeature {
+  id: string;
+  title: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+  route?: string;
+}
+
+const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
+  {
+    id: 'pts',
+    title: 'HLV',
+    iconName: 'people-outline',
+  },
+  {
+    id: 'customers',
+    title: 'Khách hàng',
+    iconName: 'person-add-outline',
+    route: '/(app)/customers',
+  },
+  {
+    id: 'packages',
+    title: 'Gói tập',
+    iconName: 'cube-outline',
+  },
+  {
+    id: 'wallet',
+    title: 'Ví credit',
+    iconName: 'wallet-outline',
+    route: '/(app)/wallet',
+  },
+  {
+    id: 'knowledge',
+    title: 'Kho tri thức',
+    iconName: 'book-outline',
+  },
+  {
+    id: 'settings',
+    title: 'Cài đặt',
+    iconName: 'settings-outline',
+    route: '/(app)/profile',
+  },
+];
+
 export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps) {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -767,74 +810,125 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
     setToDate('');
   };
 
+  const handleAdminFeaturePress = (id: string, route?: string) => {
+    if (id === 'pts') {
+      setShowPtSheet(true);
+    } else if (id === 'packages') {
+      setIsFilterExpanded((prev) => !prev);
+    } else if (route) {
+      router.push(route as any);
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContainer}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
     >
-      {/* 1. TOP MODULE NAVIGATION IN 1 SINGLE CARD (6 FEATURE ICONS IN 3x2 GRID) */}
-      <View style={styles.topNavModuleCard}>
-        <View style={styles.topNavGridMatrix}>
-          {/* Row 1: HLV, Khách hàng, Gói tập */}
-          <View style={styles.topNavRow}>
-            {/* 1. HLV */}
-            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#F0F9FF' }]}>
-                <Ionicons name="people-outline" size={18} color="#0284C7" />
-              </View>
-              <Text style={styles.topNavBtnText}>HLV</Text>
-            </Pressable>
-
-            {/* 2. Khách hàng */}
-            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="person-add-outline" size={18} color="#16A34A" />
-              </View>
-              <Text style={styles.topNavBtnText}>Khách hàng</Text>
-            </Pressable>
-
-            {/* 3. Gói tập */}
-            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#F5F3FF' }]}>
-                <Ionicons name="cube-outline" size={18} color="#7C3AED" />
-              </View>
-              <Text style={styles.topNavBtnText}>Gói tập</Text>
-            </Pressable>
+      {/* 1. THẺ CHỈ SỐ TỔNG HỢP (QUICK STATS CARD) */}
+      <View style={styles.quickStatsCard}>
+        {/* HLV */}
+        <Pressable
+          onPress={() => setShowPtSheet(true)}
+          style={({ pressed }) => [
+            styles.quickStatCol,
+            pressed && styles.quickStatColPressed,
+          ]}
+        >
+          <View style={[styles.statIconWrap, { backgroundColor: '#F0F9FF' }]}>
+            <Ionicons name="people" size={15} color="#0284C7" />
           </View>
-
-          {/* Row 2: Ví credit, Kho tri thức, Cài đặt */}
-          <View style={styles.topNavRow}>
-            {/* 4. Ví credit */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/wallet')}
-            >
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="wallet-outline" size={18} color="#D97706" />
-              </View>
-              <Text style={styles.topNavBtnText}>Ví credit</Text>
-            </Pressable>
-
-            {/* 5. Kho tri thức */}
-            <Pressable style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}>
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#EFF6FF' }]}>
-                <Ionicons name="book-outline" size={18} color="#2563EB" />
-              </View>
-              <Text style={styles.topNavBtnText}>Kho tri thức</Text>
-            </Pressable>
-
-            {/* 6. Cài đặt */}
-            <Pressable
-              style={({ pressed }) => [styles.topNavBtnItem, pressed && styles.btnPressed]}
-              onPress={() => router.push('/(app)/profile')}
-            >
-              <View style={[styles.topNavIconCircle, { backgroundColor: '#F8FAFC' }]}>
-                <Ionicons name="settings-outline" size={18} color="#475569" />
-              </View>
-              <Text style={styles.topNavBtnText}>Cài đặt</Text>
-            </Pressable>
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, { color: '#0284C7' }]}>{totalPts}</Text>
+            <Text style={styles.statLabel}>HLV hệ thống</Text>
           </View>
+        </Pressable>
+
+        <View style={styles.statDivider} />
+
+        {/* Khách hàng */}
+        <Pressable
+          onPress={() => router.push('/(app)/customers')}
+          style={({ pressed }) => [
+            styles.quickStatCol,
+            pressed && styles.quickStatColPressed,
+          ]}
+        >
+          <View style={[styles.statIconWrap, { backgroundColor: '#F0FDF4' }]}>
+            <Ionicons name="person-add" size={15} color="#16A34A" />
+          </View>
+          <View style={styles.statInfo}>
+            <Text style={[styles.statValue, { color: '#16A34A' }]}>{totalCustomers}</Text>
+            <Text style={styles.statLabel}>Khách hàng</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.statDivider} />
+
+        {/* Cảnh báo */}
+        <Pressable
+          onPress={() => {
+            if (openAlerts > 0) {
+              setIsFilterExpanded(true);
+            }
+          }}
+          style={({ pressed }) => [
+            styles.quickStatCol,
+            pressed && styles.quickStatColPressed,
+          ]}
+        >
+          <View
+            style={[
+              styles.statIconWrap,
+              { backgroundColor: openAlerts > 0 ? '#FEF2F2' : '#F4F8FB' },
+            ]}
+          >
+            <Feather
+              name={openAlerts > 0 ? 'alert-triangle' : 'shield'}
+              size={15}
+              color={openAlerts > 0 ? '#EF4444' : '#64748B'}
+            />
+          </View>
+          <View style={styles.statInfo}>
+            <Text
+              style={[
+                styles.statValue,
+                openAlerts > 0 && { color: '#EF4444' },
+              ]}
+            >
+              {openAlerts}
+            </Text>
+            <Text style={styles.statLabel}>Cảnh báo</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* 2. LƯỚI TÍNH NĂNG CHUYÊN SÂU GIỐNG MÀN HÌNH PT */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>CHỨC NĂNG QUẢN LÝ</Text>
+        <Text style={styles.sectionMeta}>{ADMIN_QUICK_FEATURES.length} phân hệ</Text>
+      </View>
+
+      <View style={styles.featuresCard}>
+        <View style={styles.featuresGrid}>
+          {ADMIN_QUICK_FEATURES.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => handleAdminFeaturePress(item.id, item.route)}
+              style={({ pressed }) => [
+                styles.featureItem,
+                pressed && styles.featureItemPressed,
+              ]}
+            >
+              <View style={styles.featureIconWrap}>
+                <Ionicons name={item.iconName} size={20} color="#0284C7" />
+              </View>
+              <Text style={styles.featureTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </View>
 
@@ -1280,46 +1374,130 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 
-  /* Single Card Top Nav Modules (6 Icons in 3x2 Grid) */
-  topNavModuleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginTop: 4,
-    elevation: 1,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-  },
-  topNavGridMatrix: {
-    gap: 14,
-  },
-  topNavRow: {
+  /* Quick Stats Summary Card (PT Style) */
+  quickStatsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 4,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  topNavBtnItem: {
+  quickStatCol: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 2,
   },
-  topNavIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  quickStatColPressed: {
+    opacity: 0.7,
+  },
+  statIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topNavBtnText: {
-    fontSize: 11.5,
+  statInfo: {
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    lineHeight: 18,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 12,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+
+  /* Section Header */
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  sectionTitle: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#334155',
+    color: '#1E293B',
+    letterSpacing: 0.6,
+  },
+  sectionMeta: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+
+  /* Features Grid Card (PT Style) */
+  featuresCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  featureItem: {
+    width: '25%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  featureItemPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.94 }],
+  },
+  featureIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  featureTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0F172A',
     textAlign: 'center',
+    maxWidth: '92%',
   },
 
   /* Header Row */
