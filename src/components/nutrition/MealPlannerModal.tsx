@@ -12,23 +12,7 @@ import {
   View,
 } from 'react-native';
 import {
-  Calendar,
-  Check,
-  CheckCircle2,
-  CircleAlert,
-  Coffee,
-  Copy,
-  FileText,
-  Info,
-  Layers,
-  Moon,
-  PlusCircle,
-  Send,
-  Sparkles,
-  Sun,
-  SunMedium,
   Trash2,
-  Utensils,
   X,
 } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
@@ -49,6 +33,7 @@ import {
   DAYS_OF_WEEK_VI,
   buildWeeksSchedule,
   computeEndDate,
+  createDefaultDayMeals,
   formatDisplayDateVi,
   formatShortDay,
   formatYmdDate,
@@ -185,14 +170,40 @@ export function MealPlannerModal({
       const curDays = [...curWeek.days];
       if (!curDays[selectedDayIdx]) return prev;
       const curDay = { ...curDays[selectedDayIdx] };
-      const curMeals = [...curDay.meals];
-      const target = { ...curMeals[activeMealIndex] };
-      const newItems = [...target.items, food];
+      const curMeals =
+        Array.isArray(curDay.meals) && curDay.meals.length > 0
+          ? [...curDay.meals]
+          : createDefaultDayMeals();
+
+      let target: MealBlock;
+      if (curMeals[activeMealIndex]) {
+        target = { ...curMeals[activeMealIndex] };
+      } else {
+        const defaultMeals = createDefaultDayMeals();
+        target = defaultMeals[activeMealIndex] || {
+          id: `meal_${Date.now()}_${activeMealIndex}`,
+          type: 'LUNCH',
+          title: `Bữa ${activeMealIndex + 1}`,
+          name: `Bữa ${activeMealIndex + 1}`,
+          timeHint: '',
+          timeSlot: '',
+          items: [],
+          totalCalories: 0,
+          calories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+        };
+      }
+
+      const existingItems = Array.isArray(target.items) ? target.items : [];
+      const newItems = [...existingItems, food];
       target.items = newItems;
-      target.totalCalories = Math.round(newItems.reduce((s, i) => s + i.calories, 0));
-      target.totalProtein = Math.round(newItems.reduce((s, i) => s + i.protein, 0) * 10) / 10;
-      target.totalCarbs = Math.round(newItems.reduce((s, i) => s + i.carbs, 0) * 10) / 10;
-      target.totalFat = Math.round(newItems.reduce((s, i) => s + i.fat, 0) * 10) / 10;
+      target.totalCalories = Math.round(newItems.reduce((s, i) => s + (i.calories || 0), 0));
+      target.calories = target.totalCalories;
+      target.totalProtein = Math.round(newItems.reduce((s, i) => s + (i.protein || 0), 0) * 10) / 10;
+      target.totalCarbs = Math.round(newItems.reduce((s, i) => s + (i.carbs || 0), 0) * 10) / 10;
+      target.totalFat = Math.round(newItems.reduce((s, i) => s + (i.fat || 0), 0) * 10) / 10;
       curMeals[activeMealIndex] = target;
       curDay.meals = curMeals;
       curDays[selectedDayIdx] = curDay;
@@ -211,14 +222,17 @@ export function MealPlannerModal({
       const curDays = [...curWeek.days];
       if (!curDays[selectedDayIdx]) return prev;
       const curDay = { ...curDays[selectedDayIdx] };
-      const curMeals = [...curDay.meals];
+      const curMeals = Array.isArray(curDay.meals) ? [...curDay.meals] : [];
+      if (!curMeals[mealIdx]) return prev;
       const target = { ...curMeals[mealIdx] };
-      const newItems = target.items.filter((i) => i.id !== foodId);
+      const existingItems = Array.isArray(target.items) ? target.items : [];
+      const newItems = existingItems.filter((i) => i.id !== foodId);
       target.items = newItems;
-      target.totalCalories = Math.round(newItems.reduce((s, i) => s + i.calories, 0));
-      target.totalProtein = Math.round(newItems.reduce((s, i) => s + i.protein, 0) * 10) / 10;
-      target.totalCarbs = Math.round(newItems.reduce((s, i) => s + i.carbs, 0) * 10) / 10;
-      target.totalFat = Math.round(newItems.reduce((s, i) => s + i.fat, 0) * 10) / 10;
+      target.totalCalories = Math.round(newItems.reduce((s, i) => s + (i.calories || 0), 0));
+      target.calories = target.totalCalories;
+      target.totalProtein = Math.round(newItems.reduce((s, i) => s + (i.protein || 0), 0) * 10) / 10;
+      target.totalCarbs = Math.round(newItems.reduce((s, i) => s + (i.carbs || 0), 0) * 10) / 10;
+      target.totalFat = Math.round(newItems.reduce((s, i) => s + (i.fat || 0), 0) * 10) / 10;
       curMeals[mealIdx] = target;
       curDay.meals = curMeals;
       curDays[selectedDayIdx] = curDay;
@@ -228,62 +242,7 @@ export function MealPlannerModal({
     });
   };
 
-  // Copy active day meals to all days in current week
-  const handleCopyDayToCurrentWeek = () => {
-    if (!activeDay || activeMeals.length === 0 || activeMeals.every((m) => m.items.length === 0)) {
-      showWarning('Vui lòng thêm món ăn vào ngày này trước khi sao chép.', 'Chưa có món');
-      return;
-    }
-    setWeeks((prev) => {
-      const clone = [...prev];
-      const curWeek = { ...clone[selectedWeekIdx] };
-      curWeek.days = curWeek.days.map((d, idx) => {
-        if (idx === selectedDayIdx) return d;
-        return {
-          ...d,
-          meals: activeMeals.map((m) => ({
-            ...m,
-            id: `meal_w${selectedWeekIdx + 1}_d${idx + 1}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
-            items: m.items.map((it) => ({ ...it })),
-          })),
-        };
-      });
-      clone[selectedWeekIdx] = curWeek;
-      return clone;
-    });
-    showSuccess(
-      `Đã áp dụng toàn bộ món ăn của ${activeDay.dayOfWeek} sang cả ${activeWeek?.name}!`,
-      'Sao chép thành công'
-    );
-  };
 
-  // Copy active day meals to ALL weeks (full duration)
-  const handleCopyDayToAllWeeks = () => {
-    if (!activeDay || activeMeals.length === 0 || activeMeals.every((m) => m.items.length === 0)) {
-      showWarning('Vui lòng thêm món ăn vào ngày này trước khi sao chép.', 'Chưa có món');
-      return;
-    }
-    setWeeks((prev) => {
-      return prev.map((w, wIdx) => ({
-        ...w,
-        days: w.days.map((d, dIdx) => {
-          if (wIdx === selectedWeekIdx && dIdx === selectedDayIdx) return d;
-          return {
-            ...d,
-            meals: activeMeals.map((m) => ({
-              ...m,
-              id: `meal_w${wIdx + 1}_d${dIdx + 1}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
-              items: m.items.map((it) => ({ ...it })),
-            })),
-          };
-        }),
-      }));
-    });
-    showSuccess(
-      `Đã áp dụng món ăn của ${activeDay.dayOfWeek} sang toàn bộ ${durationDays} ngày!`,
-      'Sao chép thành công'
-    );
-  };
 
   // AI auto-generate
   const handleAiAutoFill = async () => {
@@ -430,18 +389,13 @@ export function MealPlannerModal({
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.headerTitleRow}>
-              <View style={styles.headerIconCircle}>
-                <Utensils size={18} color="#16A34A" />
-              </View>
-              <View>
-                <Text style={styles.title}>
-                  {editingPlan ? 'Chỉnh sửa Thực Đơn' : 'Lập Thực Đơn Mới'}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}
-                </Text>
-              </View>
+            <View>
+              <Text style={styles.title}>
+                {editingPlan ? 'Chỉnh sửa Thực Đơn' : 'Lập Thực Đơn Mới'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}
+              </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
               <X size={20} color={colors.textMuted} />
@@ -467,12 +421,9 @@ export function MealPlannerModal({
             {/* Schedule Duration Preset Selection */}
             <View style={styles.durationPresetSection}>
               <View style={styles.durationPresetHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Calendar size={13} color={colors.primary} />
-                  <Text style={styles.durationPresetTitle}>
-                    THỜI HẠN ÁP DỤNG ({durationDays} NGÀY)
-                  </Text>
-                </View>
+                <Text style={styles.durationPresetTitle}>
+                  THỜI HẠN ÁP DỤNG ({durationDays} NGÀY)
+                </Text>
                 <Text style={styles.durationDatesText}>
                   {formatDisplayDateVi(startDate, false)} – {formatDisplayDateVi(endDate, false)}
                 </Text>
@@ -565,13 +516,6 @@ export function MealPlannerModal({
                 diffCal < -150 && styles.diffBannerUnder,
               ]}
             >
-              {Math.abs(diffCal) <= 80 ? (
-                <CheckCircle2 size={16} color="#16A34A" />
-              ) : diffCal > 80 ? (
-                <CircleAlert size={16} color="#DC2626" />
-              ) : (
-                <Info size={16} color="#0284C7" />
-              )}
               <Text
                 style={[
                   styles.diffText,
@@ -590,20 +534,13 @@ export function MealPlannerModal({
             {/* LEVEL 1: Week Selector when plan has multiple weeks */}
             {weeks.length > 1 && (
               <View style={styles.weeksSelectorSection}>
-                <View style={styles.daysSelectorHeader}>
-                  <View style={styles.daysSelectorHeaderLeft}>
-                    <Calendar size={13} color={colors.primary} />
-                    <Text style={styles.daysSelectorTitle}>
-                      1. PHÂN CẤP THEO TUẦN ({weeks.length} TUẦN • {durationDays} NGÀY):
+                <View style={styles.weeksSelectorHeader}>
+                  <Text style={styles.weeksSelectorTitle}>Phân cấp tuần</Text>
+                  <View style={styles.weeksCountBadge}>
+                    <Text style={styles.weeksCountBadgeText}>
+                      {weeks.length} tuần • {durationDays} ngày
                     </Text>
                   </View>
-                  <Pressable
-                    style={styles.copyDayBtn}
-                    onPress={handleCopyDayToAllWeeks}
-                  >
-                    <Copy size={11} color={colors.primary} />
-                    <Text style={styles.copyDayBtnText}>Chép sang cả {durationDays}N</Text>
-                  </Pressable>
                 </View>
                 <ScrollView
                   horizontal
@@ -652,34 +589,38 @@ export function MealPlannerModal({
             {/* LEVEL 2: Day Selector */}
             <View style={styles.daysSelectorSection}>
               <View style={styles.daysSelectorHeader}>
-                <View style={styles.daysSelectorHeaderLeft}>
-                  <Layers size={13} color="#0284c7" />
-                  <Text style={styles.daysSelectorTitle}>
-                    {weeks.length > 1
-                      ? `2. ${activeWeek?.name || 'Tuần'}: Chọn ngày (${activeWeek?.days.length || 0} ngày):`
-                      : `Chọn ngày để thiết kế (${activeWeek?.days.length || 0} ngày):`}
+                <Text style={styles.daysSelectorTitle} numberOfLines={1}>
+                  {weeks.length > 1
+                    ? `${activeWeek?.name || 'Tuần'}: Chọn ngày`
+                    : 'Chọn ngày thiết kế'}
+                </Text>
+                <View style={styles.daysCountBadge}>
+                  <Text style={styles.daysCountBadgeText}>
+                    {activeWeek?.days.length || 0} ngày
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  <Pressable
-                    style={styles.aiFillBtn}
-                    onPress={handleAiAutoFill}
-                    disabled={generatingAi}
-                  >
-                    {generatingAi ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Sparkles size={11} color="#fff" />
-                        <Text style={styles.aiFillBtnText}>AI sinh món</Text>
-                      </>
-                    )}
-                  </Pressable>
-                  <Pressable style={styles.copyDayBtn} onPress={handleCopyDayToCurrentWeek}>
-                    <Copy size={11} color={colors.primary} />
-                    <Text style={styles.copyDayBtnText}>Chép tuần</Text>
-                  </Pressable>
-                </View>
+              </View>
+
+              {/* Hàng nút thao tác rộng rãi, thoáng đãng 50/50 */}
+              <View style={styles.daysActionToolbar}>
+                <Pressable
+                  style={styles.aiFillBtn}
+                  onPress={handleAiAutoFill}
+                  disabled={generatingAi}
+                >
+                  {generatingAi ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.aiFillBtnText}>AI sinh món</Text>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  style={styles.manualAddBtn}
+                  onPress={() => setActiveMealIndex(0)}
+                >
+                  <Text style={styles.manualAddBtnText}>Tạo món thủ công</Text>
+                </Pressable>
               </View>
               <ScrollView
                 horizontal
@@ -726,20 +667,9 @@ export function MealPlannerModal({
                 <View key={meal.id || `meal-${mealIdx}`} style={styles.mealCard}>
                   {/* Meal Header */}
                   <View style={styles.mealHeader}>
-                    <View style={styles.mealHeaderLeft}>
-                      {meal.type === 'BREAKFAST' ? (
-                        <Sun size={18} color={colors.primary} />
-                      ) : meal.type === 'LUNCH' ? (
-                        <SunMedium size={18} color={colors.primary} />
-                      ) : meal.type === 'DINNER' ? (
-                        <Moon size={18} color={colors.primary} />
-                      ) : (
-                        <Coffee size={18} color={colors.primary} />
-                      )}
-                      <View>
-                        <Text style={styles.mealTitle}>{meal.title}</Text>
-                        <Text style={styles.mealTimeHint}>{meal.timeHint}</Text>
-                      </View>
+                    <View>
+                      <Text style={styles.mealTitle}>{meal.title}</Text>
+                      <Text style={styles.mealTimeHint}>{meal.timeHint}</Text>
                     </View>
 
                     <View style={styles.mealTotalPill}>
@@ -784,54 +714,48 @@ export function MealPlannerModal({
                     style={styles.addFoodBtn}
                     onPress={() => setActiveMealIndex(mealIdx)}
                   >
-                    <PlusCircle size={16} color={colors.primary} />
                     <Text style={styles.addFoodBtnText}>
-                      + Thêm món vào {meal.title}
+                      Thêm món vào {meal.title}
                     </Text>
                   </Pressable>
                 </View>
               ))}
             </View>
 
-            {/* Status Selector */}
+            {/* Status Selector - Segmented Control tinh tế, nhỏ gọn */}
             <Text style={[styles.sectionLabel, { marginTop: 14 }]}>TRẠNG THÁI XUẤT BẢN</Text>
-            <View style={styles.statusRow}>
+            <View style={styles.statusSegmentWrap}>
               <Pressable
-                style={[styles.statusBtn, status === 'DRAFT' && styles.statusBtnActiveDraft]}
+                style={[
+                  styles.statusSegmentBtn,
+                  status === 'DRAFT' && styles.statusSegmentBtnActiveDraft,
+                ]}
                 onPress={() => setStatus('DRAFT')}
               >
-                <FileText
-                  size={16}
-                  color={status === 'DRAFT' ? '#D97706' : colors.textMuted}
-                />
                 <Text
                   style={[
-                    styles.statusBtnText,
-                    status === 'DRAFT' && { color: '#B45309', fontWeight: '700' },
+                    styles.statusSegmentText,
+                    status === 'DRAFT' && styles.statusSegmentTextActiveDraft,
                   ]}
                 >
-                  Lưu nháp (Chưa gửi học viên)
+                  Lưu nháp
                 </Text>
               </Pressable>
 
               <Pressable
                 style={[
-                  styles.statusBtn,
-                  status === 'PUBLISHED' && styles.statusBtnActivePublish,
+                  styles.statusSegmentBtn,
+                  status === 'PUBLISHED' && styles.statusSegmentBtnActivePublish,
                 ]}
                 onPress={() => setStatus('PUBLISHED')}
               >
-                <Send
-                  size={16}
-                  color={status === 'PUBLISHED' ? '#16A34A' : colors.textMuted}
-                />
                 <Text
                   style={[
-                    styles.statusBtnText,
-                    status === 'PUBLISHED' && { color: '#15803D', fontWeight: '700' },
+                    styles.statusSegmentText,
+                    status === 'PUBLISHED' && styles.statusSegmentTextActivePublish,
                   ]}
                 >
-                  Xuất bản ngay cho Học viên
+                  Xuất bản
                 </Text>
               </Pressable>
             </View>
@@ -864,12 +788,9 @@ export function MealPlannerModal({
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <>
-                  <Check size={18} color="#FFFFFF" />
-                  <Text style={styles.saveBtnText}>
-                    {status === 'PUBLISHED' ? 'Xuất bản Thực Đơn' : 'Lưu Thực Đơn'}
-                  </Text>
-                </>
+                <Text style={styles.saveBtnText}>
+                  {status === 'PUBLISHED' ? 'Xuất bản Thực Đơn' : 'Lưu Thực Đơn'}
+                </Text>
               )}
             </Pressable>
           </View>
@@ -902,6 +823,8 @@ const styles = StyleSheet.create({
     maxHeight: '94%',
     paddingTop: spacing.md,
     paddingBottom: Platform.OS === 'ios' ? 34 : spacing.md,
+    overflow: 'hidden',
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -942,11 +865,13 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 0,
+    width: '100%',
   },
   scrollContent: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
+    width: '100%',
   },
   inputGroup: {
     marginBottom: 10,
@@ -1087,6 +1012,24 @@ const styles = StyleSheet.create({
     borderColor: '#BAE6FD',
     marginTop: 4,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  weeksSelectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  weeksSelectorHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  weeksSelectorTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: colors.primaryNavy,
   },
   weekTabPill: {
     paddingHorizontal: 12,
@@ -1122,78 +1065,124 @@ const styles = StyleSheet.create({
   /* 7-Day Selector Styles */
   daysSelectorSection: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginTop: 4,
+    marginTop: 6,
+    overflow: 'hidden',
   },
   daysSelectorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   daysSelectorHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
+    flex: 1,
   },
   daysSelectorTitle: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: colors.text,
+    color: colors.primaryNavy,
   },
-  copyDayBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
+  daysCountBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     borderRadius: radius.pill,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
   },
-  copyDayBtnText: {
-    fontSize: 10,
+  daysCountBadgeText: {
+    fontSize: 10.5,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#0369A1',
+  },
+  daysActionToolbar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
   },
   aiFillBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    justifyContent: 'center',
+    gap: 6,
     backgroundColor: '#4F46E5',
-    borderRadius: radius.pill,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 1,
   },
   aiFillBtnText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#fff',
   },
+  weeksCountBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: radius.pill,
+  },
+  weeksCountBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  manualAddBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  manualAddBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   dayTabsScroll: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
+    paddingRight: 12,
+    paddingVertical: 2,
   },
   dayTabPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     alignItems: 'center',
-    minWidth: 70,
+    minWidth: 72,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   dayTabPillActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    shadowOpacity: 0.15,
   },
   dayTabPillText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
   },
@@ -1201,19 +1190,19 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   dayTabSubText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '600',
     color: colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
   },
   dayTabSubTextActive: {
     color: 'rgba(255, 255, 255, 0.85)',
   },
   dayTabMetaText: {
-    fontSize: 8.5,
+    fontSize: 9,
     fontWeight: '600',
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   dayTabMetaTextActive: {
     color: 'rgba(255, 255, 255, 0.9)',
@@ -1314,35 +1303,52 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
   },
-  statusRow: {
+  statusSegmentWrap: {
     flexDirection: 'row',
-    gap: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 6,
   },
-  statusBtn: {
+  statusSegmentBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 8,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingVertical: 7,
+    borderRadius: 8,
   },
-  statusBtnActiveDraft: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
+  statusSegmentBtnActiveDraft: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  statusBtnActivePublish: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#BBF7D0',
+  statusSegmentBtnActivePublish: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  statusBtnText: {
-    fontSize: 11.5,
+  statusSegmentText: {
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  statusSegmentTextActiveDraft: {
+    color: '#B45309',
+    fontWeight: '700',
+  },
+  statusSegmentTextActivePublish: {
+    color: '#15803D',
+    fontWeight: '700',
   },
   footerRow: {
     flexDirection: 'row',

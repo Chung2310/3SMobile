@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Check, Flame, Info, Sparkles, Utensils, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { FoodCategory, FoodItem } from '@/types/nutrition';
@@ -278,7 +278,6 @@ export function FoodItemEditorModal({
           {/* Dinh dưỡng cho 1 phần */}
           <View style={styles.nutritionBox}>
             <View style={styles.nutritionBoxHeader}>
-              <Utensils size={14} color="#0284c7" />
               <Text style={styles.nutritionBoxTitle}>
                 Dinh dưỡng cho 1 khẩu phần ({gramsNum}g):
               </Text>
@@ -343,7 +342,6 @@ export function FoodItemEditorModal({
             <View style={styles.macroPreviewCard}>
               <View style={styles.macroPreviewTop}>
                 <View style={styles.macroPreviewCalorie}>
-                  <Flame size={14} color="#ea580c" />
                   <Text style={styles.macroPreviewCalorieText}>
                     {Math.round(displayKcal)} kcal / phần
                   </Text>
@@ -383,10 +381,7 @@ export function FoodItemEditorModal({
 
           {/* Mẹo chế biến / Hướng dẫn */}
           <View style={styles.fieldGroup}>
-            <View style={styles.labelWithHint}>
-              <Text style={styles.fieldLabel}>Mẹo chế biến & Ghi chú (tùy chọn)</Text>
-              <Info size={13} color={colors.textMuted} />
-            </View>
+            <Text style={styles.fieldLabel}>Mẹo chế biến & Ghi chú (tùy chọn)</Text>
             <TextInput
               style={[styles.textInput, styles.multilineInput]}
               value={prepTip}
@@ -413,7 +408,6 @@ export function FoodItemEditorModal({
             onPress={handleSave}
             disabled={saving}
           >
-            <Check size={16} color="#ffffff" />
             <Text style={styles.saveBtnText}>
               {saving ? 'Đang lưu...' : editingFood ? 'Cập nhật món' : 'Lưu món ăn'}
             </Text>
