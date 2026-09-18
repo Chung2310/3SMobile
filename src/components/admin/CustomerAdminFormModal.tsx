@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/services/api/client';
 import { formPayload, recordId, resources, type AdminRecord } from '@/services/adminResources';
@@ -66,11 +65,13 @@ function CustomerAdminFormModalInner({
   const [fullName, setFullName] = useState(() => String(item?.fullName || ''));
   const [phone, setPhone] = useState(() => String(item?.phone || ''));
   const [email, setEmail] = useState(() => String(item?.email || ''));
+  const [dateOfBirth, setDateOfBirth] = useState(() => (item?.dateOfBirth ? String(item.dateOfBirth).slice(0, 10) : ''));
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>(() => (item?.gender as any) || 'MALE');
   const [height, setHeight] = useState(() => (item?.height !== undefined && item?.height !== null ? String(item.height) : ''));
   const [initialWeight, setInitialWeight] = useState(() => (item?.initialWeight !== undefined && item?.initialWeight !== null ? String(item.initialWeight) : ''));
   const [initialGoal, setInitialGoal] = useState(() => String(item?.initialGoal || ''));
   const [medicalNotes, setMedicalNotes] = useState(() => String(item?.medicalNotes || ''));
+  const [internalNotes, setInternalNotes] = useState(() => String(item?.internalNotes || ''));
   const [status, setStatus] = useState<'ACTIVE' | 'LEAD' | 'INACTIVE'>(() => (item?.status as any) || 'ACTIVE');
 
   // Assigned PT
@@ -170,11 +171,13 @@ function CustomerAdminFormModalInner({
       phone,
       email,
       assignedPtId,
+      dateOfBirth,
       gender,
       height,
       initialWeight,
       initialGoal,
       medicalNotes,
+      internalNotes,
       status,
     };
 
@@ -226,7 +229,7 @@ function CustomerAdminFormModalInner({
               style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
               hitSlop={8}
             >
-              <Feather name="x" size={20} color={colors.text} />
+              <Text style={styles.closeBtnText}>Đóng</Text>
             </Pressable>
           </View>
 
@@ -238,7 +241,6 @@ function CustomerAdminFormModalInner({
           >
             {error ? (
               <View style={styles.errorNotice}>
-                <Ionicons name="alert-circle" size={16} color="#EF4444" />
                 <Text style={styles.errorNoticeText}>{error}</Text>
               </View>
             ) : null}
@@ -246,7 +248,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 1: THÔNG TIN CÁ NHÂN */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="user" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
               </View>
 
@@ -302,6 +303,21 @@ function CustomerAdminFormModalInner({
                 </View>
               </View>
 
+              {/* Ngày sinh */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Ngày sinh (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ví dụ: 1995-10-24"
+                  placeholderTextColor="#94A3B8"
+                  value={dateOfBirth}
+                  onChangeText={(val) => {
+                    setDateOfBirth(val);
+                    setDirty(true);
+                  }}
+                />
+              </View>
+
               {/* Giới tính */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Giới tính</Text>
@@ -341,7 +357,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 2: HLV PHỤ TRÁCH & TRẠNG THÁI */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="shield" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>HLV phụ trách & Trạng thái</Text>
               </View>
 
@@ -354,13 +369,10 @@ function CustomerAdminFormModalInner({
                   onPress={() => setPtSelectorOpen(true)}
                   style={styles.ptSelectBtn}
                 >
-                  <View style={styles.ptSelectInfo}>
-                    <Feather name="user-check" size={16} color={colors.primary} />
-                    <Text style={styles.ptSelectText}>
-                      {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
-                    </Text>
-                  </View>
-                  <Feather name="chevron-down" size={18} color="#64748B" />
+                  <Text style={styles.ptSelectText} numberOfLines={1}>
+                    {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
+                  </Text>
+                  <Text style={styles.ptSelectBtnAction}>Chọn HLV</Text>
                 </Pressable>
               </View>
 
@@ -412,7 +424,6 @@ function CustomerAdminFormModalInner({
             {/* PHẦN 3: CHỈ SỐ THỂ TRẠNG & MỤC TIÊU */}
             <View style={styles.formSection}>
               <View style={styles.sectionHeader}>
-                <Feather name="activity" size={15} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Thể trạng & Mục tiêu</Text>
               </View>
 
@@ -479,6 +490,22 @@ function CustomerAdminFormModalInner({
                   numberOfLines={2}
                 />
               </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Ghi chú nội bộ</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Ghi chú nội bộ dành cho HLV và Admin..."
+                  placeholderTextColor="#94A3B8"
+                  value={internalNotes}
+                  onChangeText={(val) => {
+                    setInternalNotes(val);
+                    setDirty(true);
+                  }}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
             </View>
           </ScrollView>
 
@@ -507,12 +534,9 @@ function CustomerAdminFormModalInner({
               {busy ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <>
-                  <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitBtnText}>
-                    {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
-                  </Text>
-                </>
+                <Text style={styles.submitBtnText}>
+                  {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                </Text>
               )}
             </Pressable>
           </View>
@@ -535,12 +559,11 @@ function CustomerAdminFormModalInner({
                   onPress={() => setPtSelectorOpen(false)}
                   hitSlop={8}
                 >
-                  <Feather name="x" size={20} color={colors.text} />
+                  <Text style={styles.ptPickerCloseText}>Đóng</Text>
                 </Pressable>
               </View>
 
               <View style={styles.ptPickerSearch}>
-                <Feather name="search" size={16} color="#64748B" />
                 <TextInput
                   style={styles.ptPickerSearchInput}
                   placeholder="Tìm HLV theo tên, username..."
@@ -549,8 +572,8 @@ function CustomerAdminFormModalInner({
                   onChangeText={setPtSearch}
                 />
                 {ptSearch ? (
-                  <Pressable onPress={() => setPtSearch('')} hitSlop={6}>
-                    <Feather name="x" size={14} color="#64748B" />
+                  <Pressable onPress={() => setPtSearch('')} hitSlop={6} style={styles.clearSearchBtn}>
+                    <Text style={styles.clearSearchText}>Xóa</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -587,7 +610,9 @@ function CustomerAdminFormModalInner({
                           <Text style={styles.ptPickerUser}>@{String(pt.username || '')} · {String(pt.phone || 'Chưa có SĐT')}</Text>
                         </View>
                         {isSelected && (
-                          <Feather name="check" size={18} color={colors.primary} />
+                          <View style={styles.ptPickerCheckBadge}>
+                            <Text style={styles.ptPickerCheckText}>Đã chọn</Text>
+                          </View>
                         )}
                       </Pressable>
                     );
@@ -609,9 +634,6 @@ function CustomerAdminFormModalInner({
         >
           <View style={styles.subModalOverlay}>
             <View style={styles.discardCard}>
-              <View style={styles.discardIcon}>
-                <Ionicons name="alert" size={24} color="#EF4444" />
-              </View>
               <Text style={styles.discardTitle}>Hủy thay đổi?</Text>
               <Text style={styles.discardDesc}>
                 Các thông tin bạn vừa nhập sẽ bị mất và không thể khôi phục.
@@ -684,30 +706,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  closeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   formScrollContent: {
     paddingVertical: 16,
     gap: 16,
   },
   errorNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
     borderRadius: 12,
     padding: 12,
-    gap: 8,
   },
   errorNoticeText: {
-    flex: 1,
     fontSize: 13,
     color: '#EF4444',
   },
@@ -720,9 +743,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     marginBottom: 4,
   },
   sectionTitle: {
@@ -800,16 +820,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  ptSelectInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
   ptSelectText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  ptSelectBtnAction: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   statusRow: {
     flexDirection: 'row',
@@ -863,7 +884,6 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.primary,
     borderRadius: 14,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -903,6 +923,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
+  ptPickerCloseText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   ptPickerSearch: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -913,12 +940,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 42,
     marginBottom: 12,
-    gap: 8,
   },
   ptPickerSearchInput: {
     flex: 1,
     fontSize: 14,
     color: colors.text,
+  },
+  clearSearchBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  clearSearchText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
   },
   ptPickerList: {
     maxHeight: 320,
@@ -973,6 +1008,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 1,
   },
+  ptPickerCheckBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ptPickerCheckText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   discardCard: {
     width: '100%',
     maxWidth: 320,
@@ -985,15 +1031,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
-  },
-  discardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
   },
   discardTitle: {
     fontSize: 17,
