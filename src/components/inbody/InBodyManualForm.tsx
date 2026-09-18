@@ -357,7 +357,7 @@ export function InBodyManualForm({
                 color={colors.primary}
               />
               <Text style={styles.title}>
-                {editingRecord ? 'Chỉnh sửa Phiếu InBody' : 'Nhập Phiếu InBody Thủ Công'}
+                {editingRecord ? 'Chỉnh sửa phiếu InBody' : 'Nhập phiếu InBody thủ công'}
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>

@@ -545,7 +545,7 @@ export function InBodyOcrFlow({
                 <Ionicons name="scan-outline" size={20} color={colors.primary} />
               </View>
               <Text style={styles.title}>
-                {step === 'PICK_IMAGE' ? 'Quét phiếu InBody AI' : 'Kiểm tra & Xác nhận'}
+                {step === 'PICK_IMAGE' ? 'Quét phiếu InBody AI' : 'Kiểm tra & xác nhận'}
               </Text>
             </View>
             <Pressable

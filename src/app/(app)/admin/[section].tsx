@@ -47,7 +47,7 @@ export default function AdminSection() {
 
   return (
     <Screen
-      title={title.toLocaleUpperCase('vi-VN')}
+      title={title}
       onBack={() => {
         if (router.canGoBack()) {
           router.back();

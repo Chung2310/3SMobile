@@ -416,7 +416,7 @@ export function RoadmapCreateModal({
                 <Ionicons name="sparkles" size={18} color={colors.primary} />
               </View>
               <View>
-                <Text style={styles.modalTitle}>Tạo Lộ trình Huấn luyện</Text>
+                <Text style={styles.modalTitle}>Tạo lộ trình huấn luyện</Text>
                 <Text style={styles.modalSubtitle}>Trợ lý AI & Khoa học Thể thao NSCA/ACSM</Text>
               </View>
             </View>

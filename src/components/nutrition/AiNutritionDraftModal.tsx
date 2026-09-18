@@ -250,7 +250,7 @@ export function AiNutritionDraftModal({
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <View>
-                <Text style={styles.headerTitle}>Trợ Lý AI Lên Thực Đơn</Text>
+                <Text style={styles.headerTitle}>Trợ lý AI lên thực đơn</Text>
                 <Text style={styles.headerSub}>
                   {customer ? `${customer.fullName} • Cá nhân hóa cơm Việt` : 'Dành cho học viên'}
                 </Text>

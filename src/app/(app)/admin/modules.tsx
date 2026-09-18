@@ -53,7 +53,7 @@ export default function AdminModulesScreen() {
 
   return (
     <Screen
-      title="QUẢN TRỊ HỆ THỐNG"
+      title="Quản trị hệ thống"
       subtitle={`${totalSections} chức năng quản lý`}
       onBack={() => {
         if (router.canGoBack()) {

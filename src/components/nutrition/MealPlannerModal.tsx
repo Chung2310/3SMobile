@@ -426,7 +426,7 @@ export function MealPlannerModal({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>
-                {editingPlan ? 'Chỉnh sửa Thực Đơn' : 'Lập Thực Đơn Mới'}
+                {editingPlan ? 'Chỉnh sửa thực đơn' : 'Lập thực đơn mới'}
               </Text>
               <Text style={styles.subtitle}>
                 {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}

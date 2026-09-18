@@ -411,7 +411,7 @@ export default function WalletScreen() {
           <Feather name="arrow-left" size={20} color="#0F172A" />
         </Pressable>
         <View style={styles.titleWrap}>
-          <Text style={styles.pageTitle}>Ví Credit AI</Text>
+          <Text style={styles.pageTitle}>Ví credit AI</Text>
           <Text style={styles.pageSubtitle}>Nạp credit sử dụng các tính năng AI</Text>
         </View>
         <View style={styles.topBalanceBadge}>
