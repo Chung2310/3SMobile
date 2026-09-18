@@ -5,11 +5,11 @@ import type { JsonRecord } from '../types/domain';
 export const ATTENDANCE = { PRESENT: 'Có mặt', LATE: 'Đi muộn', ABSENT: 'Vắng mặt' };
 export const MEASUREMENTS: [string, string, string][] = [['weight', 'Cân nặng', 'kg'], ['bodyFatPercentage', 'Tỷ lệ mỡ', '%'], ['muscleMass', 'Khối lượng cơ', 'kg'], ['chest', 'Vòng ngực', 'cm'], ['waist', 'Vòng eo', 'cm'], ['hips', 'Vòng hông', 'cm'], ['arm', 'Vòng tay', 'cm'], ['thigh', 'Vòng đùi', 'cm'], ['calf', 'Vòng bắp chân', 'cm']];
 export const RESULT_FIELDS: Record<string, [string, string][]> = {
-  STRENGTH: [['reps', 'Số lần'], ['weight', 'Mức tạ (kg)'], ['rpe', 'RPE (0–10)'], ['rir', 'Số lần dự trữ']],
-  BODYWEIGHT: [['reps', 'Số lần'], ['addedWeight', 'Tạ thêm (kg)'], ['rpe', 'RPE (0–10)'], ['rir', 'Số lần dự trữ']],
-  CARDIO: [['durationMinutes', 'Thời lượng (phút)'], ['distanceKm', 'Quãng đường (km)'], ['paceSecondsPerKm', 'Pace (giây/km)'], ['averageHeartRate', 'Nhịp tim (bpm)'], ['inclinePercent', 'Độ dốc (%)'], ['calories', 'Năng lượng (kcal)'], ['rpe', 'RPE (0–10)']],
-  INTERVAL: [['rounds', 'Số vòng'], ['workSeconds', 'Thời gian tập (giây)'], ['restSeconds', 'Thời gian nghỉ (giây)'], ['distanceMetersPerRound', 'Quãng đường/vòng (m)'], ['repsPerRound', 'Số lần/vòng'], ['rpe', 'RPE (0–10)']],
-  MOBILITY: [['durationMinutes', 'Thời lượng (phút)'], ['reps', 'Số lần'], ['discomfort', 'Mức khó chịu (0–10)']],
+  STRENGTH: [['reps', 'Reps'], ['weight', 'Weight (kg)'], ['rpe', 'RPE (0–10)'], ['rir', 'RIR']],
+  BODYWEIGHT: [['reps', 'Reps'], ['addedWeight', 'Added Weight (kg)'], ['rpe', 'RPE (0–10)'], ['rir', 'RIR']],
+  CARDIO: [['durationMinutes', 'Duration (min)'], ['distanceKm', 'Distance (km)'], ['paceSecondsPerKm', 'Pace (s/km)'], ['averageHeartRate', 'Heart Rate (bpm)'], ['inclinePercent', 'Incline (%)'], ['calories', 'Calories (kcal)'], ['rpe', 'RPE (0–10)']],
+  INTERVAL: [['rounds', 'Rounds'], ['workSeconds', 'Work Time (s)'], ['restSeconds', 'Rest (s)'], ['distanceMetersPerRound', 'Distance/Round (m)'], ['repsPerRound', 'Reps/Round'], ['rpe', 'RPE (0–10)']],
+  MOBILITY: [['durationMinutes', 'Duration (min)'], ['reps', 'Reps'], ['discomfort', 'Discomfort (0–10)']],
 };
 export const ACHIEVEMENTS: Record<string, string> = { MAX_WEIGHT: 'Mức tạ cao nhất', MAX_REPS: 'Số lần cao nhất', MAX_SET_VOLUME: 'Khối lượng tập/hiệp cao nhất', ESTIMATED_1RM: '1RM ước tính', BODYWEIGHT_MAX_REPS: 'Số lần với trọng lượng cơ thể', BODYWEIGHT_MAX_ADDED_WEIGHT: 'Tạ thêm cao nhất', CARDIO_MAX_DISTANCE: 'Quãng đường dài nhất', CARDIO_MAX_DURATION: 'Thời gian cardio dài nhất', CARDIO_BEST_PACE: 'Pace tốt nhất', INTERVAL_MAX_ROUNDS: 'Số vòng cao nhất', MOBILITY_MAX_DURATION: 'Thời gian linh hoạt dài nhất' };
 export function dayKey(value: string | Date): string {

@@ -178,7 +178,6 @@ export function SessionAttachments({
       <View style={styles.photoHeaderRow}>
         <Text style={styles.sectionTitle}>Ảnh tiến độ ({photos.length}/4)</Text>
       </View>
-      <Notice text="Ảnh sẽ được tải lên máy chủ bảo mật và liên kết trực tiếp vào lịch sử buổi tập của học viên." />
 
       {photos.map((photo, index) => {
         const rawUrl = readText(photo, ['photoUrl']);
