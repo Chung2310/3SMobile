@@ -59,7 +59,6 @@ function AdminDonutChart({
 
   useEffect(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    setFillProgress(0);
     const startTime = Date.now();
     const duration = 850;
 
@@ -176,7 +175,6 @@ function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSession
 
   useEffect(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    setFillProgress(0);
     const startTime = Date.now();
     const duration = 850;
 
@@ -303,7 +301,6 @@ function AdminPtWorkloadBarChart({
 
   useEffect(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    setFillProgress(0);
     const startTime = Date.now();
     const duration = 850;
 
@@ -690,13 +687,11 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     id: 'pts',
     title: 'HLV',
     iconName: 'people-outline',
-    route: '/(app)/customers',
   },
   {
     id: 'customers',
     title: 'Khách hàng',
     iconName: 'person-add-outline',
-    route: '/(app)/admin/customers',
   },
   {
     id: 'packages',
@@ -704,15 +699,26 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     iconName: 'cube-outline',
   },
   {
-    id: 'wallet',
-    title: 'Ví credit',
-    iconName: 'wallet-outline',
-    route: '/(app)/wallet',
+    id: 'modules',
+    title: 'Phân hệ',
+    iconName: 'layers-outline',
+    route: '/(app)/admin/modules',
+  },
+  {
+    id: 'transfers',
+    title: 'Chuyển giao',
+    iconName: 'swap-horizontal-outline',
   },
   {
     id: 'knowledge',
     title: 'Kho tri thức',
     iconName: 'book-outline',
+  },
+  {
+    id: 'wallet',
+    title: 'Ví credit',
+    iconName: 'wallet-outline',
+    route: '/(app)/wallet',
   },
   {
     id: 'settings',
@@ -811,10 +817,16 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   };
 
   const handleAdminFeaturePress = (id: string, route?: string) => {
-    if (id === 'pts') {
+    if (id === 'modules') {
+      router.push('/(app)/admin/modules' as any);
+    } else if (id === 'pts') {
       router.push({ pathname: '/(app)/admin/[section]', params: { section: 'pts' } });
+    } else if (id === 'customers') {
+      router.push({ pathname: '/(app)/admin/[section]', params: { section: 'customers' } });
     } else if (id === 'packages') {
       router.push({ pathname: '/(app)/admin/[section]', params: { section: 'packages' } });
+    } else if (id === 'transfers') {
+      router.push({ pathname: '/(app)/admin/[section]', params: { section: 'transfers' } });
     } else if (id === 'knowledge') {
       router.push({ pathname: '/(app)/admin/[section]', params: { section: 'knowledge' } });
     } else if (route) {
@@ -909,7 +921,15 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
       {/* 2. LƯỚI TÍNH NĂNG CHUYÊN SÂU GIỐNG MÀN HÌNH PT */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>CHỨC NĂNG QUẢN LÝ</Text>
-        <Text style={styles.sectionMeta}>{ADMIN_QUICK_FEATURES.length} phân hệ</Text>
+        <Pressable
+          onPress={() => router.push('/(app)/admin/modules' as any)}
+          hitSlop={8}
+          style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Xem tất cả phân hệ"
+        >
+          <Text style={[styles.sectionMeta, { color: colors.primary }]}>Xem tất cả</Text>
+        </Pressable>
       </View>
 
       <View style={styles.featuresCard}>

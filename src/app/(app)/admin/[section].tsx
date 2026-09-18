@@ -48,7 +48,13 @@ export default function AdminSection() {
   return (
     <Screen
       title={title.toLocaleUpperCase('vi-VN')}
-      onBack={() => router.dismissTo({ pathname: '/(app)/admin', params: { tab: 'modules' } })}
+      onBack={() => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(app)/admin/modules');
+        }
+      }}
     >
       {section === 'pts' ? (
         <AdminPtsManagement />
@@ -87,7 +93,13 @@ export default function AdminSection() {
       ) : (
         <Notice
           message="Không tìm thấy chức năng quản trị."
-          retry={() => router.dismissTo({ pathname: '/(app)/admin', params: { tab: 'modules' } })}
+          retry={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(app)/admin/modules');
+            }
+          }}
         />
       )}
     </Screen>
