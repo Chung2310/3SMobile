@@ -494,7 +494,13 @@ export default function ProfileScreen() {
       {/* 1. TOP BAR */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.navigate('/(app)/(tabs)')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.navigate('/(app)/(tabs)');
+            }
+          }}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
           accessibilityLabel="Quay lại"
@@ -507,19 +513,7 @@ export default function ProfileScreen() {
           <Text style={styles.topBarSubtitle}>Huấn luyện viên 3S</Text>
         </View>
 
-        {/* Nút sửa nhanh trên Top Bar */}
-        <Pressable
-          onPress={() => {
-            if (profile) applyProfileToForm(profile);
-            setSheetTab('profile');
-            setShowEditSheet(true);
-          }}
-          hitSlop={12}
-          style={({ pressed }) => [styles.topEditBtn, pressed && styles.backBtnPressed]}
-          accessibilityLabel="Sửa hồ sơ"
-        >
-          <Feather name="edit-3" size={18} color="#0284C7" />
-        </Pressable>
+        <View style={styles.topBarRightSpacer} />
       </View>
 
       <ScrollView
@@ -1337,15 +1331,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  topEditBtn: {
+  topBarRightSpacer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
   },
   backBtnPressed: {
     backgroundColor: '#E2E8F0',

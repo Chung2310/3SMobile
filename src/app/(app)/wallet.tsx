@@ -396,7 +396,13 @@ export default function WalletScreen() {
       {/* Top Header */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.navigate('/(app)/(tabs)')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.navigate('/(app)/(tabs)');
+            }
+          }}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
           accessibilityRole="button"
