@@ -11,21 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {
-  Calendar,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  Flame,
-  Layers,
-  Pencil,
-  RefreshCw,
-  Sparkles,
-  Utensils,
-  X,
-} from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
@@ -73,13 +59,6 @@ const AI_PRESET_PROMPTS = [
   },
 ];
 
-const AI_LOADING_STEPS = [
-  'Đang phân tích chỉ số thể trạng & mục tiêu...',
-  'Đang tính toán phân bổ BMR, TDEE & Macro...',
-  'Đang tuyển chọn thực phẩm cơm Việt chuẩn calo...',
-  'Đang thiết kế thực đơn chi tiết từng bữa...',
-  'Đang hoàn tất lưu ý chế biến & thời điểm uống nước...',
-];
 
 export function AiNutritionDraftModal({
   visible,
@@ -91,7 +70,6 @@ export function AiNutritionDraftModal({
   const [request, setRequest] = useState(AI_PRESET_PROMPTS[0].prompt);
   const [durationDays, setDurationDays] = useState(30);
   const [loading, setLoading] = useState(false);
-  const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState<NutritionPlanData | null>(null);
   const [adviceExpanded, setAdviceExpanded] = useState(true);
@@ -108,17 +86,6 @@ export function AiNutritionDraftModal({
   const activeDay = activeWeek?.days?.[selectedDayIdx] || activeWeek?.days?.[0];
   const activeMeals: MealBlock[] = activeDay?.meals || [];
 
-  // Cycle loading messages for smooth AI experience
-  useEffect(() => {
-    if (!loading) {
-      setLoadingStepIdx(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setLoadingStepIdx((prev) => (prev + 1) % AI_LOADING_STEPS.length);
-    }, 1600);
-    return () => clearInterval(interval);
-  }, [loading]);
 
   // Reset state on open
   useEffect(() => {
@@ -259,9 +226,6 @@ export function AiNutritionDraftModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <View style={styles.sparkleIconBox}>
-                <Sparkles size={18} color="#fff" />
-              </View>
               <View>
                 <Text style={styles.headerTitle}>Trợ Lý AI Lên Thực Đơn</Text>
                 <Text style={styles.headerSub}>
@@ -361,15 +325,10 @@ export function AiNutritionDraftModal({
                   {loading ? (
                     <View style={styles.loadingRow}>
                       <ActivityIndicator size="small" color="#fff" />
-                      <Text style={styles.generateBtnText}>
-                        {AI_LOADING_STEPS[loadingStepIdx]}
-                      </Text>
+                      <Text style={styles.generateBtnText}>Đang tạo...</Text>
                     </View>
                   ) : (
-                    <View style={styles.btnContentRow}>
-                      <Sparkles size={16} color="#fff" />
-                      <Text style={styles.generateBtnText}>Bắt Đầu Tạo Thực Đơn AI</Text>
-                    </View>
+                    <Text style={styles.generateBtnText}>Bắt Đầu Tạo Thực Đơn AI</Text>
                   )}
                 </Pressable>
               </View>
@@ -380,7 +339,6 @@ export function AiNutritionDraftModal({
                 <View style={styles.resultHeaderCard}>
                   <View style={styles.aiBadgeRow}>
                     <View style={styles.aiBadge}>
-                      <Sparkles size={12} color="#fff" />
                       <Text style={styles.aiBadgeText}>
                         AI THỰC ĐƠN • {weeks.length} TUẦN ({generatedDraft.durationDays || durationDays} NGÀY)
                       </Text>
@@ -434,7 +392,6 @@ export function AiNutritionDraftModal({
                 {weeks.length > 1 && (
                   <View style={styles.weeksSelectorSection}>
                     <View style={styles.daysSelectorHeader}>
-                      <Calendar size={13} color={colors.primary} />
                       <Text style={styles.daysSelectorTitle}>
                         1. PHÂN CẤP THEO TUẦN ({weeks.length} TUẦN • {generatedDraft.durationDays || durationDays} NGÀY):
                       </Text>
@@ -487,7 +444,6 @@ export function AiNutritionDraftModal({
                 {activeWeek && activeWeek.days.length > 0 && (
                   <View style={styles.daysSelectorSection}>
                     <View style={styles.daysSelectorHeader}>
-                      <Layers size={13} color="#0284c7" />
                       <Text style={styles.daysSelectorTitle}>
                         {weeks.length > 1
                           ? `2. ${activeWeek?.name || 'Tuần'}: Chọn ngày (${activeWeek?.days.length || 0} ngày):`
@@ -539,7 +495,6 @@ export function AiNutritionDraftModal({
                     <View key={mealIdx} style={styles.mealCard}>
                       <View style={styles.mealCardHeader}>
                         <View style={styles.mealTitleRow}>
-                          <Utensils size={14} color={colors.primary} />
                           <Text style={styles.mealTitle}>{meal.title || `Bữa ${mealIdx + 1}`}</Text>
                         </View>
                         {meal.calories ? (
@@ -576,18 +531,17 @@ export function AiNutritionDraftModal({
                     onPress={handleSaveDraft}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <View style={styles.btnContentRow}>
-                        <CheckCircle2 size={16} color="#fff" />
-                        <Text style={styles.saveBtnText}>Lưu & Áp Dụng Thực Đơn</Text>
+                      <View style={styles.loadingRow}>
+                        <ActivityIndicator size="small" color="#fff" />
+                        <Text style={styles.saveBtnText}>Đang lưu...</Text>
                       </View>
+                    ) : (
+                      <Text style={styles.saveBtnText}>Lưu & Áp Dụng Thực Đơn</Text>
                     )}
                   </Pressable>
 
                   <View style={styles.subActionRow}>
                     <Pressable style={styles.subActionBtn} onPress={handleEditManually}>
-                      <Pencil size={14} color={colors.primary} />
                       <Text style={styles.subActionBtnText}>Sửa thêm thủ công</Text>
                     </Pressable>
 
@@ -595,7 +549,6 @@ export function AiNutritionDraftModal({
                       style={[styles.subActionBtn, { borderColor: '#E2E8F0' }]}
                       onPress={() => setGeneratedDraft(null)}
                     >
-                      <RefreshCw size={14} color={colors.textMuted} />
                       <Text style={[styles.subActionBtnText, { color: colors.textMuted }]}>
                         Tạo lại với yêu cầu khác
                       </Text>

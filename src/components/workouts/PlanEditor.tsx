@@ -180,7 +180,7 @@ export function PlanEditor({
 
   return (
     <Screen
-      title="WORKOUT STUDIO"
+      title="Workout Studio"
       scroll={false}
       onBack={() => {
         if (!busy) {
@@ -193,10 +193,10 @@ export function PlanEditor({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+          contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         >
-          <View pointerEvents={busy ? 'none' : 'auto'} style={{ gap: 16 }}>
+          <View pointerEvents={busy ? 'none' : 'auto'} style={{ gap: 10 }}>
             {!!error && <Notice error text={error} />}
             {saved && <Notice tone="success" text="Đã lưu giáo án thành công." />}
 
@@ -848,11 +848,11 @@ function ExerciseEditor({ exercise, onChange }: { exercise: JsonRecord; onChange
 const editorStyles = StyleSheet.create({
   planHeroCard: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    gap: 8,
+    padding: 10,
+    gap: 6,
   },
   planHeroTop: {
     flexDirection: 'row',
@@ -861,107 +861,105 @@ const editorStyles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     alignItems: 'center',
   },
   levelBadge: {
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   levelBadgeText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
     color: colors.primaryDark,
-    textTransform: 'uppercase',
   },
   durationBadge: {
     backgroundColor: '#E0F2FE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   durationBadgeText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
     color: colors.primary,
   },
   quickEditBtn: {
-    minHeight: 36,
+    minHeight: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     backgroundColor: colors.surfaceMuted,
   },
   quickEditBtnText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primary,
   },
   planTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 14.5,
+    lineHeight: 19,
     color: colors.text,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     flexWrap: 'wrap',
   },
   daySwitcherContainer: {
-    gap: 12,
+    gap: 6,
   },
   dayNavBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 8,
+    padding: 4,
   },
   navArrowBtn: {
-    width: 44,
-    height: 44,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: colors.surfaceMuted,
   },
   currentDayText: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 15,
+    fontSize: 13,
     color: colors.text,
   },
   dayIndexSubtext: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 12,
+    fontSize: 10.5,
     color: colors.textMuted,
   },
   dayChipsScroll: {
-    gap: 8,
-    paddingVertical: 4,
+    gap: 6,
+    paddingVertical: 2,
   },
   dayChip: {
-    minHeight: 44,
-    minWidth: 72,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
+    minHeight: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   dayChipSelected: {
     backgroundColor: colors.primary,
@@ -969,16 +967,16 @@ const editorStyles = StyleSheet.create({
   },
   dayChipText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 11.5,
     color: colors.text,
   },
   dayChipTextSelected: {
     color: '#FFFFFF',
   },
   dayChipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.primary,
   },
   dayChipDotSelected: {
@@ -986,39 +984,39 @@ const editorStyles = StyleSheet.create({
   },
   emptySubCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 24,
+    padding: 14,
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   unscheduledTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
     marginBottom: 4,
   },
   deleteCircleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   levelRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   levelChip: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,

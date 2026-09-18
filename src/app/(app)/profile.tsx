@@ -123,7 +123,6 @@ export default function ProfileScreen() {
     onConfirm: () => {},
   });
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const applyProfileToForm = (data: PtProfileInfo) => {
     setForm((prev) => ({
@@ -462,10 +461,23 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleConfirmSignOut = async () => {
-    setShowLogoutModal(false);
-    await signOut();
-    router.replace('/(auth)/login');
+  const handleSignOut = () => {
+    setAlertConfig({
+      visible: true,
+      type: 'warning',
+      title: 'Đăng xuất tài khoản',
+      message: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng 3S Gym?',
+      confirmLabel: 'Đăng xuất',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        await signOut();
+        router.replace('/(auth)/login');
+      },
+      onCancel: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+      },
+    });
   };
 
   const displayName = profile?.fullName || session?.user?.fullName || session?.user?.username || 'Huấn luyện viên';
@@ -787,7 +799,7 @@ export default function ProfileScreen() {
             <View style={styles.systemCard}>
               <Text style={styles.systemHeading}>HỆ THỐNG</Text>
               <Pressable
-                onPress={() => setShowLogoutModal(true)}
+                onPress={handleSignOut}
                 style={({ pressed }) => [
                   styles.signOutBtn,
                   pressed && styles.signOutBtnPressed,
@@ -1285,57 +1297,7 @@ export default function ProfileScreen() {
         onCancel={alertConfig.onCancel}
       />
 
-      {/* MODAL XÁC NHẬN ĐĂNG XUẤT */}
-      <Modal
-        visible={showLogoutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
-        <Pressable
-          style={styles.logoutModalOverlay}
-          onPress={() => setShowLogoutModal(false)}
-        >
-          <Pressable
-            style={styles.logoutModalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.logoutModalIconWrap}>
-              <Feather name="log-out" size={26} color="#EF4444" />
-            </View>
-            <Text style={styles.logoutModalTitle}>Xác nhận đăng xuất</Text>
-            <Text style={styles.logoutModalMessage}>
-              Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không? Phiên làm việc của bạn sẽ kết thúc.
-            </Text>
 
-            <View style={styles.logoutModalActions}>
-              <Pressable
-                onPress={() => setShowLogoutModal(false)}
-                style={({ pressed }) => [
-                  styles.logoutModalCancelBtn,
-                  pressed && { opacity: 0.8 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Hủy bỏ"
-              >
-                <Text style={styles.logoutModalCancelText}>Hủy bỏ</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => void handleConfirmSignOut()}
-                style={({ pressed }) => [
-                  styles.logoutModalConfirmBtn,
-                  pressed && { opacity: 0.85 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Xác nhận đăng xuất"
-              >
-                <Text style={styles.logoutModalConfirmText}>Đăng xuất</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -1774,85 +1736,6 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
 
-  // -------------------------------------------------------------
-  // MODAL XÁC NHẬN ĐĂNG XUẤT
-  // -------------------------------------------------------------
-  logoutModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  logoutModalContent: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  logoutModalIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  logoutModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  logoutModalMessage: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  logoutModalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  logoutModalCancelBtn: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  logoutModalCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  logoutModalConfirmBtn: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  logoutModalConfirmText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
 
   // -------------------------------------------------------------
   // BOTTOM SHEET SỬA HỒ SƠ & BẢO MẬT

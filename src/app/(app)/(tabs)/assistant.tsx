@@ -218,9 +218,78 @@ export default function AssistantScreen() {
     }
   };
 
-  const handleSelectCustomer = (customer: CustomerProfile | null) => {
+  const handleSelectCustomer = async (customer: CustomerProfile | null) => {
     setSelectedCustomer(customer);
     setShowCustomerPicker(false);
+
+    if (!customer) {
+      // Bỏ liên kết học viên -> tìm đoạn chat chung chưa liên kết học viên (nếu có)
+      const unlinkedConv = conversations.find((c) => !c.customerId);
+      if (unlinkedConv) {
+        setActiveConversation(unlinkedConv);
+        try {
+          const detail = await fetchConversationDetail(unlinkedConv._id);
+          if (detail?.messages && detail.messages.length > 0) {
+            setMessages(detail.messages);
+          } else {
+            setMessages(unlinkedConv.messages && unlinkedConv.messages.length > 0 ? unlinkedConv.messages : [WELCOME_MESSAGE]);
+          }
+        } catch {
+          setMessages(unlinkedConv.messages && unlinkedConv.messages.length > 0 ? unlinkedConv.messages : [WELCOME_MESSAGE]);
+        }
+      } else {
+        setActiveConversation(null);
+        setMessages([WELCOME_MESSAGE]);
+      }
+      return;
+    }
+
+    // Chọn học viên mới -> Tìm đoạn chat cũ của học viên này nếu đã có
+    const matchedConv = conversations.find((c) => c.customerId === customer._id);
+    if (matchedConv) {
+      setActiveConversation(matchedConv);
+      try {
+        const detail = await fetchConversationDetail(matchedConv._id);
+        if (detail?.messages && detail.messages.length > 0) {
+          setMessages(detail.messages);
+        } else if (matchedConv.messages && matchedConv.messages.length > 0) {
+          setMessages(matchedConv.messages);
+        } else {
+          setMessages([
+            {
+              _id: `welcome-${customer._id}`,
+              role: 'ASSISTANT',
+              content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch {
+        setMessages(
+          matchedConv.messages && matchedConv.messages.length > 0
+            ? matchedConv.messages
+            : [
+                {
+                  _id: `welcome-${customer._id}`,
+                  role: 'ASSISTANT',
+                  content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
+                  createdAt: new Date().toISOString(),
+                },
+              ]
+        );
+      }
+    } else {
+      // Chưa từng chat với học viên này -> reset activeConversation để khi gửi tin nhắn sẽ tạo phiên chat mới đúng customerId
+      setActiveConversation(null);
+      setMessages([
+        {
+          _id: `welcome-${customer._id}`,
+          role: 'ASSISTANT',
+          content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    }
   };
 
   const handleSend = async (textToSend?: string) => {
@@ -240,7 +309,10 @@ export default function AssistantScreen() {
     setMessages((prev) => [...prev, optimisticUserMsg]);
 
     try {
-      if (activeConversation?._id) {
+      const isMatchingCustomer =
+        (activeConversation?.customerId || undefined) === (selectedCustomer?._id || undefined);
+
+      if (activeConversation?._id && isMatchingCustomer) {
         const updated = await sendConversationMessage(activeConversation._id, {
           content: text,
           requestType: 'GENERAL',
@@ -251,7 +323,12 @@ export default function AssistantScreen() {
           prev.map((c) => (c._id === updated._id ? updated : c))
         );
       } else {
-        const title = text.length > 35 ? `${text.slice(0, 35)}...` : text;
+        const title = selectedCustomer
+          ? `Tư vấn ${selectedCustomer.fullName}`
+          : text.length > 35
+          ? `${text.slice(0, 35)}...`
+          : text;
+
         const newConv = await createConversation({
           title,
           customerId: selectedCustomer?._id,
@@ -483,7 +560,7 @@ export default function AssistantScreen() {
                     ]}
                   >
                     <Text style={[styles.msgText, isAi ? styles.textAi : styles.textUser]}>
-                      {msg.content}
+                      {msg.content ? msg.content.replace(/\*\*/g, '') : ''}
                     </Text>
                     {formattedTime ? (
                       <Text style={[styles.msgTime, isAi ? styles.timeAi : styles.timeUser]}>

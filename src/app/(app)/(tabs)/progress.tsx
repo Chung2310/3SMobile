@@ -52,11 +52,19 @@ export default function ProgressScreen() {
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN';
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/(app)/(tabs)');
+    }
+  };
+
   // If user is staff (PT/ADMIN), display the PT InBody Management Screen
   if (staff && session) {
     return (
-      <View style={[styles.inbodyContainer, { paddingTop: insets.top }]}>
-        <InBodyListScreen />
+      <View style={styles.inbodyContainer}>
+        <InBodyListScreen onBack={handleBack} />
       </View>
     );
   }

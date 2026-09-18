@@ -90,7 +90,7 @@ function CustomerWorkouts() {
   return (
     <Screen
       onBack={() => router.navigate('/(app)/(tabs)')}
-      title="GIÁO ÁN"
+      title="Giáo án"
       subtitle="Kế hoạch tập luyện được PT công bố cho bạn."
       refreshing={loading}
       onRefresh={refresh}
@@ -232,7 +232,7 @@ function StaffWorkouts() {
   return (
     <Screen
       onBack={() => router.navigate('/(app)/(tabs)')}
-      title="GIÁO ÁN"
+      title="Giáo án"
       refreshing={loading}
       onRefresh={refresh}
     >
@@ -582,21 +582,21 @@ const styles = StyleSheet.create({
   },
   toolbarBtn: {
     flex: 1,
-    minHeight: 38,
-    borderRadius: 12,
+    minHeight: 34,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   toolbarBtnPrimary: {
     backgroundColor: colors.primary,
   },
   toolbarBtnPrimaryText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFFFFF',
   },
   toolbarBtnAi: {
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   },
   toolbarBtnAiText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primary,
   },
   toolbarBtnSecondary: {
@@ -616,12 +616,12 @@ const styles = StyleSheet.create({
   },
   toolbarBtnSecondaryText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text,
   },
   searchBox: {
-    height: 46,
-    borderRadius: 14,
+    height: 40,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -638,12 +638,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontSize: 13.5,
     color: colors.text,
   },
   clearSearchBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -653,9 +653,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statusChip: {
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    minHeight: 30,
+    paddingHorizontal: 12,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   statusChipText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
   },
   statusChipTextActive: {
     color: '#FFFFFF',
@@ -682,37 +682,38 @@ const styles = StyleSheet.create({
   },
   listCountText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
   },
   templateCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    gap: 10,
+    padding: 12,
+    gap: 8,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
   },
   templateCardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
   },
   templateMainPressable: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   templateThumbnailContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
@@ -724,14 +725,13 @@ const styles = StyleSheet.create({
   },
   templateInfo: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   templateTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 13.5,
+    lineHeight: 18,
     color: colors.text,
-    textTransform: 'uppercase',
   },
   templateStatusRow: {
     flexDirection: 'row',
@@ -741,8 +741,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 6,
   },
   statusBadgeActive: {
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 10,
+    fontSize: 9.5,
     letterSpacing: 0.3,
   },
   statusBadgeTextActive: {
@@ -765,54 +765,54 @@ const styles = StyleSheet.create({
   templateActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   quickEditBtn: {
-    minHeight: 30,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    minHeight: 26,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     alignSelf: 'flex-start',
   },
   quickEditBtnText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 10.5,
     color: colors.primary,
   },
   quickDeleteBtn: {
-    minHeight: 30,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    minHeight: 26,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     alignSelf: 'flex-start',
   },
   quickDeleteBtnText: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 10.5,
     color: colors.danger,
   },
   templateGoal: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#4B5563',
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#64748B',
   },
   templateMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
     paddingTop: 4,
     borderTopWidth: 1,
@@ -822,14 +822,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
   },
   templateMetaPillText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 11,
+    fontSize: 10.5,
     color: colors.textMuted,
   },
   detailSheetFooterRow: {
