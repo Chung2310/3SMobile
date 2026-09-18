@@ -27,7 +27,7 @@ export default function AiWorkoutScreen() {
 
 function AiWorkoutScreenContent() {
   const { session } = useAuth();
-  if (session?.user.role !== 'PT') return <Screen title="GIÁO ÁN AI"><Notice text="Tài khoản này không có quyền tạo giáo án." /></Screen>;
+  if (session?.user.role !== 'PT') return <Screen title="Giáo án AI"><Notice text="Tài khoản này không có quyền tạo giáo án." /></Screen>;
   return <Wizard key={session.user.id} />;
 }
 
@@ -169,7 +169,7 @@ function Wizard() {
     }
   }} />;
 
-  return <Screen title="TẠO GIÁO ÁN AI" onBack={close}>
+  return <Screen title="Tạo giáo án AI" onBack={close}>
     <Sheet title="Tạo giáo án bằng AI" locked={busy} onClose={close} footer={<View style={{ gap: 12 }}>
       <Button icon="zap" label={step === 0 ? 'Phân tích bằng AI' : step < 3 ? 'Tiếp tục' : error ? 'Thử lại / Kiểm tra tác vụ' : 'Tạo giáo án'} busy={busy} disabled={step === 0 && (loadingCustomers || !customers.length)} onPress={next} />
       {step > 0 && <Button secondary label="Quay lại" disabled={busy} onPress={() => { generationKey.current = ''; jobId.current = ''; setError(''); setStep(step - 1); }} />}

@@ -22,7 +22,18 @@ interface ScreenProps {
 
 export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, noPadding = false, onBack }: ScreenProps) {
   const insets = useSafeAreaInsets();
-  const handleBack = onBack === null ? undefined : (onBack !== undefined ? onBack : () => router.navigate('/(app)/(tabs)'));
+  const handleBack =
+    onBack === null
+      ? undefined
+      : onBack !== undefined
+      ? onBack
+      : () => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.navigate('/(app)/(tabs)');
+          }
+        };
 
   const content = scroll ? (
     <ScrollView

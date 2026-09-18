@@ -18,7 +18,7 @@ export default function NutritionScreen() {
 
   if (loading) {
     return (
-      <Screen title="DINH DƯỠNG" onBack={handleBack}>
+      <Screen title="Dinh dưỡng" onBack={handleBack}>
         <Busy />
       </Screen>
     );
@@ -26,7 +26,7 @@ export default function NutritionScreen() {
 
   if (!session) {
     return (
-      <Screen title="DINH DƯỠNG" onBack={handleBack}>
+      <Screen title="Dinh dưỡng" onBack={handleBack}>
         <Notice text="Vui lòng đăng nhập để xem thông tin dinh dưỡng." />
       </Screen>
     );
@@ -37,7 +37,7 @@ export default function NutritionScreen() {
 
   return (
     <Screen
-      title="Dinh Dưỡng"
+      title="Dinh dưỡng"
       scroll={false}
       onBack={handleBack}
     >

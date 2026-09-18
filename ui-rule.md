@@ -39,9 +39,11 @@
 
 ## 2. Typography & Kiểu Chữ Thể Thao (Athletic Typography)
 
+- **Header Title / Screen Title / Page Title**: Bắt buộc dùng **sentence case** (viết hoa chữ cái đầu câu), không IN HOA toàn bộ hoặc viết hoa từng từ. Giữ nguyên tên riêng và từ viết tắt như `3S Gym`, `InBody`, `AI`, `PT`, `BMR`. Không ép chữ hoa bằng `textTransform`, `toUpperCase()` hoặc `toLocaleUpperCase()`.
+
 ### 2.1. Phân loại kiểu chữ đặc thù:
 1. **Kiểu chữ Thể thao Mạnh mẽ (Athletic Condensed ALL CAPS)**:
-   - Dùng cho: Tiêu đề màn hình chính (`ĐIỀU CHỈNH KẾ HOẠCH`, `LỊCH SỬ`, `TÔI`), Tiêu đề khóa tập luyện (`CƠ BẮP VÙNG TRÊN MẠNH MẼ`, `TOÀN BỘ CƠ THỂ MẠNH MẼ`), Nhãn cấp độ (`NGƯỜI BẮT ĐẦU`).
+   - Dùng cho: Tiêu đề khóa tập luyện (`CƠ BẮP VÙNG TRÊN MẠNH MẼ`, `TOÀN BỘ CƠ THỂ MẠNH MẼ`), Nhãn cấp độ (`NGƯỜI BẮT ĐẦU`).
    - Đặc điểm: Font in hoa toàn bộ, chữ cao gọn, nét đậm, dứt khoát, mang lại cảm giác kỷ luật và năng lượng tập luyện bùng nổ.
 2. **Kiểu chữ Số liệu Thống kê (Metric & Hero Numbers)**:
    - Dùng cho: Chỉ số đếm trên Profile (`0`, `67.2 kg`), thời lượng và số bài tập (`9 phút · 17 bài tập`), tiến độ (`0/28 Ngày`).
@@ -53,7 +55,7 @@
 
 | Cấp | Kích thước | Weight / Style | Dùng cho |
 |---|---|---|---|
-| **Athletic Display** | 26–30px | Bold/Black (Condensed ALL CAPS) | Tiêu đề màn hình thể thao lớn, Tiêu đề giáo án |
+| **Athletic Display** | 26–30px | Bold/Black (Condensed ALL CAPS) | Tiêu đề giáo án |
 | **H1 (Section Title)** | 20–22px | Bold (700) | Tiêu đề khối (vd: `Tuần 1`, `Cân nặng`, `Tháng 9 2026`) |
 | **H2 (Card Title)** | 17–19px | SemiBold/Bold | Tiêu đề thẻ ngày (`Ngày 1`, `Ngày 2`) |
 | **Body Large** | 15–16px | Medium (500) | Nhãn menu cài đặt, tabbar, text nút bấm chính |
@@ -99,7 +101,7 @@
 ## 5. Cấu trúc Layout & Cách Sắp Xếp (Component Layouts)
 
 ### 5.1. Top Navigation & Segmented Tabs:
-- **Header**: Nút Back mũi tên trái (touch target ≥ 44px) + Tiêu đề căn trái dạng `Athletic Condensed ALL CAPS`.
+- **Header**: Nút Back mũi tên trái (touch target ≥ 44px) + Tiêu đề căn trái dạng **sentence case** (ví dụ: `Điều chỉnh kế hoạch`, `Lịch sử`, `Tôi`).
 - **Segmented Filter Tabs** (ví dụ: `TẠI NHÀ` | `PHÒNG GYM` hoặc `Lịch` | `Thời lượng` | `Calo`):
   - Chữ tab active: Màu đen đậm, in hoa.
   - Tab indicator: Thanh gạch chân màu xanh lá `#22C55E` bo tròn 2 đầu, dày 3px, chiều rộng co theo chữ hoặc cố định gọn gàng ngay dưới tab active.
@@ -262,7 +264,7 @@ Màn hình Lịch sử tập luyện phải tích hợp bộ Calendar dạng th�
 
 - [ ] Áp dụng đúng màu **Primary Sport Green (`#22C55E`)** và **Dark Accent (`#111827`)**.
 - [ ] Mọi màn hình gốc đều có bọc **SafeArea** đầy đủ (không dính status bar, tai thỏ, home bar).
-- [ ] Tiêu đề chính sử dụng **Athletic Condensed ALL CAPS**, tạo cảm giác thể thao, dứt khoát.
+- [ ] Header Title / Screen Title / Page Title dùng **sentence case**, giữ nguyên tên riêng và từ viết tắt; không ép IN HOA.
 - [ ] Tuyệt đối **không có emoji** nào trong code/giao diện.
 - [ ] Tất cả icon đều thuộc **cùng 1 bộ icon set duy nhất** (Lucide / Expo vector icons).
 - [ ] Các Card kế hoạch có viền xanh lá 2px, badge thời lượng và khối sub-card lồng bên trong.

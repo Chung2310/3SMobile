@@ -20,18 +20,14 @@ import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import type {
   CalculatedNutrition,
-  DailyPlanItem,
-  DayMenuPlan,
   MealBlock,
   MealFoodEntry,
-  MealType,
   NutritionPlanData,
   WeekMenuPlan,
 } from '@/types/nutrition';
 import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
 import {
-  DAYS_OF_WEEK_VI,
   buildWeeksSchedule,
   computeEndDate,
   createDefaultDayMeals,
@@ -83,6 +79,7 @@ export function MealPlannerModal({
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [generatedPlanId, setGeneratedPlanId] = useState<string>();
   const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   // Sub-modal for selecting foods
@@ -91,12 +88,15 @@ export function MealPlannerModal({
   // Active items helpers
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
   const activeDay = activeWeek?.days?.[selectedDayIdx] || activeWeek?.days?.[0];
-  const activeMeals: MealBlock[] = activeDay?.meals || [];
+  const activeMeals: MealBlock[] = useMemo(() => activeDay?.meals || [], [activeDay]);
 
   // Initialize or reset form state
   useEffect(() => {
     if (visible) {
+      // Hydrate the persistent native modal from the selected record on opening.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedWeekIdx(0);
+      setGeneratedPlanId(undefined);
       setSelectedDayIdx(0);
 
       if (editingPlan) {
@@ -278,8 +278,9 @@ export function MealPlannerModal({
           : '';
       const draft = await nutritionService.generateAiNutritionDraft(
         cId,
-        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal${allergyClause}`
+        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal${allergyClause}`, undefined, durationDays
       );
+      setGeneratedPlanId(draft._id || draft.id);
       if (draft.menu && Array.isArray(draft.menu) && draft.menu.length > 0 && draft.menu[0]?.days) {
         setWeeks(normalizePlanToWeeks(draft));
       } else if (draft.dailyPlans && draft.dailyPlans.length > 0) {
@@ -393,8 +394,9 @@ export function MealPlannerModal({
       };
 
       let saved: NutritionPlanData;
-      if (editingPlan?._id) {
-        saved = await nutritionService.updatePlan(editingPlan._id, payload);
+      const savedId = generatedPlanId || editingPlan?._id || editingPlan?.id;
+      if (savedId) {
+        saved = await nutritionService.updatePlan(savedId, payload);
       } else {
         saved = await nutritionService.createPlan(payload);
       }
@@ -424,7 +426,7 @@ export function MealPlannerModal({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>
-                {editingPlan ? 'Chỉnh sửa Thực Đơn' : 'Lập Thực Đơn Mới'}
+                {editingPlan ? 'Chỉnh sửa thực đơn' : 'Lập thực đơn mới'}
               </Text>
               <Text style={styles.subtitle}>
                 {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}

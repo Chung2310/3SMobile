@@ -249,7 +249,7 @@ export function InBodyListScreen({ onBack }: InBodyListScreenProps = {}) {
           </Pressable>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.screenTitle}>Theo Dõi InBody</Text>
+            <Text style={styles.screenTitle}>Theo dõi InBody</Text>
             <Text style={styles.screenSubtitle}>
               {totalCount} phiếu đo đã ghi nhận
             </Text>

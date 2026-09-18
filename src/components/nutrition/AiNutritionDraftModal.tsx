@@ -12,10 +12,10 @@ import {
   View,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
-import type { DayMenuPlan, MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
+import type { MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
 import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
 import {
@@ -93,6 +93,8 @@ export function AiNutritionDraftModal({
   // Reset state on open
   useEffect(() => {
     if (visible) {
+      // Reset this persistent native modal when it is opened for a new editing session.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGeneratedDraft(null);
       setLoading(false);
       setSaving(false);
@@ -129,7 +131,7 @@ export function AiNutritionDraftModal({
           ? `\n- Kiêng kỵ & Dị ứng bắt buộc tránh: ${allRestrictions.join(', ')}.`
           : '';
       const promptWithDuration = `Thực đơn ${durationDays} ngày (kéo dài ${Math.ceil(durationDays / 7)} tuần), chia theo tuần và từng ngày: ${request}${allergyClause}`;
-      const draft = await nutritionService.generateAiNutritionDraft(customerId, promptWithDuration);
+      const draft = await nutritionService.generateAiNutritionDraft(customerId, promptWithDuration, undefined, durationDays);
       draft.durationDays = draft.durationDays || durationDays;
       setGeneratedDraft(draft);
       setSelectedWeekIdx(0);
@@ -189,7 +191,7 @@ export function AiNutritionDraftModal({
         }))
       );
 
-      const saved = await nutritionService.createPlan({
+      const payload: Partial<NutritionPlanData> = {
         customerId,
         title: generatedDraft.title,
         startDate: generatedDraft.startDate || new Date().toISOString(),
@@ -201,7 +203,9 @@ export function AiNutritionDraftModal({
         notes: generatedDraft.notes,
         menu: menuPayload,
         dailyPlans: dailyPlansPayload,
-      });
+      };
+      const id = generatedDraft._id || generatedDraft.id;
+      const saved = id ? await nutritionService.updatePlan(id, payload) : await nutritionService.createPlan(payload);
       showSuccess('Đã lưu thực đơn do AI tạo vào danh sách thực đơn!', 'Thành công', () => {
         onPlanCreated(saved);
         onClose();
@@ -246,7 +250,7 @@ export function AiNutritionDraftModal({
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <View>
-                <Text style={styles.headerTitle}>Trợ Lý AI Lên Thực Đơn</Text>
+                <Text style={styles.headerTitle}>Trợ lý AI lên thực đơn</Text>
                 <Text style={styles.headerSub}>
                   {customer ? `${customer.fullName} • Cá nhân hóa cơm Việt` : 'Dành cho học viên'}
                 </Text>

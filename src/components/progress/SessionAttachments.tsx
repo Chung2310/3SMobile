@@ -375,7 +375,7 @@ function Signature({
         <View style={styles.fullScreenSignatureHeader}>
           <View style={{ flex: 1 }}>
             <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureTitle}>
-              KÝ XÁC NHẬN BUỔI TẬP
+              Ký xác nhận buổi tập
             </Text>
             <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureSubtitle}>
               Học viên ký trực tiếp vào khung bên dưới để xác nhận

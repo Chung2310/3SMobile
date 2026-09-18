@@ -197,7 +197,7 @@ export function AdminAccountsManagement() {
           accessibilityLabel="Thêm tài khoản quản trị mới"
         >
           <Feather name="plus" size={16} color="#FFFFFF" />
-          <Text style={styles.addAdminText}>Thêm tài khoản Admin</Text>
+          <Text style={styles.addAdminText}>Thêm tài khoản admin</Text>
         </Pressable>
 
         <Pressable
@@ -706,7 +706,7 @@ export function AdminAccountsManagement() {
               <View style={styles.deleteIconBox}>
                 <Feather name="trash-2" size={26} color="#EF4444" />
               </View>
-              <Text style={styles.deleteTitle}>Xóa tài khoản Admin</Text>
+              <Text style={styles.deleteTitle}>Xóa tài khoản admin</Text>
               <Text style={styles.deleteDesc}>
                 Bạn có chắc chắn muốn xóa tài khoản &ldquo;{display(deletingAdmin)}&rdquo;? Toàn bộ quyền truy cập quản trị của tài khoản này sẽ bị thu hồi vĩnh viễn.
               </Text>
@@ -778,8 +778,8 @@ export function AdminAccountsManagement() {
               </View>
               <Text style={styles.deleteTitle}>
                 {lockTarget.status === 'LOCKED'
-                  ? 'Mở khóa tài khoản Admin'
-                  : 'Khóa tài khoản Admin'}
+                  ? 'Mở khóa tài khoản admin'
+                  : 'Khóa tài khoản admin'}
               </Text>
               <Text style={styles.deleteDesc}>
                 {lockTarget.status === 'LOCKED'
@@ -911,7 +911,7 @@ function AdminAccountFormModal({
             <View style={styles.sheetHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sheetTitle}>
-                  {editing ? 'Chỉnh sửa tài khoản Admin' : 'Thêm tài khoản Admin mới'}
+                  {editing ? 'Chỉnh sửa tài khoản admin' : 'Thêm tài khoản admin mới'}
                 </Text>
                 <Text style={styles.sheetSub}>
                   {editing ? `Tài khoản: @${String(item?.username || '')}` : 'Tạo tài khoản quản trị viên mới'}
@@ -956,20 +956,20 @@ function AdminAccountFormModal({
               {/* Password */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>
-                  {editing ? 'Đổi mật khẩu 6 số (bỏ trống nếu giữ nguyên)' : 'Mật khẩu 6 chữ số *'}
+                  {editing ? 'Mật khẩu mới từ 8 ký tự (bỏ trống nếu giữ nguyên)' : 'Mật khẩu tối thiểu 8 ký tự *'}
                 </Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={[styles.formInput, { flex: 1, borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
-                    placeholder={editing ? '••••••' : 'Nhập đúng 6 chữ số'}
+                    placeholder={editing ? 'Để trống để giữ mật khẩu hiện tại' : 'Chữ, số hoặc ký tự đặc biệt'}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(v) => {
                       setPassword(v);
                     }}
                     secureTextEntry={!showPassword}
-                    keyboardType="numeric"
-                    maxLength={6}
+                    keyboardType="default"
+                    autoCapitalize="none" autoCorrect={false}
                   />
                   <Pressable
                     onPress={() => setShowPassword((p) => !p)}

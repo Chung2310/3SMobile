@@ -124,7 +124,7 @@ export function NutritionMacroCalculatorModal({
                 <Calculator size={18} color={colors.primary} />
               </View>
               <View>
-                <Text style={styles.title}>Tính BMR & Macro Cá Nhân</Text>
+                <Text style={styles.title}>Tính BMR & macro cá nhân</Text>
                 <Text style={styles.subtitle}>
                   {customer ? `Học viên: ${customer.fullName}` : 'Công thức chuẩn Mifflin-St Jeor'}
                 </Text>

@@ -396,7 +396,13 @@ export default function WalletScreen() {
       {/* Top Header */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.navigate('/(app)/(tabs)')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.navigate('/(app)/(tabs)');
+            }
+          }}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
           accessibilityRole="button"
@@ -405,7 +411,7 @@ export default function WalletScreen() {
           <Feather name="arrow-left" size={20} color="#0F172A" />
         </Pressable>
         <View style={styles.titleWrap}>
-          <Text style={styles.pageTitle}>Ví Credit AI</Text>
+          <Text style={styles.pageTitle}>Ví credit AI</Text>
           <Text style={styles.pageSubtitle}>Nạp credit sử dụng các tính năng AI</Text>
         </View>
         <View style={styles.topBalanceBadge}>

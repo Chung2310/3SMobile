@@ -1470,7 +1470,7 @@ export function PtNutritionWorkspace() {
             {/* Tab 3 Top Action Header: Tiêu đề + Nút Thêm Món + Khôi phục */}
             <View style={styles.mealManagerTopBar}>
               <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">KHO MÓN ĂN & DINH DƯỠNG</Text>
+                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">Kho món ăn & dinh dưỡng</Text>
                 <Text style={styles.tabHeadingSub} numberOfLines={1} ellipsizeMode="tail">
                   {filteredFoods.length} món • Chuẩn dinh dưỡng thể hình 3S Gym
                 </Text>
@@ -1833,7 +1833,7 @@ export function PtNutritionWorkspace() {
             <View style={styles.activityTopBanner}>
               <View>
                 <Text style={styles.activityBannerTitle}>
-                  Ước Tính Tiêu Hao Calo Hoạt Động Thể Thao
+                  Ước tính tiêu hao calo hoạt động thể thao
                 </Text>
                 <Text style={styles.activityBannerSub}>
                   Hệ số trao đổi chất (METs) theo cân nặng & thời gian vận động
@@ -1979,7 +1979,7 @@ export function PtNutritionWorkspace() {
             {/* 3. Thanh Công Cụ & Thống Kê Kho Hoạt Động (CRUD HEADER) */}
             <View style={styles.mealManagerTopBar}>
               <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">DANH MỤC BỘ MÔN VẬN ĐỘNG</Text>
+                <Text style={styles.tabHeadingTitle} numberOfLines={1} ellipsizeMode="tail">Danh mục bộ môn vận động</Text>
                 <Text style={styles.tabHeadingSub} numberOfLines={1} ellipsizeMode="tail">
                   {filteredActivities.length} / {allActivities.length} hoạt động trong hệ thống
                 </Text>
