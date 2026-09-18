@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerDetailModal } from '@/components/CustomerDetailModal';
@@ -38,10 +39,10 @@ const MASCOT_SEARCH = require('../../../assets/public/3s-search.png');
 
 export default function CustomersScreen() {
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
 
   const [customers, setCustomers] = useState<PtCustomerSummary[]>([]);
   const [profileCustomers, setProfileCustomers] = useState<CustomerProfile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CustomerStatusFilter>('ALL');
@@ -118,7 +119,6 @@ export default function CustomersScreen() {
 
       setCustomerGoalsMap({ ...gMap });
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -133,45 +133,49 @@ export default function CustomersScreen() {
   }, [loadData]);
 
   // Hiển thị danh sách khách hàng thực tế kèm mục tiêu thật từ /api/goals
-  const allList: CustomerListItem[] = profileCustomers.map((p) => {
-    const dash = customers.find((c) => c.customerId === p._id);
-    const latestGoal = customerGoalsMap[p._id];
+  const allList: CustomerListItem[] = useMemo(() => {
+    return profileCustomers.map((p) => {
+      const dash = customers.find((c) => c.customerId === p._id);
+      const latestGoal = customerGoalsMap[p._id];
 
-    let displayGoal = '';
-    if (latestGoal?.title) {
-      if (latestGoal.targetValue != null) {
-        displayGoal = `${latestGoal.title} (${latestGoal.targetValue} ${latestGoal.targetUnit || ''})`.trim();
-      } else {
-        displayGoal = latestGoal.title;
+      let displayGoal = '';
+      if (latestGoal?.title) {
+        if (latestGoal.targetValue != null) {
+          displayGoal = `${latestGoal.title} (${latestGoal.targetValue} ${latestGoal.targetUnit || ''})`.trim();
+        } else {
+          displayGoal = latestGoal.title;
+        }
+      } else if (p.initialGoal) {
+        displayGoal = p.initialGoal;
       }
-    } else if (p.initialGoal) {
-      displayGoal = p.initialGoal;
-    }
 
-    return {
-      id: p._id,
-      fullName: p.fullName,
-      phone: p.phone || dash?.phone || '',
-      email: p.email || '',
-      initialGoal: displayGoal,
-      score: dash?.score ?? null,
-      measurementCount: dash?.measurementCount ?? 0,
-      progressCategory: dash?.progressCategory ?? 'GOOD',
-      status: (p.status || 'ACTIVE') as any,
-      rawProfile: p,
-    };
-  });
+      return {
+        id: p._id,
+        fullName: p.fullName,
+        phone: p.phone || dash?.phone || '',
+        email: p.email || '',
+        initialGoal: displayGoal,
+        score: dash?.score ?? null,
+        measurementCount: dash?.measurementCount ?? 0,
+        progressCategory: dash?.progressCategory ?? 'GOOD',
+        status: (p.status || 'ACTIVE') as any,
+        rawProfile: p,
+      };
+    });
+  }, [profileCustomers, customers, customerGoalsMap]);
 
-  const filtered = allList.filter((c) => {
-    if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.fullName.toLowerCase().includes(q) ||
-      (c.phone && c.phone.includes(q)) ||
-      (c.initialGoal && c.initialGoal.toLowerCase().includes(q))
-    );
-  });
+  const filtered = useMemo(() => {
+    return allList.filter((c) => {
+      if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        c.fullName.toLowerCase().includes(q) ||
+        (c.phone && c.phone.includes(q)) ||
+        (c.initialGoal && c.initialGoal.toLowerCase().includes(q))
+      );
+    });
+  }, [allList, statusFilter, search]);
 
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,10 +183,6 @@ export default function CustomersScreen() {
   const paginatedCustomers = useMemo(() => {
     return filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   }, [filtered, currentPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter]);
 
   const activeCount = allList.filter((c) => c.status === 'ACTIVE').length;
   const leadCount = allList.filter((c) => c.status === 'LEAD').length;
@@ -213,12 +213,22 @@ export default function CustomersScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
+      router.replace('/(app)/admin');
+    } else {
+      router.navigate('/(app)/(tabs)');
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
       {/* 1. TOP BAR */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.navigate('/(app)/(tabs)')}
+          onPress={handleBack}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
           accessibilityLabel="Quay lại"
@@ -267,10 +277,13 @@ export default function CustomersScreen() {
       >
         {/* 2. SEARCH BOX */}
         <View style={styles.searchBox}>
-          <Feather name="search" size={18} color="#00C2FF" style={styles.searchIcon} />
+          <Feather name="search" size={18} color={colors.primary} style={styles.searchIcon} />
           <TextInput
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(text) => {
+              setSearch(text);
+              setCurrentPage(1);
+            }}
             placeholder="Tìm theo tên, số điện thoại, mục tiêu..."
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
@@ -280,7 +293,10 @@ export default function CustomersScreen() {
               name="x"
               size={18}
               color={colors.textMuted}
-              onPress={() => setSearch('')}
+              onPress={() => {
+                setSearch('');
+                setCurrentPage(1);
+              }}
             />
           ) : null}
         </View>
@@ -299,7 +315,7 @@ export default function CustomersScreen() {
             <Feather
               name="filter"
               size={14}
-              color={statusFilter !== 'ALL' ? '#0098CC' : '#4B5563'}
+              color={statusFilter !== 'ALL' ? colors.primary : '#4B5563'}
             />
             <Text
               style={[
@@ -312,7 +328,7 @@ export default function CustomersScreen() {
             <Feather
               name="chevron-down"
               size={14}
-              color={statusFilter !== 'ALL' ? '#0098CC' : '#9CA3AF'}
+              color={statusFilter !== 'ALL' ? colors.primary : '#9CA3AF'}
             />
           </Pressable>
         </View>
@@ -433,7 +449,10 @@ export default function CustomersScreen() {
         activeCount={activeCount}
         leadCount={leadCount}
         inactiveCount={inactiveCount}
-        onSelect={(st) => setStatusFilter(st)}
+        onSelect={(st) => {
+          setStatusFilter(st);
+          setCurrentPage(1);
+        }}
         onClose={() => setShowStatusSheet(false)}
       />
 
@@ -459,9 +478,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -484,20 +503,20 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   addHeaderBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00C2FF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00C2FF',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3,
   },
   addHeaderBtnPressed: {
-    backgroundColor: '#0098CC',
+    backgroundColor: colors.primaryDark,
     transform: [{ scale: 0.95 }],
   },
   toastWrap: {
@@ -582,7 +601,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   filterTriggerTextActive: {
-    color: '#0098CC',
+    color: colors.primary,
     fontWeight: '700',
   },
   emptySearchWrap: {

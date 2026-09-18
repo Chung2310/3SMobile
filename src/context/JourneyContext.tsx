@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { isAdminRole } from '@/services/adminAccess';
 import { api } from '@/services/api/client';
 import type { CustomerJourney } from '@/types/domain';
 
@@ -22,7 +23,7 @@ export function JourneyProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!session) return;
+    if (!session || isAdminRole(session.user.role)) return;
 
     setError(null);
     setLoading(true);
@@ -39,7 +40,7 @@ export function JourneyProvider({ children }: PropsWithChildren) {
   }, [session]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || isAdminRole(session.user.role)) return;
     const timer = setTimeout(() => void refresh(), 0);
     return () => clearTimeout(timer);
   }, [refresh, session]);

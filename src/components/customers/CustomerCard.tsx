@@ -227,20 +227,7 @@ export function CustomerCard({
           </>
         )}
 
-        {/* 3. Hồ sơ (Con mắt) */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.compactActionBtn,
-            pressed && styles.actionBtnPressed,
-          ]}
-          onPress={() => onPress(item)}
-          hitSlop={8}
-          accessibilityLabel="Xem chi tiết hồ sơ"
-        >
-          <Feather name="eye" size={16} color="#00C2FF" />
-        </Pressable>
 
-        <View style={styles.actionDivider} />
 
         {/* 3. Sửa */}
         <Pressable

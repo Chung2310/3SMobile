@@ -16,7 +16,7 @@ export const colors = {
   borderSoft: '#EDF2F7',    // Viền siêu nhẹ
   card: '#FFFFFF',
   cardSecondary: '#F8FAFC',
-  success: '#16A34A',
+  success: '#22C55E',
   warning: '#D97706',
   danger: '#EF4444',
   overlay: 'rgba(15, 23, 42, 0.6)',
