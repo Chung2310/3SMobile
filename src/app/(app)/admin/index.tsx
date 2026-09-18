@@ -370,42 +370,6 @@ export default function AdminHomeScreen() {
             )}
           </View>
 
-          {/* Quick Actions Banners */}
-          <View style={styles.quickAccessRow}>
-            <Pressable
-              onPress={() => router.push('/(app)/(tabs)')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickAccessIcon, { backgroundColor: '#F0F9FF' }]}>
-                <Ionicons name="fitness" size={20} color={colors.primary} />
-              </View>
-              <View style={styles.quickAccessMeta}>
-                <Text style={styles.quickAccessTitle}>K/gian Huấn luyện</Text>
-                <Text style={styles.quickAccessSub}>Lịch & giáo án HLV</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={colors.textMuted} />
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/(app)/wallet')}
-              style={({ pressed }) => [
-                styles.quickAccessCard,
-                pressed && styles.quickAccessCardPressed,
-              ]}
-            >
-              <View style={[styles.quickAccessIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="wallet" size={20} color="#16A34A" />
-              </View>
-              <View style={styles.quickAccessMeta}>
-                <Text style={styles.quickAccessTitle}>Ví Credit AI</Text>
-                <Text style={styles.quickAccessSub}>Số dư & giao dịch</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
 
           {/* Danh mục phân hệ quản trị */}
           {filteredCategories.length === 0 ? (
@@ -723,45 +687,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
-  /* Quick Access Row */
-  quickAccessRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickAccessCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 10,
-    gap: 8,
-  },
-  quickAccessCardPressed: {
-    backgroundColor: '#F8FAFC',
-  },
-  quickAccessIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickAccessMeta: {
-    flex: 1,
-  },
-  quickAccessTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  quickAccessSub: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
 
   /* Category Sections */
   categorySection: {
