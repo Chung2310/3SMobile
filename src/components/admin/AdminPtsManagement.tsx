@@ -581,11 +581,12 @@ export function AdminPtsManagement() {
               <View style={styles.sheetHandle} />
 
               <View style={styles.sheetHeader}>
-                <View style={styles.avatarLarge}>
-                  <Text style={styles.avatarLargeText}>
-                    {String(selectedPt.fullName || selectedPt.username || 'PT').slice(0, 1).toUpperCase()}
-                  </Text>
-                </View>
+                <PtAvatar
+                  avatarUrl={(selectedPt.avatarUrl || (selectedPt as any).avatar || (selectedPt as any).photoUrl) as string | undefined}
+                  name={String(selectedPt.fullName || selectedPt.username || 'PT')}
+                  isLocked={selectedPt.status === 'LOCKED'}
+                  size={48}
+                />
 
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetTitle}>{display(selectedPt)}</Text>
