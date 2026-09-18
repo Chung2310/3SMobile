@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { CheckCircle2, Minus, Plus, Search, X, XCircle } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import type { FoodCategory, FoodItem, MealFoodEntry } from '@/types/nutrition';
 import {
@@ -135,14 +135,12 @@ export function FoodLibrarySheet({
                 style={styles.sheetAddFoodBtn}
                 onPress={() => setEditorModalVisible(true)}
               >
-                <Plus size={14} color="#ffffff" />
-                <Text style={styles.sheetAddFoodBtnText}>+ Thêm món ăn mới vào kho</Text>
+                <Text style={styles.sheetAddFoodBtnText}>Thêm món ăn mới vào kho</Text>
               </Pressable>
             </View>
 
             {/* Search Box */}
           <View style={styles.searchBox}>
-            <Search size={16} color={colors.textMuted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
@@ -152,7 +150,7 @@ export function FoodLibrarySheet({
             />
             {search ? (
               <Pressable hitSlop={8} onPress={() => setSearch('')}>
-                <XCircle size={16} color={colors.textMuted} />
+                <Text style={styles.clearSearchText}>Xóa</Text>
               </Pressable>
             ) : null}
           </View>
@@ -264,7 +262,7 @@ export function FoodLibrarySheet({
                 <Text style={styles.stepperLabel}>Số lượng (gram):</Text>
                 <View style={styles.stepperBtns}>
                   <Pressable style={styles.stepperBtn} onPress={() => adjustGrams(-25)}>
-                    <Minus size={16} color={colors.text} />
+                    <Text style={styles.stepperBtnText}>−</Text>
                   </Pressable>
                   <TextInput
                     value={grams}
@@ -273,14 +271,13 @@ export function FoodLibrarySheet({
                     style={styles.stepperInput}
                   />
                   <Pressable style={styles.stepperBtn} onPress={() => adjustGrams(25)}>
-                    <Plus size={16} color={colors.text} />
+                    <Text style={styles.stepperBtnText}>+</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Add Button */}
               <Pressable style={styles.addBtn} onPress={handleConfirmAdd}>
-                <CheckCircle2 size={18} color="#FFFFFF" />
                 <Text style={styles.addBtnText}>
                   {onSelectFood
                     ? `Thêm vào ${targetMealTitle} (${activeMacros.calories} kcal)`
@@ -569,5 +566,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  clearSearchText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  stepperBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
   },
 });

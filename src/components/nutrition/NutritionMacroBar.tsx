@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Flame } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import type { MacroNutrients } from '@/types/nutrition';
 
@@ -41,10 +40,7 @@ export function NutritionMacroBar({
       {/* Header: Title + Calorie Big Number */}
       <View style={styles.headerRow}>
         <View style={styles.titleCol}>
-          <View style={styles.badgeRow}>
-            <Flame size={15} color="#EA580C" />
-            <Text style={styles.cardTitle}>{title}</Text>
-          </View>
+          <Text style={styles.cardTitle}>{title}</Text>
           {showSubtitle && (
             <Text style={styles.cardSub}>
               {consumedCalories != null
@@ -204,23 +200,25 @@ const styles = StyleSheet.create({
   macroCol: {
     flex: 1,
     borderRadius: radius.md,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 7,
     borderWidth: 1,
   },
   macroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-end',
+    flexWrap: 'wrap',
+    gap: 2,
     marginBottom: 5,
   },
   macroLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
   macroVal: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   macroTrack: {

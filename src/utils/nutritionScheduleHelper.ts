@@ -124,6 +124,71 @@ export function normalizeMealBlock(rawMeal: any, fallbackIdx = 0): MealBlock {
 }
 
 /**
+ * Standard default meals for a day (Breakfast, Lunch, Snack, Dinner)
+ */
+export function createDefaultDayMeals(prefix = 'meal'): MealBlock[] {
+  const timestamp = Date.now();
+  return [
+    {
+      id: `${prefix}_bf_${timestamp}`,
+      type: 'BREAKFAST',
+      title: 'Bữa sáng',
+      name: 'Bữa sáng',
+      timeHint: '07:00 - 08:00',
+      timeSlot: '07:00 - 08:00',
+      items: [],
+      totalCalories: 0,
+      calories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+    },
+    {
+      id: `${prefix}_lu_${timestamp}`,
+      type: 'LUNCH',
+      title: 'Bữa trưa',
+      name: 'Bữa trưa',
+      timeHint: '12:00 - 13:00',
+      timeSlot: '12:00 - 13:00',
+      items: [],
+      totalCalories: 0,
+      calories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+    },
+    {
+      id: `${prefix}_sn_${timestamp}`,
+      type: 'SNACK',
+      title: 'Bữa xế',
+      name: 'Bữa xế',
+      timeHint: '15:30 - 16:30',
+      timeSlot: '15:30 - 16:30',
+      items: [],
+      totalCalories: 0,
+      calories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+    },
+    {
+      id: `${prefix}_di_${timestamp}`,
+      type: 'DINNER',
+      title: 'Bữa tối',
+      name: 'Bữa tối',
+      timeHint: '18:30 - 19:30',
+      timeSlot: '18:30 - 19:30',
+      items: [],
+      totalCalories: 0,
+      calories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+    },
+  ];
+}
+
+/**
  * Builds schedule of weeks (matching Web MealPlannerBuilder logic)
  */
 export function buildWeeksSchedule(
@@ -161,8 +226,10 @@ export function buildWeeksSchedule(
         dayMeals = baseMeals.map((m, mIdx) => ({
           ...normalizeMealBlock(m, mIdx),
           id: `meal_w${w + 1}_d${dIdx + 1}_${mIdx + 1}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          items: m.items.map((it) => ({ ...it })),
+          items: Array.isArray(m.items) ? m.items.map((it) => ({ ...it })) : [],
         }));
+      } else {
+        dayMeals = createDefaultDayMeals(`meal_w${w + 1}_d${dIdx + 1}`);
       }
 
       days.push({
@@ -222,7 +289,10 @@ export function normalizePlanToWeeks(plan?: NutritionPlanData | null): WeekMenuP
             dayNumber: Number(d.dayNumber) || dIdx + 1,
             date: d.date || '',
             dayOfWeek: d.dayOfWeek || `Ngày ${dIdx + 1}`,
-            meals: Array.isArray(d.meals) ? d.meals.map((m: any, mIdx: number) => normalizeMealBlock(m, mIdx)) : [],
+            meals:
+              Array.isArray(d.meals) && d.meals.length > 0
+                ? d.meals.map((m: any, mIdx: number) => normalizeMealBlock(m, mIdx))
+                : createDefaultDayMeals(`meal_w${wIdx + 1}_d${dIdx + 1}`),
           }))
         : [],
     }));
@@ -247,7 +317,10 @@ export function normalizePlanToWeeks(plan?: NutritionPlanData | null): WeekMenuP
           dayNumber: dIdx + 1,
           date: dp.date || formatYmdDate(curD),
           dayOfWeek: dp.dayOfWeek || DAYS_OF_WEEK_VI[curD.getDay()] || `Ngày ${dIdx + 1}`,
-          meals: Array.isArray(dp.meals) ? dp.meals.map((m: any, mIdx: number) => normalizeMealBlock(m, mIdx)) : [],
+          meals:
+            Array.isArray(dp.meals) && dp.meals.length > 0
+              ? dp.meals.map((m: any, mIdx: number) => normalizeMealBlock(m, mIdx))
+              : createDefaultDayMeals(`meal_w${w + 1}_d${dIdx + 1}`),
         });
       }
 
