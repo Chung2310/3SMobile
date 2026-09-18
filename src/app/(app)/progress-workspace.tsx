@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button, Busy, Field, Notice, Sheet } from '@/components/workouts/Controls';
+import { SessionDraftForm, SessionDraftCard } from '@/components/progress/SessionDraftForm';
 import { ProgressForm } from '@/components/progress/ProgressForm';
 import { MetricChart, SessionCalendar } from '@/components/progress/ProgressVisuals';
 import { useAuth } from '@/context/AuthContext';
@@ -54,7 +55,7 @@ const label = (value: unknown) => (value === null || value === undefined ? 'Chư
 export default function ProgressWorkspaceScreen() {
   const { session } = useAuth();
   const role = session?.user.role;
-  const staff = role === 'PT' || role === 'ADMIN';
+  const staff = role === 'PT' || role === 'ADMIN' || role === 'SUPER_ADMIN';
 
   return (
     <Screen
@@ -85,6 +86,8 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
   const [selectedDay, setSelectedDay] = useState('');
   const [metric, setMetric] = useState('weight');
   const [form, setForm] = useState<{ kind: 'session' | 'measurement' | 'report'; record?: JsonRecord } | null>(null);
+  const [draftRefresh, setDraftRefresh] = useState(0);
+  function closeForm() { setForm(null); setDraftRefresh((value) => value + 1); }
   const [detail, setDetail] = useState<JsonRecord | null>(null);
   const [action, setAction] = useState<{ title: string; text: string; path: string; method: 'patch' | 'delete' } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -139,7 +142,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
   }
 
   function saved() {
-    setForm(null);
+    closeForm();
     setSuccess('Đã lưu dữ liệu tiến độ thành công.');
     setPopup({ message: 'Đã lưu dữ liệu tiến độ thành công.', error: false });
     void load();
@@ -366,6 +369,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
             )}
           </View>
 
+          {staff && targetId && <SessionDraftCard key={targetId} customerId={targetId} refreshKey={draftRefresh} onResume={() => setForm({ kind: 'session' })} />}
           {/* Horizontal Scrollable Athletic Tab Bar */}
           <View style={styles.tabScrollWrapper}>
             <ScrollView
@@ -909,13 +913,16 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
       )}
 
       {/* Progress Form */}
-      {form && (
+      {form?.kind === 'session' ? (
+        <SessionDraftForm customerId={targetId} plan={activePlan} pastSessions={sessions} onClose={closeForm} onSaved={saved} />
+      ) : form && (
         <ProgressForm
           kind={form.kind}
           customerId={targetId}
           plan={activePlan}
           record={form.record}
-          onClose={() => setForm(null)}
+          pastSessions={sessions}
+          onClose={closeForm}
           onSaved={saved}
         />
       )}
