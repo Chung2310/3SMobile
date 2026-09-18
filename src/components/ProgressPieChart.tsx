@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   centerValue: {
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: '900',
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '800',
     color: colors.text,
   },
   centerTitle: {

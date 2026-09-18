@@ -211,8 +211,8 @@ export function ExerciseForm({
             <Text numberOfLines={4} ellipsizeMode="tail" style={ws.muted}>
               {readText(item, ['description'])}
             </Text>
-            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(index), disabled: aiBusy || busy }} disabled={aiBusy || busy} onPress={() => setSelected((values) => values.includes(index) ? values.filter((value) => value !== index) : [...values, index])} style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.8 : 1 })}>
-              <LibraryIcon name={selected.includes(index) ? 'check-square' : 'square'} size={24} color={colors.primary} />
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(index), disabled: aiBusy || busy }} disabled={aiBusy || busy} onPress={() => setSelected((values) => values.includes(index) ? values.filter((value) => value !== index) : [...values, index])} style={({ pressed }) => ({ minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 8, opacity: pressed ? 0.8 : 1 })}>
+              <LibraryIcon name={selected.includes(index) ? 'check-square' : 'square'} size={18} color={colors.primary} />
               <Text style={ws.text}>{selected.includes(index) ? 'Đã chọn' : 'Chọn bài này'}</Text>
             </Pressable>
             <Button
@@ -511,12 +511,12 @@ function MusclePicker({
 
 const styles = StyleSheet.create({
   pickerTrigger: {
-    minHeight: 48,
-    borderRadius: 14,
+    minHeight: 42,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -524,26 +524,26 @@ const styles = StyleSheet.create({
   pickerTriggerText: {
     flex: 1,
     fontFamily: 'Inter_500Medium',
-    fontSize: 14,
+    fontSize: 13.5,
     color: colors.text,
   },
   videoCard: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 16,
-    padding: 14,
-    gap: 10,
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
   },
   muscleOptionItem: {
-    minHeight: 48,
-    borderRadius: 14,
+    minHeight: 40,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   muscleOptionItemSelected: {
     backgroundColor: '#F0F9FF',
@@ -552,11 +552,11 @@ const styles = StyleSheet.create({
   muscleOptionText: {
     flex: 1,
     fontFamily: 'Inter_500Medium',
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text,
   },
   muscleOptionTextSelected: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Inter_600SemiBold',
     color: colors.primaryDark,
   },
 });

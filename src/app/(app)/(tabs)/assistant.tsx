@@ -259,7 +259,7 @@ export default function AssistantScreen() {
             {
               _id: `welcome-${customer._id}`,
               role: 'ASSISTANT',
-              content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên **${customer.fullName}**.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho **${customer.fullName}**!`,
+              content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
               createdAt: new Date().toISOString(),
             },
           ]);
@@ -272,7 +272,7 @@ export default function AssistantScreen() {
                 {
                   _id: `welcome-${customer._id}`,
                   role: 'ASSISTANT',
-                  content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên **${customer.fullName}**.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho **${customer.fullName}**!`,
+                  content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
                   createdAt: new Date().toISOString(),
                 },
               ]
@@ -285,7 +285,7 @@ export default function AssistantScreen() {
         {
           _id: `welcome-${customer._id}`,
           role: 'ASSISTANT',
-          content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên **${customer.fullName}**.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho **${customer.fullName}**!`,
+          content: `Xin chào HLV! Tôi đã liên kết dữ liệu & chỉ số InBody của học viên ${customer.fullName}.\n\nBạn có thể hỏi tôi bất kỳ điều gì về InBody, giáo án, hoặc dinh dưỡng cho ${customer.fullName}!`,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -560,7 +560,7 @@ export default function AssistantScreen() {
                     ]}
                   >
                     <Text style={[styles.msgText, isAi ? styles.textAi : styles.textUser]}>
-                      {msg.content}
+                      {msg.content ? msg.content.replace(/\*\*/g, '') : ''}
                     </Text>
                     {formattedTime ? (
                       <Text style={[styles.msgTime, isAi ? styles.timeAi : styles.timeUser]}>
