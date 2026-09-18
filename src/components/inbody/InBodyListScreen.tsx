@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '@/theme';
 import type { CustomerProfile } from '@/types/domain';
@@ -45,8 +46,22 @@ const formatDateDisplay = (isoStr?: string): string => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
-export function InBodyListScreen() {
+interface InBodyListScreenProps {
+  onBack?: () => void;
+}
+
+export function InBodyListScreen({ onBack }: InBodyListScreenProps = {}) {
   const insets = useSafeAreaInsets();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/(app)/(tabs)');
+    }
+  };
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -224,6 +239,15 @@ export function InBodyListScreen() {
       {/* Top Bar Header */}
       <View style={styles.topHeader}>
         <View style={styles.titleRow}>
+          <Pressable
+            hitSlop={12}
+            onPress={handleBack}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+            accessibilityLabel="Quay lại"
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </Pressable>
+
           <View style={styles.headerTitleWrap}>
             <Text style={styles.screenTitle}>Theo Dõi InBody</Text>
             <Text style={styles.screenSubtitle}>
@@ -512,6 +536,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    backgroundColor: colors.surfaceMuted,
+  },
+  backBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.95 }],
   },
   headerTitleWrap: {
     flex: 1,
