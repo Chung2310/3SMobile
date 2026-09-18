@@ -1,3 +1,4 @@
+import { generateNutritionJob } from './nutritionJobs';
 import { api } from './api/client';
 import type {
   CalculatedNutrition,
@@ -138,12 +139,13 @@ export const nutritionService = {
   async generateAiNutritionDraft(
     customerId: string,
     request: string,
-    planId?: string
+    planId?: string,
+    durationDays?: number
   ): Promise<NutritionPlanData> {
-    const res = await api.post<any>('/api/content-drafts/nutrition', {
+    const res = await generateNutritionJob<any>({
       customerId,
       request,
-      planId,
+      planId, durationDays,
     });
     const data = res?.data || res;
     const rawDailyPlans = Array.isArray(data.dailyPlans) ? data.dailyPlans : [];
@@ -206,6 +208,7 @@ export const nutritionService = {
       id: data._id || data.id,
       customerId,
       title: data.title || 'Thực Đơn Dinh Dưỡng AI',
+      durationDays: data.durationDays,
       targetCalories: Number(data.targetCalories) || 1800,
       macros: {
         protein: Number(data.macros?.protein) || 130,

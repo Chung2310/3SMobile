@@ -1,3 +1,4 @@
+import { PASSWORD_HINT } from '@/services/passwordValidation';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -214,11 +215,11 @@ function PtFormModalInner({
                       setDirty(true);
                       setPassword(v);
                     }}
-                    placeholder={editing ? 'Nhập 6 số để đổi mới...' : 'Mật khẩu 6 chữ số (vd: 123456)'}
+                    placeholder={editing ? 'Nhập mật khẩu mới (tối thiểu 8 ký tự)...' : 'Mật khẩu tối thiểu 8 ký tự'}
                     placeholderTextColor={colors.textMuted}
                     secureTextEntry={!showPassword}
-                    keyboardType="number-pad"
-                    maxLength={6}
+                    keyboardType="default"
+                    autoCapitalize="none" autoCorrect={false}
                     style={styles.passwordInput}
                   />
                   <Pressable
@@ -234,7 +235,7 @@ function PtFormModalInner({
                   </Pressable>
                 </View>
                 <Text style={styles.helperText}>
-                  Quy chuẩn bảo mật hệ thống: Mật khẩu gồm đúng 6 chữ số
+                  {PASSWORD_HINT}
                 </Text>
               </View>
 

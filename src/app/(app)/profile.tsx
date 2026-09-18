@@ -1,3 +1,4 @@
+import { isValidPassword, PASSWORD_ERROR, PASSWORD_HINT } from '@/services/passwordValidation';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -82,7 +83,7 @@ const getGenderLabel = (val?: string | null): string => {
   return 'Khác';
 };
 
-const isSixDigitPassword = (val: string) => /^\d{6}$/.test(val.trim());
+
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -404,12 +405,12 @@ export default function ProfileScreen() {
       return;
     }
 
-    if (!isSixDigitPassword(form.newPassword)) {
+    if (!isValidPassword(form.newPassword)) {
       setAlertConfig({
         visible: true,
         type: 'warning',
         title: 'Mật khẩu không hợp lệ',
-        message: 'Mật khẩu mới phải gồm đúng 6 chữ số (ví dụ: 123456).',
+        message: PASSWORD_ERROR,
         onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
       });
       return;
@@ -1106,7 +1107,7 @@ export default function ProfileScreen() {
                       <Text style={styles.passwordRuleTitle}>Quy tắc mật khẩu</Text>
                     </View>
                     <Text style={styles.passwordRuleDesc}>
-                      Mật khẩu tối thiểu 6 kí tự. Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
+                      {PASSWORD_HINT}. Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
                     </Text>
                   </View>
 
@@ -1123,8 +1124,8 @@ export default function ProfileScreen() {
                         placeholder="Nhập mật khẩu hiện tại..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showCurrentPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}
@@ -1143,18 +1144,18 @@ export default function ProfileScreen() {
                   {/* Mật khẩu mới */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
-                      Mật khẩu mới (tối thiểu 6 kí tự) <Text style={styles.requiredStar}>*</Text>
+                      Mật khẩu mới (tối thiểu 8 ký tự) <Text style={styles.requiredStar}>*</Text>
                     </Text>
                     <View style={styles.passwordInputWrap}>
                       <TextInput
                         style={styles.passwordInput}
                         value={form.newPassword}
                         onChangeText={(val) => setForm((prev) => ({ ...prev, newPassword: val }))}
-                        placeholder="Nhập mật khẩu mới..."
+                        placeholder="Nhập mật khẩu mới từ 8 ký tự"
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showNewPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}
@@ -1183,8 +1184,8 @@ export default function ProfileScreen() {
                         placeholder="Nhập lại mật khẩu mới..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showConfirmPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}

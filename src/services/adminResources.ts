@@ -1,3 +1,4 @@
+import { isValidPassword, PASSWORD_ERROR } from './passwordValidation';
 import type { Option } from '@/components/admin/AdminUI';
 export interface AdminRecord { _id?: string; id?: string; role?: string; [key: string]: unknown }
 export const recordId = (r: AdminRecord) => r._id || r.id || '';
@@ -11,7 +12,7 @@ export const statuses: Option[] = [{ value: 'ACTIVE', label: 'Đang hoạt độ
 const customerStatuses = [statuses[0], { value: 'INACTIVE', label: 'Ngừng hoạt động' }, { value: 'LEAD', label: 'Tiềm năng' }];
 export interface Field { key: string; label: string; required?: boolean; numeric?: boolean; min?: number; integer?: boolean; multiline?: boolean; options?: Option[]; source?: string; createOnly?: boolean; password?: boolean; default?: string }
 export interface Resource { title: string; path: string; query?: Record<string, string>; fields?: Field[]; summary: [string, string][]; search?: string; filters?: Option[]; account?: boolean; superOnly?: boolean; unpaged?: boolean; readonly?: boolean }
-const contactFields: Field[] = [{ key: 'username', label: 'Tên đăng nhập', required: true, createOnly: true }, { key: 'password', label: 'Mật khẩu 6 chữ số (để trống khi giữ nguyên)', password: true }, { key: 'fullName', label: 'Họ và tên', required: true }, { key: 'phone', label: 'Số điện thoại', required: true }, { key: 'email', label: 'Email' }, { key: 'status', label: 'Trạng thái', options: statuses, default: 'ACTIVE' }];
+const contactFields: Field[] = [{ key: 'username', label: 'Tên đăng nhập', required: true, createOnly: true }, { key: 'password', label: 'Mật khẩu tối thiểu 8 ký tự (để trống khi giữ nguyên)', password: true }, { key: 'fullName', label: 'Họ và tên', required: true }, { key: 'phone', label: 'Số điện thoại', required: true }, { key: 'email', label: 'Email' }, { key: 'status', label: 'Trạng thái', options: statuses, default: 'ACTIVE' }];
 export const resources: Record<string, Resource> = {
   pts: { title: 'Huấn luyện viên', path: '/api/users', query: { role: 'PT' }, account: true, search: 'keyword', filters: statuses, fields: [...contactFields, { key: 'specialization', label: 'Chuyên môn' }, { key: 'yearsOfExperience', label: 'Số năm kinh nghiệm', numeric: true, integer: true, min: 0 }, { key: 'bio', label: 'Giới thiệu', multiline: true }], summary: [['username', 'Tên đăng nhập'], ['phone', 'Điện thoại'], ['email', 'Email'], ['status', 'Trạng thái'], ['specialization', 'Chuyên môn']] },
   users: { title: 'Tài khoản hội viên', path: '/api/users', query: { role: 'CUSTOMER' }, account: true, search: 'keyword', filters: statuses, fields: contactFields, summary: [['username', 'Tên đăng nhập'], ['phone', 'Điện thoại'], ['status', 'Trạng thái']] },
@@ -30,10 +31,11 @@ export function formPayload(fields: Field[], values: Record<string, string>, edi
   const result: Record<string, unknown> = {};
   for (const field of fields) {
     if (editing && field.createOnly) continue;
-    const value = (values[field.key] || '').trim();
+    const rawValue = values[field.key] || '';
+    const value = field.password ? rawValue : rawValue.trim();
     if (field.password) {
       if (!value && editing) continue;
-      if (!/^\d{6}$/.test(value)) throw new Error('Mật khẩu phải gồm đúng 6 chữ số.');
+      if (!isValidPassword(value)) throw new Error(PASSWORD_ERROR);
     }
     if (field.required && !value) throw new Error(`Vui lòng nhập ${field.label.toLowerCase()}.`);
     if (field.numeric) {

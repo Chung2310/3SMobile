@@ -956,20 +956,20 @@ function AdminAccountFormModal({
               {/* Password */}
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>
-                  {editing ? 'Đổi mật khẩu 6 số (bỏ trống nếu giữ nguyên)' : 'Mật khẩu 6 chữ số *'}
+                  {editing ? 'Mật khẩu mới từ 8 ký tự (bỏ trống nếu giữ nguyên)' : 'Mật khẩu tối thiểu 8 ký tự *'}
                 </Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     style={[styles.formInput, { flex: 1, borderRightWidth: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
-                    placeholder={editing ? '••••••' : 'Nhập đúng 6 chữ số'}
+                    placeholder={editing ? 'Để trống để giữ mật khẩu hiện tại' : 'Chữ, số hoặc ký tự đặc biệt'}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(v) => {
                       setPassword(v);
                     }}
                     secureTextEntry={!showPassword}
-                    keyboardType="numeric"
-                    maxLength={6}
+                    keyboardType="default"
+                    autoCapitalize="none" autoCorrect={false}
                   />
                   <Pressable
                     onPress={() => setShowPassword((p) => !p)}
