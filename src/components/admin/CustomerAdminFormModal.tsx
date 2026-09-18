@@ -212,7 +212,11 @@ function CustomerAdminFormModalInner({
               </Text>
               <Text style={styles.headerSub}>
                 {editing
-                  ? `Mã: ${recordId(item!)}`
+                  ? (item?.fullName
+                      ? `Học viên: ${String(item.fullName)}`
+                      : item?.phone
+                      ? `SĐT: ${String(item.phone)}`
+                      : 'Cập nhật thông tin hồ sơ khách hàng')
                   : 'Điền thông tin để tạo hồ sơ khách hàng mới'}
               </Text>
             </View>

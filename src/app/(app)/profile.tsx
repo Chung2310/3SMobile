@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -29,6 +29,7 @@ import {
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
+import { canAccessAdmin } from '@/services/adminAccess';
 import { colors, radius, spacing } from '@/theme';
 
 interface ProfileFormState {
@@ -122,8 +123,6 @@ export default function ProfileScreen() {
     onConfirm: () => {},
   });
 
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyProfileToForm = (data: PtProfileInfo) => {
     setForm((prev) => ({
@@ -755,6 +754,27 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            {/* NÚT CHUYỂN SANG TRANG QUẢN TRỊ (KHI CÓ QUYỀN ADMIN) */}
+            {canAccessAdmin(session?.user) && (
+              <Pressable
+                style={({ pressed }) => [styles.adminBarBtn, pressed && styles.securityBarBtnPressed]}
+                onPress={() => router.push('/(app)/admin')}
+                accessibilityRole="button"
+                accessibilityLabel="Chuyển sang trang Quản trị"
+              >
+                <View style={styles.securityBarLeft}>
+                  <View style={[styles.securityIconCircle, { backgroundColor: '#E0F2FE' }]}>
+                    <Ionicons name="shield-checkmark" size={17} color="#0284C7" />
+                  </View>
+                  <View>
+                    <Text style={styles.securityBarTitle}>Trang Quản trị hệ thống</Text>
+                    <Text style={styles.adminBarSub}>Quản lý tài khoản, khách hàng & tài chính</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.textMuted} />
+              </Pressable>
+            )}
+
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
               style={({ pressed }) => [styles.securityBarBtn, pressed && styles.securityBarBtnPressed]}
@@ -784,6 +804,8 @@ export default function ProfileScreen() {
                   styles.signOutBtn,
                   pressed && styles.signOutBtnPressed,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Đăng xuất tài khoản"
               >
                 <Feather name="log-out" size={18} color="#EF4444" />
                 <Text style={styles.signOutText}>Đăng xuất tài khoản</Text>
@@ -1274,6 +1296,8 @@ export default function ProfileScreen() {
         onConfirm={alertConfig.onConfirm}
         onCancel={alertConfig.onCancel}
       />
+
+
     </View>
   );
 }
@@ -1616,6 +1640,27 @@ const styles = StyleSheet.create({
   },
 
   // Security button bar
+  adminBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 10,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  adminBarSub: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   securityBarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1679,10 +1724,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: 14,
     paddingVertical: 13,
-  },
-  signOutBtnConfirming: {
-    backgroundColor: '#EF4444',
-    borderColor: '#DC2626',
+    minHeight: 44,
   },
   signOutBtnPressed: {
     opacity: 0.85,
@@ -1693,9 +1735,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#EF4444',
   },
-  signOutTextConfirming: {
-    color: '#FFFFFF',
-  },
+
 
   // -------------------------------------------------------------
   // BOTTOM SHEET SỬA HỒ SƠ & BẢO MẬT

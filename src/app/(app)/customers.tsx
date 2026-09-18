@@ -10,9 +10,10 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
+import { canAccessAdmin } from '@/services/adminAccess';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerDetailModal } from '@/components/CustomerDetailModal';
@@ -242,6 +243,18 @@ export default function CustomersScreen() {
             {allList.length} khách hàng đang quản lý
           </Text>
         </View>
+
+        {canAccessAdmin(session?.user) && (
+          <Pressable
+            onPress={() => router.push({ pathname: '/(app)/admin/[section]', params: { section: 'customers' } })}
+            style={({ pressed }) => [styles.adminHeaderBtn, pressed && styles.addHeaderBtnPressed]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Quản lý khách hàng toàn hệ thống"
+          >
+            <Ionicons name="shield-checkmark" size={17} color="#0284C7" />
+          </Pressable>
+        )}
 
         <Pressable
           onPress={handleOpenAdd}
@@ -501,6 +514,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.textMuted,
     marginTop: 1,
+  },
+  adminHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   addHeaderBtn: {
     width: 44,

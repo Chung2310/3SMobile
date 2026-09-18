@@ -1,6 +1,10 @@
 export function isAdminRole(role?: string): boolean {
   return role === 'ADMIN' || role === 'SUPER_ADMIN';
 }
+export function canAccessAdmin(user?: { role?: string; isAdmin?: boolean; [key: string]: unknown } | null): boolean {
+  if (!user) return false;
+  return isAdminRole(user.role) || user.role === 'SUPERADMIN' || Boolean(user.isAdmin);
+}
 export function homeForRole(role?: string) {
   return isAdminRole(role) ? '/(app)/admin' as const : '/(app)/(tabs)' as const;
 }

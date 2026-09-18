@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { SessionAttachments } from './SessionAttachments';
 import { ProgressNotice } from './ProgressNotice';
-import { Text, View } from 'react-native';
+import { DatePickerModal } from '@/components/DatePickerModal';
+import { TimePicker } from '@/components/workouts/TimePicker';
 import { sessionDraftPath, sessionDraftBody, matchesDraftPlan, type SessionDraft } from '@/services/sessionDrafts';
 import { messageOf } from '@/utils/error';
 import { api, ApiError } from '@/services/api/client';
@@ -10,6 +13,85 @@ import { exerciseMetrics, recordId } from '@/services/workouts';
 import { ATTENDANCE, dayKey, localTime, initialResult, sessionPayload, measurementPayload, reportPayload, MEASUREMENTS, RESULT_FIELDS, calculateNextSessionIndex } from '@/services/progress';
 import type { JsonRecord } from '@/types/domain';
 import { Button, Field, Notice, Picker, Sheet, ws } from '../workouts/Controls';
+
+function formatDisplayDate(dateStr: string): { main: string; sub: string } {
+  if (!dateStr) return { main: 'Chưa chọn ngày', sub: 'Chạm để chọn' };
+  const parts = dateStr.trim().split('-');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    if (!isNaN(d.getTime())) {
+      const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+      const dayName = days[d.getDay()];
+      const now = new Date();
+      const isToday =
+        now.getFullYear() === d.getFullYear() &&
+        now.getMonth() === d.getMonth() &&
+        now.getDate() === d.getDate();
+      return {
+        main: `${parts[2]}/${parts[1]}/${parts[0]}`,
+        sub: isToday ? `Hôm nay · ${dayName}` : dayName,
+      };
+    }
+    return { main: `${parts[2]}/${parts[1]}/${parts[0]}`, sub: '' };
+  }
+  return { main: dateStr, sub: '' };
+}
+
+function DatePickerField({
+  label,
+  value,
+  onSelect,
+  title = 'Chọn ngày tập',
+}: {
+  label: string;
+  value: string;
+  onSelect: (iso: string) => void;
+  title?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { main, sub } = formatDisplayDate(value);
+
+  return (
+    <View style={{ gap: 6 }}>
+      {!!label && <Text style={ws.muted}>{label}</Text>}
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.dateTriggerBtn,
+          pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+      >
+        <View style={styles.dateTriggerLeft}>
+          <View style={styles.dateIconBox}>
+            <Feather name="calendar" size={18} color="#0284C7" />
+          </View>
+          <View style={{ gap: 2 }}>
+            <Text style={styles.dateDisplayText}>{main}</Text>
+            {!!sub && <Text style={styles.dateSubText}>{sub}</Text>}
+          </View>
+        </View>
+
+        <View style={styles.dateChangeBadge}>
+          <Text style={styles.dateChangeBadgeText}>Chọn ngày</Text>
+          <Feather name="chevron-down" size={15} color="#0284C7" />
+        </View>
+      </Pressable>
+
+      <DatePickerModal
+        visible={open}
+        value={value}
+        title={title}
+        onSelect={(iso) => {
+          onSelect(iso);
+          setOpen(false);
+        }}
+        onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
 
 export function ProgressForm({
   kind,
@@ -149,7 +231,8 @@ export function ProgressForm({
           />
         )}
         <Picker label="Buổi trong giáo án" value={String(draft.sessionIndex)} options={Object.fromEntries(sessions.map((s, i) => [String(i), `${i + 1}. ${readText(s, ['name'], 'Buổi tập')}`]))} onChange={(value) => setDraft((old) => ({ ...old, sessionIndex: value, results: asRecords(sessions[Number(value)]?.exercises).map(initialResult) }))} />
-        {field('date', 'Ngày tập (YYYY-MM-DD)')}{field('time', 'Giờ tập (HH:mm)')}
+        <DatePickerField label="Ngày tập" value={String(draft.date || dayKey(new Date()))} onSelect={(iso) => set('date', iso)} title="Chọn ngày tập" />
+        <TimePicker label="Giờ tập" value={String(draft.time || localTime())} onChange={(time) => set('time', time)} />
         <Picker label="Điểm danh" value={String(draft.attendance)} options={ATTENDANCE} onChange={(value) => set('attendance', value)} />
         {draft.attendance === 'ABSENT' ? field('absenceReason', 'Lý do vắng', false, true) : asRecords(sessions[Number(draft.sessionIndex)]?.exercises).map((exercise, index) => {
           const type = readText(exercise, ['trackingType']); const result = results[index] || {}; const sets = asRecords(result.sets); const isSets = type === 'STRENGTH' || type === 'BODYWEIGHT';
@@ -159,11 +242,67 @@ export function ProgressForm({
         {field('feeling', 'Cảm nhận', false, true)}{field('notes', 'Ghi chú', false, true)}
         {draft.attendance !== 'ABSENT' && <SessionAttachments value={draft} onChange={setDraft} onBusy={setUploading} />}
       </>}
-      {kind === 'measurement' && <>{recordId(record) && <Notice text="Để trống một chỉ số sẽ giữ giá trị cũ. Để bỏ số đo sai, xóa bản ghi và nhập lại." />}{field('date', 'Ngày đo (YYYY-MM-DD)')}{MEASUREMENTS.map(([name, label, unit]) => field(name, `${label} (${unit})`, true))}</>}
-      {kind === 'report' && <>{record.status === 'PUBLISHED' && <Notice tone="warning" text="Chỉnh sửa sẽ chuyển báo cáo về bản nháp. Cần xuất bản lại để khách xem." />}{field('from', 'Từ ngày (YYYY-MM-DD)')}{field('to', 'Đến ngày (YYYY-MM-DD)')}{field('summary', 'Nội dung báo cáo', false, true)}</>}
+      {kind === 'measurement' && <>{recordId(record) && <Notice text="Để trống một chỉ số sẽ giữ giá trị cũ. Để bỏ số đo sai, xóa bản ghi và nhập lại." />}<DatePickerField label="Ngày đo" value={String(draft.date || dayKey(new Date()))} onSelect={(iso) => set('date', iso)} title="Chọn ngày đo" />{MEASUREMENTS.map(([name, label, unit]) => field(name, `${label} (${unit})`, true))}</>}
+      {kind === 'report' && <>{record.status === 'PUBLISHED' && <Notice tone="warning" text="Chỉnh sửa sẽ chuyển báo cáo về bản nháp. Cần xuất bản lại để khách xem." />}<DatePickerField label="Từ ngày" value={String(draft.from || dayKey(new Date()))} onSelect={(iso) => set('from', iso)} title="Chọn từ ngày" /><DatePickerField label="Đến ngày" value={String(draft.to || dayKey(new Date()))} onSelect={(iso) => set('to', iso)} title="Chọn đến ngày" />{field('summary', 'Nội dung báo cáo', false, true)}</>}
     </View>}
     {closePrompt && <Sheet title="Giữ lại tiến độ đang nhập?" onClose={() => setClosePrompt(false)} locked={busy} footer={<><Button label="Lưu nháp và đóng" busy={busy} onPress={() => void saveDraft(true)} /><Button secondary label="Tiếp tục nhập" disabled={busy} onPress={() => setClosePrompt(false)} /><Button secondary destructive label="Thoát không lưu thay đổi" disabled={busy} onPress={onClose} /></>}><Notice text="Lưu bản nháp để lần sau tiếp tục. Thoát không lưu chỉ bỏ thay đổi mới; bản nháp đã lưu trước đó vẫn còn." />{error && <Notice error text={error} />}</Sheet>}
     {switchPlan && <Sheet title="Đổi giáo án cho bản nháp?" onClose={() => setSwitchPlan(false)}><Notice tone="warning" text="Kết quả từng bài và hiệp trong bản nháp sẽ được đặt lại theo giáo án hiện tại." /><Button label="Áp dụng và đặt lại kết quả" onPress={() => { setSessionPlan(plan); setDraft(old => ({...old,sessionIndex:String(nextSessionIndex),results:asRecords(asRecords(plan.sessions)[nextSessionIndex]?.exercises).map(initialResult)})); setSwitchPlan(false); }} /><Button secondary label="Giữ bản nháp hiện tại" onPress={() => setSwitchPlan(false)} /></Sheet>}
     <ProgressNotice message={popupError} error onClose={() => setPopupError('')} />
   </Sheet>;
 }
+
+const styles = StyleSheet.create({
+  dateTriggerBtn: {
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateTriggerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dateIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  dateDisplayText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  dateSubText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: '#64748B',
+  },
+  dateChangeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  dateChangeBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    color: '#0284C7',
+  },
+});
