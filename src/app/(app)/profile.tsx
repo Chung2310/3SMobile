@@ -762,7 +762,7 @@ export default function ProfileScreen() {
                   <Feather name="lock" size={16} color="#0284C7" />
                 </View>
                 <View>
-                  <Text style={styles.securityBarTitle}>Bảo mật & Đổi mật khẩu</Text>
+                  <Text style={styles.securityBarTitle}>Bảo mật & đổi mật khẩu</Text>
                   
                 </View>
               </View>
@@ -820,7 +820,7 @@ export default function ProfileScreen() {
                 </View>
                 <View>
                   <Text style={styles.sheetTitle}>
-                    {sheetTab === 'profile' ? 'Chỉnh sửa hồ sơ' : 'Bảo mật & Đổi mật khẩu'}
+                    {sheetTab === 'profile' ? 'Chỉnh sửa hồ sơ' : 'Bảo mật & đổi mật khẩu'}
                   </Text>
                   <Text style={styles.sheetSubtitle}>{displayName}</Text>
                 </View>

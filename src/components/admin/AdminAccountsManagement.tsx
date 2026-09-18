@@ -197,7 +197,7 @@ export function AdminAccountsManagement() {
           accessibilityLabel="Thêm tài khoản quản trị mới"
         >
           <Feather name="plus" size={16} color="#FFFFFF" />
-          <Text style={styles.addAdminText}>Thêm tài khoản Admin</Text>
+          <Text style={styles.addAdminText}>Thêm tài khoản admin</Text>
         </Pressable>
 
         <Pressable
@@ -706,7 +706,7 @@ export function AdminAccountsManagement() {
               <View style={styles.deleteIconBox}>
                 <Feather name="trash-2" size={26} color="#EF4444" />
               </View>
-              <Text style={styles.deleteTitle}>Xóa tài khoản Admin</Text>
+              <Text style={styles.deleteTitle}>Xóa tài khoản admin</Text>
               <Text style={styles.deleteDesc}>
                 Bạn có chắc chắn muốn xóa tài khoản &ldquo;{display(deletingAdmin)}&rdquo;? Toàn bộ quyền truy cập quản trị của tài khoản này sẽ bị thu hồi vĩnh viễn.
               </Text>
@@ -778,8 +778,8 @@ export function AdminAccountsManagement() {
               </View>
               <Text style={styles.deleteTitle}>
                 {lockTarget.status === 'LOCKED'
-                  ? 'Mở khóa tài khoản Admin'
-                  : 'Khóa tài khoản Admin'}
+                  ? 'Mở khóa tài khoản admin'
+                  : 'Khóa tài khoản admin'}
               </Text>
               <Text style={styles.deleteDesc}>
                 {lockTarget.status === 'LOCKED'
@@ -911,7 +911,7 @@ function AdminAccountFormModal({
             <View style={styles.sheetHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sheetTitle}>
-                  {editing ? 'Chỉnh sửa tài khoản Admin' : 'Thêm tài khoản Admin mới'}
+                  {editing ? 'Chỉnh sửa tài khoản admin' : 'Thêm tài khoản admin mới'}
                 </Text>
                 <Text style={styles.sheetSub}>
                   {editing ? `Tài khoản: @${String(item?.username || '')}` : 'Tạo tài khoản quản trị viên mới'}

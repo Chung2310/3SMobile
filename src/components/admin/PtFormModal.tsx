@@ -136,7 +136,7 @@ function PtFormModalInner({
 
             <View style={styles.headerTitleWrap}>
               <Text style={styles.sheetTitle}>
-                {editing ? 'Chỉnh sửa HLV' : 'Thêm Huấn luyện viên mới'}
+                {editing ? 'Chỉnh sửa HLV' : 'Thêm huấn luyện viên mới'}
               </Text>
               <Text style={styles.sheetSub}>
                 {editing

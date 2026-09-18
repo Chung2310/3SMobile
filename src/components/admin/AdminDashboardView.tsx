@@ -451,7 +451,7 @@ function AdminPtFilterSheet({
           <View style={styles.sheetHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="people" size={18} color="#0284C7" />
-              <Text style={styles.sheetTitle}>Chọn Huấn luyện viên (PT)</Text>
+              <Text style={styles.sheetTitle}>Chọn huấn luyện viên (PT)</Text>
             </View>
             <Pressable
               onPress={onClose}

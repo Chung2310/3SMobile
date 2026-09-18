@@ -52,7 +52,7 @@ function ShortfallDetailSheet({
 
           <View style={styles.sheetHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sheetTitle}>Sự cố thiếu hụt Credit</Text>
+              <Text style={styles.sheetTitle}>Sự cố thiếu hụt credit</Text>
               <Text style={styles.sheetSub}>
                 {record.createdAt ? new Date(record.createdAt).toLocaleString('vi-VN') : '—'}
               </Text>

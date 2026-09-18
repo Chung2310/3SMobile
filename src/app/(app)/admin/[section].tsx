@@ -36,7 +36,7 @@ export default function AdminSection() {
       features: 'Tính năng hệ thống',
       credits: 'Điều chỉnh credit',
       pricing: 'Bảng giá tác vụ AI',
-      creditPackages: 'Gói nạp Credit',
+      creditPackages: 'Gói nạp credit',
       orders: 'Đơn thanh toán',
       ledger: 'Sổ cái giao dịch',
       usage: 'Nhật ký dùng AI',
