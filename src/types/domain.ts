@@ -1,3 +1,5 @@
+import type { Roadmap } from './roadmap';
+
 export type JsonRecord = Record<string, unknown>;
 
 export interface User {
@@ -29,6 +31,8 @@ export interface LoginResponse {
   [key: string]: unknown;
 }
 
+export type { Roadmap } from './roadmap';
+
 export interface CustomerJourney extends JsonRecord {
   customer?: JsonRecord;
   sessions?: JsonRecord[];
@@ -36,7 +40,7 @@ export interface CustomerJourney extends JsonRecord {
   calendar?: JsonRecord[];
   photos?: JsonRecord[];
   plans?: JsonRecord | JsonRecord[];
-  roadmaps?: JsonRecord[];
+  roadmaps?: Roadmap[];
   nutritionPlans?: JsonRecord[];
   goals?: JsonRecord[];
   inbodyRecords?: JsonRecord[];
