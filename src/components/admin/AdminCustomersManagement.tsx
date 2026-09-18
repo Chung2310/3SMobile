@@ -731,7 +731,15 @@ export function AdminCustomersManagement() {
 
                 <View style={{ flex: 1 }}>
                   <Text style={styles.detailTitle}>{display(selectedCustomer)}</Text>
-                  <Text style={styles.detailSub}>Mã ID: {recordId(selectedCustomer)}</Text>
+                  <Text style={styles.detailSub}>
+                    {selectedCustomer.customerCode || selectedCustomer.code
+                      ? `Mã HV: ${selectedCustomer.customerCode || selectedCustomer.code}`
+                      : selectedCustomer.phone
+                      ? String(selectedCustomer.phone)
+                      : selectedCustomer.email
+                      ? String(selectedCustomer.email)
+                      : 'Học viên 3S Fitness'}
+                  </Text>
                 </View>
 
                 <Pressable
