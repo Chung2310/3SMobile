@@ -462,19 +462,24 @@ export default function ProfileScreen() {
     }
   };
 
-  async function handleSignOut() {
-    if (!confirmingLogout) {
-      setConfirmingLogout(true);
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-      resetTimer.current = setTimeout(() => {
-        setConfirmingLogout(false);
-      }, 4000);
-      return;
-    }
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-    await signOut();
-    router.replace('/(auth)/login');
-  }
+  const handleSignOut = () => {
+    setAlertConfig({
+      visible: true,
+      type: 'warning',
+      title: 'Đăng xuất tài khoản',
+      message: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng 3S Gym?',
+      confirmLabel: 'Đăng xuất',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        await signOut();
+        router.replace('/(auth)/login');
+      },
+      onCancel: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+      },
+    });
+  };
 
   const displayName = profile?.fullName || session?.user?.fullName || session?.user?.username || 'Huấn luyện viên';
   const username = profile?.username || session?.user?.username || 'pt';
@@ -774,21 +779,14 @@ export default function ProfileScreen() {
             <View style={styles.systemCard}>
               <Text style={styles.systemHeading}>HỆ THỐNG</Text>
               <Pressable
-                onPress={() => void handleSignOut()}
+                onPress={handleSignOut}
                 style={({ pressed }) => [
                   styles.signOutBtn,
-                  confirmingLogout && styles.signOutBtnConfirming,
                   pressed && styles.signOutBtnPressed,
                 ]}
               >
-                <Feather
-                  name={confirmingLogout ? 'alert-triangle' : 'log-out'}
-                  size={18}
-                  color={confirmingLogout ? '#FFFFFF' : '#EF4444'}
-                />
-                <Text style={[styles.signOutText, confirmingLogout && styles.signOutTextConfirming]}>
-                  {confirmingLogout ? 'Chạm lần nữa để xác nhận đăng xuất' : 'Đăng xuất tài khoản'}
-                </Text>
+                <Feather name="log-out" size={18} color="#EF4444" />
+                <Text style={styles.signOutText}>Đăng xuất tài khoản</Text>
               </Pressable>
             </View>
           </>
