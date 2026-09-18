@@ -7,11 +7,13 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { Screen } from '@/components/Screen';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomerSelectModal } from '@/components/CustomerSelectModal';
 import {
+  RoadmapCreateModal,
   RoadmapEditModal,
   RoadmapEmptyState,
   RoadmapMetricsGrid,
@@ -44,6 +46,9 @@ export default function RoadmapScreen() {
   // Roadmaps list & active selection
   const [staffRoadmaps, setStaffRoadmaps] = useState<Roadmap[]>([]);
   const [selectedRoadmap, setSelectedRoadmap] = useState<Roadmap | null>(null);
+
+  // Create modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Edit modal state
   const [editingRoadmap, setEditingRoadmap] = useState<Roadmap | null>(null);
@@ -137,6 +142,14 @@ export default function RoadmapScreen() {
       await loadStaffData(true);
     } else {
       await refreshCustomerJourney();
+    }
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.navigate('/(app)/(tabs)');
     }
   };
 
@@ -358,13 +371,22 @@ export default function RoadmapScreen() {
   return (
     <Screen
       title="Lộ trình huấn luyện"
-      onBack={null}
+      onBack={handleBack}
       refreshing={refreshing}
       onRefresh={handleRefresh}
     >
-      {/* Staff Toolbar: Customer & Status Filters */}
+      {/* Staff Toolbar: Create Button, Customer & Status Filters */}
       {isStaff && (
         <View style={styles.toolbar}>
+          {/* Create Button */}
+          <Pressable
+            onPress={() => setShowCreateModal(true)}
+            style={({ pressed }) => [styles.createRoadmapHeaderBtn, pressed && { opacity: 0.88 }]}
+          >
+            <Feather name="plus" size={15} color="#FFFFFF" />
+            <Text style={styles.createRoadmapHeaderBtnText}>Tạo Lộ trình mới (AI)</Text>
+          </Pressable>
+
           {/* Customer Filter */}
           <View style={styles.filterRow}>
             <Pressable
@@ -582,7 +604,11 @@ export default function RoadmapScreen() {
         </View>
       ) : (
         /* Empty State */
-        <RoadmapEmptyState onRefresh={handleRefresh} isStaff={isStaff} />
+        <RoadmapEmptyState
+          onRefresh={handleRefresh}
+          onCreatePress={() => setShowCreateModal(true)}
+          isStaff={isStaff}
+        />
       )}
 
       {/* Staff Customer Select Modal */}
@@ -596,6 +622,21 @@ export default function RoadmapScreen() {
           title="Lọc theo học viên"
           onClose={() => setShowCustomerPicker(false)}
           onSelect={(id) => setFilterCustomerId(id)}
+        />
+      )}
+
+      {/* Create Roadmap Modal */}
+      {isStaff && (
+        <RoadmapCreateModal
+          visible={showCreateModal}
+          customers={customers}
+          initialCustomerId={filterCustomerId}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(newRoadmap) => {
+            setShowCreateModal(false);
+            setSelectedRoadmap(newRoadmap);
+            void handleRefresh();
+          }}
         />
       )}
 
@@ -638,6 +679,26 @@ const styles = StyleSheet.create({
   toolbar: {
     marginBottom: 8,
     gap: 6,
+  },
+  createRoadmapHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.md,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 2,
+  },
+  createRoadmapHeaderBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   filterRow: {
     flexDirection: 'row',
