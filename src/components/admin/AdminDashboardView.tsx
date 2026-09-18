@@ -696,7 +696,7 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     id: 'customers',
     title: 'Khách hàng',
     iconName: 'person-add-outline',
-    route: '/(app)/customers',
+    route: '/(app)/admin/customers',
   },
   {
     id: 'packages',
@@ -811,8 +811,12 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   };
 
   const handleAdminFeaturePress = (id: string, route?: string) => {
-    if (id === 'packages') {
-      setIsFilterExpanded((prev) => !prev);
+    if (id === 'pts') {
+      router.push({ pathname: '/(app)/admin/[section]', params: { section: 'pts' } });
+    } else if (id === 'packages') {
+      router.push({ pathname: '/(app)/admin/[section]', params: { section: 'packages' } });
+    } else if (id === 'knowledge') {
+      router.push({ pathname: '/(app)/admin/[section]', params: { section: 'knowledge' } });
     } else if (route) {
       router.push(route as any);
     }
@@ -847,7 +851,7 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
 
         {/* Khách hàng */}
         <Pressable
-          onPress={() => router.push('/(app)/customers')}
+          onPress={() => router.push({ pathname: '/(app)/admin/[section]', params: { section: 'customers' } })}
           style={({ pressed }) => [
             styles.quickStatCol,
             pressed && styles.quickStatColPressed,

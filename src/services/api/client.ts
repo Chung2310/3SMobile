@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '@/services/config';
 import { getStoredSession, saveSession } from '@/services/sessionStore';
 
-export interface ApiPage<T> { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } }
+export interface ApiPage<T> { summary?: Record<string, number>; data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } }
 
 interface ApiEnvelope<T> {
   success?: boolean;
@@ -247,6 +247,9 @@ export const api = {
   },
   patch<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
+  },
+  uploadPatch<T>(path: string, formData: FormData): Promise<T> {
+    return request<T>(path, { method: 'PATCH', body: formData });
   },
   upload<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
     if (!onProgress || typeof XMLHttpRequest === 'undefined') {

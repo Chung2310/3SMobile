@@ -122,3 +122,85 @@ export function metricSeries(records: JsonRecord[], key: string): { date: string
   return records.map((record) => ({ date: readText(record, ['measuredAt', 'measurementDate']), value: readNumber(record, [key]) ?? readNumber(asRecord(record.measurements), [key]) })).filter((item): item is { date: string; value: number } => item.value !== null && Number.isFinite(new Date(item.date).getTime())).sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
 }
 export function sessionTitle(session: JsonRecord): string { return readText(asRecord(asRecord(session.planSnapshot).session), ['name'], readText(asRecord(session.planSnapshot), ['title'], 'Buổi tập')); }
+
+export function calculateNextSessionIndex(plan: JsonRecord, pastSessions: JsonRecord[] = []): number {
+  const planSessions = asRecords(plan.sessions);
+  if (!planSessions.length) return 0;
+
+  const validPast = asRecords(pastSessions);
+  const planId = recordId(plan);
+
+  // Filter completed sessions (exclude ABSENT)
+  const attended = validPast.filter((s) => {
+    const att = readText(s, ['attendance']).toUpperCase();
+    return att !== 'ABSENT';
+  });
+  if (!attended.length) return 0;
+
+  // Prefer sessions matching current plan if any match
+  const planAttended = planId
+    ? attended.filter((s) => {
+        const sPlanId = readText(s, ['workoutPlanId', 'planId']) || recordId(asRecord(s.workoutPlan));
+        const snapPlanId = readText(asRecord(s.planSnapshot), ['_id', 'id', 'workoutPlanId', 'planId']);
+        return sPlanId === planId || snapPlanId === planId;
+      })
+    : [];
+  const relevant = planAttended.length > 0 ? planAttended : attended;
+
+  // Sort descending by performed date (most recent first)
+  const sorted = [...relevant].sort((a, b) => {
+    const timeA = new Date(readText(a, ['performedAt', 'sessionDate', 'date', 'createdAt', 'startsAt']) || 0).getTime();
+    const timeB = new Date(readText(b, ['performedAt', 'sessionDate', 'date', 'createdAt', 'startsAt']) || 0).getTime();
+    if (timeA !== timeB && !Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+      return timeB - timeA;
+    }
+    return readText(b, ['performedAt']).localeCompare(readText(a, ['performedAt']));
+  });
+  const latest = sorted[0];
+
+  // 1. Try direct sessionIndex from the latest record or its snapshot
+  const rawIdx =
+    readNumber(latest, ['sessionIndex', 'sessionNumber', 'dayIndex', 'index']) ??
+    readNumber(asRecord(latest.planSnapshot), ['sessionIndex', 'sessionNumber', 'dayIndex', 'index']) ??
+    readNumber(asRecord(asRecord(latest.planSnapshot).session), ['sessionIndex', 'sessionNumber', 'index']);
+
+  if (typeof rawIdx === 'number' && Number.isInteger(rawIdx) && rawIdx >= 0) {
+    const nextIdx = rawIdx + 1;
+    if (nextIdx < planSessions.length) return nextIdx;
+    return nextIdx % planSessions.length;
+  }
+
+  // 2. Try matching by session name from the latest record or snapshot
+  const lastName = (
+    readText(latest, ['sessionName', 'name', 'title']) ||
+    sessionTitle(latest) ||
+    readText(asRecord(asRecord(latest.planSnapshot).session), ['name', 'title'])
+  ).trim();
+
+  if (lastName && lastName !== 'Buổi tập') {
+    const matchedIdx = planSessions.findIndex(
+      (ps) => readText(ps, ['name']).toLowerCase().trim() === lastName.toLowerCase()
+    );
+    if (matchedIdx !== -1) {
+      const nextIdx = matchedIdx + 1;
+      if (nextIdx < planSessions.length) return nextIdx;
+      return nextIdx % planSessions.length;
+    }
+
+    const numMatch = lastName.match(/(?:ngày|buổi|day|session)?\s*(\d+)/i);
+    if (numMatch) {
+      const parsedNum = parseInt(numMatch[1], 10);
+      if (parsedNum > 0) {
+        const nextIdx = parsedNum; // e.g. "Ngày 3" -> 3 is 0-based index 3 (Ngày 4)
+        if (nextIdx < planSessions.length) return nextIdx;
+        return nextIdx % planSessions.length;
+      }
+    }
+  }
+
+  // 3. Fallback: use total completed count
+  if (relevant.length < planSessions.length) {
+    return relevant.length;
+  }
+  return relevant.length % planSessions.length;
+}

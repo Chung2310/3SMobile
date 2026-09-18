@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { JourneyProvider } from '@/context/JourneyContext';
 import { colors } from '@/theme';
+import { homeForRole } from '@/services/adminAccess';
 
 const LOGO_WHITE = require('../../assets/public/logo-white.png');
 
@@ -19,7 +20,7 @@ function NavigationGate() {
     if (loading) return;
     const inAuthGroup = segments[0] === '(auth)';
     if (!session && !inAuthGroup) router.replace('/(auth)/login');
-    if (session && inAuthGroup) router.replace('/(app)/(tabs)');
+    if (session && inAuthGroup) router.replace(homeForRole(session.user.role));
   }, [loading, router, segments, session]);
 
   if (loading) {
@@ -48,7 +49,7 @@ export default function RootLayout() {
 }
 
 export function IndexRedirect() {
-  return <Redirect href="/(app)/(tabs)" />;
+  const { session } = useAuth(); return <Redirect href={homeForRole(session?.user.role)} />;
 }
 
 const styles = StyleSheet.create({
@@ -63,4 +64,3 @@ const styles = StyleSheet.create({
     height: 85,
   },
 });
-
