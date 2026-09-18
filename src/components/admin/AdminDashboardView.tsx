@@ -699,12 +699,6 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     iconName: 'cube-outline',
   },
   {
-    id: 'modules',
-    title: 'Phân hệ',
-    iconName: 'layers-outline',
-    route: '/(app)/admin/modules',
-  },
-  {
     id: 'transfers',
     title: 'Chuyển giao',
     iconName: 'swap-horizontal-outline',
@@ -715,16 +709,10 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
     iconName: 'book-outline',
   },
   {
-    id: 'wallet',
-    title: 'Ví credit',
-    iconName: 'wallet-outline',
-    route: '/(app)/wallet',
-  },
-  {
-    id: 'settings',
-    title: 'Cài đặt',
-    iconName: 'settings-outline',
-    route: '/(app)/profile',
+    id: 'modules',
+    title: 'Quản trị',
+    iconName: 'apps-outline',
+    route: '/(app)/admin/modules',
   },
 ];
 
@@ -1567,10 +1555,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   featureItem: {
-    width: '25%',
+    width: '33.33%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   featureItemPressed: {
     opacity: 0.75,

@@ -53,8 +53,8 @@ export default function AdminModulesScreen() {
 
   return (
     <Screen
-      title="PHÂN HỆ QUẢN TRỊ"
-      subtitle={`${totalSections} chức năng hệ thống`}
+      title="QUẢN TRỊ HỆ THỐNG"
+      subtitle={`${totalSections} chức năng quản lý`}
       onBack={() => {
         if (router.canGoBack()) {
           router.back();
@@ -78,7 +78,7 @@ export default function AdminModulesScreen() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Tìm kiếm phân hệ, HLV, gói tập, credit..."
+            placeholder="Tìm kiếm chức năng, HLV, gói tập, credit..."
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
             returnKeyType="search"
@@ -96,12 +96,12 @@ export default function AdminModulesScreen() {
           )}
         </View>
 
-        {/* Danh mục phân hệ quản trị */}
+        {/* Danh mục chức năng quản trị */}
         {filteredCategories.length === 0 ? (
           <View style={styles.emptyModulesWrap}>
             <Ionicons name="search" size={32} color={colors.textMuted} />
             <Text style={styles.emptyModulesText}>
-              {`Không tìm thấy phân hệ khớp với "${searchQuery}"`}
+              {`Không tìm thấy chức năng khớp với "${searchQuery}"`}
             </Text>
           </View>
         ) : (
