@@ -49,6 +49,8 @@ export default function AdminSection() {
     <Screen
       title={title.toLocaleUpperCase('vi-VN')}
       onBack={() => router.dismissTo({ pathname: '/(app)/admin', params: { tab: 'modules' } })}
+      scroll={section !== 'customers'}
+      noPadding={section === 'customers'}
     >
       {section === 'pts' ? (
         <AdminPtsManagement />

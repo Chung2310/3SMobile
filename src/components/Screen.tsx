@@ -16,10 +16,11 @@ interface ScreenProps {
   refreshing?: boolean;
   onRefresh?: () => Promise<void>;
   scroll?: boolean;
+  noPadding?: boolean;
   onBack?: (() => void) | null;
 }
 
-export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, onBack }: ScreenProps) {
+export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, noPadding = false, onBack }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const handleBack = onBack === null ? undefined : (onBack !== undefined ? onBack : () => router.navigate('/(app)/(tabs)'));
 
@@ -32,7 +33,7 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
       {children}
     </ScrollView>
   ) : (
-    <View style={styles.staticContent}>{children}</View>
+    <View style={[styles.staticContent, noPadding && { padding: 0 }]}>{children}</View>
   );
 
   return (
