@@ -9,8 +9,10 @@ import { Button, Field, Notice } from '../workouts/Controls';
 export function ProgressDashboard({
   items,
   onSelect,
+  recordOnly = false,
 }: {
   items: JsonRecord[];
+  recordOnly?: boolean;
   onSelect: (id: string, log: boolean) => void;
 }) {
   const [search, setSearch] = useState('');
@@ -114,15 +116,15 @@ export function ProgressDashboard({
               </View>
 
               <View style={styles.actionRow}>
-                <View style={styles.actionButtonHalf}>
+                {!recordOnly && <View style={styles.actionButtonHalf}>
                   <Button
                     secondary
                     icon="trending-up"
                     label="Tiến độ"
                     onPress={() => onSelect(id, false)}
                   />
-                </View>
-                <View style={styles.actionButtonHalf}>
+                </View>}
+                <View style={recordOnly ? { flex: 1 } : styles.actionButtonHalf}>
                   <Button
                     icon="plus"
                     label="Ghi buổi tập"

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button, Busy, Field, Notice, Sheet } from '@/components/workouts/Controls';
@@ -54,17 +54,19 @@ const label = (value: unknown) => (value === null || value === undefined ? 'Chư
 
 export default function ProgressWorkspaceScreen() {
   const { session } = useAuth();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const recordMode = staff && mode === 'record';
 
   return (
     <Screen
-      title="Tiến độ tập luyện"
-      subtitle="Theo dõi chỉ số InBody và hành trình"
+      title={recordMode ? 'Ghi tiến độ' : 'Tiến độ tập luyện'}
+      subtitle={recordMode ? 'Chọn học viên để ghi nhận buổi tập' : 'Theo dõi chỉ số InBody và hành trình'}
       onBack={() => router.navigate('/(app)/(tabs)')}
     >
       {session && (staff || role === 'CUSTOMER') ? (
-        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} />
+        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} recordMode={recordMode} />
       ) : (
         <Notice error text="Tài khoản không có quyền xem tiến độ." />
       )}
@@ -72,7 +74,7 @@ export default function ProgressWorkspaceScreen() {
   );
 }
 
-export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: string }) {
+export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff: boolean; userId: string; recordMode?: boolean }) {
   const [customers, setCustomers] = useState<JsonRecord[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [journey, setJourney] = useState<JsonRecord | null>(null);
@@ -86,6 +88,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
   const [selectedDay, setSelectedDay] = useState('');
   const [metric, setMetric] = useState('weight');
   const [form, setForm] = useState<{ kind: 'session' | 'measurement' | 'report'; record?: JsonRecord } | null>(null);
+  const pendingLogCustomerId = useRef('');
   const [draftRefresh, setDraftRefresh] = useState(0);
   function closeForm() { setForm(null); setDraftRefresh((value) => value + 1); }
   const [detail, setDetail] = useState<JsonRecord | null>(null);
@@ -110,7 +113,16 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
         }
       } else {
         const data = await api.get<JsonRecord>(journeyPath(staff ? customerId : undefined, range.from, range.to));
-        if (request === generation.current) setJourney(data);
+        if (request === generation.current) {
+          setJourney(data);
+          if (pendingLogCustomerId.current === customerId) {
+            pendingLogCustomerId.current = '';
+            const selectedPlan = asRecord(asRecord(data.plans).active);
+            const canRecord = staff && selectedPlan.lifecycleStatus === 'ACTIVE' && readText(selectedPlan, ['ptId']) === userId && asRecords(selectedPlan.sessions).length > 0;
+            if (canRecord) setForm({ kind: 'session' });
+            else setPopup({ message: 'Chưa thể ghi buổi tập. Kiểm tra giáo án đang áp dụng và PT phụ trách.', error: true });
+          }
+        }
       }
     } catch (e) {
       if (request === generation.current) {
@@ -120,7 +132,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
     } finally {
       if (request === generation.current) setBusy(false);
     }
-  }, [staff, customerId, range]);
+  }, [staff, customerId, range, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,6 +145,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
 
   function resetView() {
     generation.current++;
+    pendingLogCustomerId.current = '';
     setJourney(null);
     setError('');
     setSuccess('');
@@ -220,8 +233,10 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
       {staff && !customerId && !busy && !error && (
         <ProgressDashboard
           items={customers}
+          recordOnly={recordMode}
           onSelect={(id, log) => {
             resetView();
+            pendingLogCustomerId.current = log ? id : '';
             setSection(log ? 'sessions' : 'overview');
             setCustomerId(id);
           }}
