@@ -1,4 +1,3 @@
-import { PASSWORD_HINT } from '@/services/passwordValidation';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -176,7 +175,7 @@ function PtFormModalInner({
               {/* Tên đăng nhập */}
               <View style={styles.fieldWrap}>
                 <Text style={styles.fieldLabel}>
-                  Tên đăng nhập (Username) <Text style={styles.reqStar}>*</Text>
+                  Tên đăng nhập<Text style={styles.reqStar}>*</Text>
                 </Text>
                 <TextInput
                   editable={!editing && !busy}
@@ -194,17 +193,12 @@ function PtFormModalInner({
                     editing && styles.inputDisabled,
                   ]}
                 />
-                {editing && (
-                  <Text style={styles.helperText}>
-                    Tên đăng nhập là định danh cố định không thể thay đổi
-                  </Text>
-                )}
               </View>
 
               {/* Mật khẩu */}
               <View style={styles.fieldWrap}>
                 <Text style={styles.fieldLabel}>
-                  {editing ? 'Đổi mật khẩu mới (để trống nếu giữ nguyên)' : 'Mật khẩu khởi tạo'}
+                  {editing ? 'Đổi mật khẩu mới' : 'Mật khẩu khởi tạo'}
                   {!editing && <Text style={styles.reqStar}> *</Text>}
                 </Text>
                 <View style={styles.passwordInputWrap}>
@@ -215,7 +209,7 @@ function PtFormModalInner({
                       setDirty(true);
                       setPassword(v);
                     }}
-                    placeholder={editing ? 'Nhập mật khẩu mới (tối thiểu 8 ký tự)...' : 'Mật khẩu tối thiểu 8 ký tự'}
+                    placeholder={editing ? 'Nhập mật khẩu mới' : 'Mật khẩu tối thiểu 8 ký tự'}
                     placeholderTextColor={colors.textMuted}
                     secureTextEntry={!showPassword}
                     keyboardType="default"
@@ -234,9 +228,7 @@ function PtFormModalInner({
                     />
                   </Pressable>
                 </View>
-                <Text style={styles.helperText}>
-                  {PASSWORD_HINT}
-                </Text>
+
               </View>
 
               {/* Trạng thái tài khoản */}
