@@ -55,8 +55,8 @@ export default function AdminSection() {
           router.replace('/(app)/admin/modules');
         }
       }}
-      scroll={section !== 'customers'}
-      noPadding={section === 'customers'}
+      scroll={section !== 'customers' && section !== 'batchTransfers' && section !== 'images'}
+      noPadding={section === 'customers' || section === 'batchTransfers' || section === 'images'}
     >
       {section === 'pts' ? (
         <AdminPtsManagement />
