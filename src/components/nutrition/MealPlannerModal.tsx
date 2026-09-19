@@ -46,6 +46,7 @@ import {
 import { FoodLibrarySheet } from './FoodLibrarySheet';
 import { NutritionMacroBar } from './NutritionMacroBar';
 import { DishImageActionSheet } from './DishImageActionSheet';
+import { fetchCustomerDetail } from '@/services/customerService';
 
 interface MealPlannerModalProps {
   visible: boolean;
@@ -99,6 +100,75 @@ export function MealPlannerModal({
     dishName: string;
     imageUrl?: string;
   } | null>(null);
+
+  // Active Customer Resolution
+  const planCustomerDerived = useMemo<CustomerProfile | null>(() => {
+    if (customer && (customer._id || (customer as any).id)) {
+      return customer;
+    }
+    if (editingPlan?.customerId) {
+      if (typeof editingPlan.customerId === 'object' && editingPlan.customerId !== null) {
+        const cObj = editingPlan.customerId as any;
+        return {
+          _id: cObj._id || cObj.id || '',
+          fullName: cObj.fullName || 'Học viên',
+          phone: cObj.phone || '',
+          avatar: cObj.avatar,
+          status: 'ACTIVE',
+        } as CustomerProfile;
+      }
+      return {
+        _id: String(editingPlan.customerId),
+        fullName: 'Học viên',
+        phone: '',
+        status: 'ACTIVE',
+      } as CustomerProfile;
+    }
+    return null;
+  }, [customer, editingPlan]);
+
+  const [fetchedCustomer, setFetchedCustomer] = useState<CustomerProfile | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const rawId = typeof editingPlan?.customerId === 'string' ? editingPlan.customerId : null;
+    if (rawId && (!customer || !(customer._id || (customer as any).id))) {
+      let active = true;
+      fetchCustomerDetail(rawId)
+        .then((res) => {
+          if (active && res) {
+            setFetchedCustomer(res);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }
+  }, [visible, editingPlan?.customerId, customer]);
+
+  const effectiveCustomerId = useMemo(() => {
+    return (
+      customer?._id ||
+      (customer as any)?.id ||
+      fetchedCustomer?._id ||
+      (fetchedCustomer as any)?.id ||
+      planCustomerDerived?._id ||
+      (planCustomerDerived as any)?.id ||
+      ''
+    );
+  }, [customer, fetchedCustomer, planCustomerDerived]);
+
+  const effectiveCustomerName = useMemo(() => {
+    if (customer?.fullName) return customer.fullName;
+    if (fetchedCustomer?.fullName && fetchedCustomer.fullName !== 'Học viên') {
+      return fetchedCustomer.fullName;
+    }
+    if (planCustomerDerived?.fullName && planCustomerDerived.fullName !== 'Học viên') {
+      return planCustomerDerived.fullName;
+    }
+    return customer?.fullName || fetchedCustomer?.fullName || planCustomerDerived?.fullName || '';
+  }, [customer, fetchedCustomer, planCustomerDerived]);
 
   // Loading state per item when calling AI generator: `${mealIdx}-${itemId}`
   const [generatingItemKey, setGeneratingItemKey] = useState<string | null>(null);
@@ -156,9 +226,11 @@ export function MealPlannerModal({
         const computedEnd = computeEndDate(today, defDays);
 
         setTitle(
-          customer
-            ? `Thực đơn ${customer.fullName} (${initialCal} kcal)`
-            : `Kế hoạch dinh dưỡng ${initialCal} kcal`
+          effectiveCustomerName
+            ? `Thực đơn ${effectiveCustomerName} (${initialCal} kcal)`
+            : customer
+              ? `Thực đơn ${customer.fullName} (${initialCal} kcal)`
+              : `Kế hoạch dinh dưỡng ${initialCal} kcal`
         );
         setTargetCalories(String(initialCal));
         setProteinG(String(initP));
@@ -174,7 +246,7 @@ export function MealPlannerModal({
         setCustomAllergy('');
       }
     }
-  }, [visible, editingPlan, customer, initialCalculated]);
+  }, [visible, editingPlan, customer, initialCalculated, effectiveCustomerName]);
 
   const toggleAllergy = (chip: string) => {
     setSelectedAllergies((prev) =>
@@ -346,7 +418,7 @@ export function MealPlannerModal({
 
   // AI auto-generate
   const handleAiAutoFill = async () => {
-    const cId = customer?._id || (customer as any)?.id;
+    const cId = effectiveCustomerId;
     if (!cId) {
       showWarning('Vui lòng chọn học viên để AI phân tích thể trạng.', 'Chưa chọn học viên');
       return;
@@ -404,7 +476,7 @@ export function MealPlannerModal({
       showWarning('Vui lòng nhập tên thực đơn.', 'Thiếu thông tin');
       return;
     }
-    const cId = customer?._id || (customer as any)?.id;
+    const cId = effectiveCustomerId;
     if (!cId) {
       showWarning('Vui lòng chọn học viên trước khi lưu thực đơn.', 'Chưa chọn học viên');
       return;
@@ -515,7 +587,9 @@ export function MealPlannerModal({
                 {editingPlan ? 'Chỉnh sửa thực đơn' : 'Lập thực đơn mới'}
               </Text>
               <Text style={styles.subtitle}>
-                {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}
+                {effectiveCustomerName
+                  ? `Học viên: ${effectiveCustomerName}`
+                  : 'Thiết kế mâm cơm 4 bữa'}
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
