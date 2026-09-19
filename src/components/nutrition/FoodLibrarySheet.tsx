@@ -86,6 +86,7 @@ export function FoodLibrarySheet({
       carbs: calc.carbs,
       fat: calc.fat,
       notes: selectedFood.prepTip,
+      imageUrl: selectedFood.imageUrl,
     };
 
     if (onSelectFood) {

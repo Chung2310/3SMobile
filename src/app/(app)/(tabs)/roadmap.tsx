@@ -260,7 +260,6 @@ export default function RoadmapScreen() {
                     {isPublished ? 'Đã công bố' : 'Bản nháp'}
                   </Text>
                 </View>
-                <Text style={styles.detailVersionText}>v{selectedRoadmap.version || 1}</Text>
               </View>
 
               {/* Actions for PT on Detail view: Sửa | Gỡ công bố / Công bố | Xóa */}
@@ -384,7 +383,7 @@ export default function RoadmapScreen() {
             style={({ pressed }) => [styles.createRoadmapHeaderBtn, pressed && { opacity: 0.88 }]}
           >
             <Feather name="plus" size={15} color="#FFFFFF" />
-            <Text style={styles.createRoadmapHeaderBtnText}>Tạo Lộ trình mới (AI)</Text>
+            <Text style={styles.createRoadmapHeaderBtnText}>Tạo Lộ trình mới</Text>
           </Pressable>
 
           {/* Customer Filter */}
@@ -501,8 +500,6 @@ export default function RoadmapScreen() {
                       </Text>
                     ) : null}
                   </View>
-
-                  <Text style={styles.cardVersion}>v{item.version || 1}</Text>
                 </View>
 
                 {/* Title (Tappable to view details) */}

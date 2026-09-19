@@ -492,7 +492,7 @@ export function RoadmapEditModal({
               </View>
 
               {/* Section: Macros */}
-              <Text style={styles.subHeading}>Tỷ lệ đa lượng (Macros)</Text>
+              <Text style={styles.subHeading}>Tỷ lệ đa lượng</Text>
               <View style={styles.row}>
                 <View style={[styles.field, { flex: 1 }]}>
                   <Text style={styles.label}>Protein (g)</Text>
@@ -532,7 +532,7 @@ export function RoadmapEditModal({
               </View>
 
               {/* Section: Baseline InBody */}
-              <Text style={styles.subHeading}>Chỉ số InBody ban đầu (Baseline)</Text>
+              <Text style={styles.subHeading}>Chỉ số InBody ban đầu</Text>
               <View style={styles.row}>
                 <View style={[styles.field, { flex: 1 }]}>
                   <Text style={styles.label}>Cân nặng (kg)</Text>
@@ -590,7 +590,7 @@ export function RoadmapEditModal({
 
               {/* Training split */}
               <View style={styles.field}>
-                <Text style={styles.label}>Lịch chia buổi tập (Split)</Text>
+                <Text style={styles.label}>Lịch chia buổi tập</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={trainingSplit}
