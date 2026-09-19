@@ -369,7 +369,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
             )}
           </View>
 
-          {staff && targetId && <SessionDraftCard key={targetId} customerId={targetId} refreshKey={draftRefresh} onResume={() => setForm({ kind: 'session' })} />}
+          {staff && targetId && <SessionDraftCard key={targetId} ownerId={userId} customerId={targetId} refreshKey={draftRefresh} onResume={() => setForm({ kind: 'session' })} />}
           {/* Horizontal Scrollable Athletic Tab Bar */}
           <View style={styles.tabScrollWrapper}>
             <ScrollView
@@ -914,7 +914,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
 
       {/* Progress Form */}
       {form?.kind === 'session' ? (
-        <SessionDraftForm customerId={targetId} plan={activePlan} pastSessions={sessions} onClose={closeForm} onSaved={saved} />
+        <SessionDraftForm ownerId={userId} customerId={targetId} plan={activePlan} pastSessions={sessions} onClose={closeForm} onSaved={saved} />
       ) : form && (
         <ProgressForm
           kind={form.kind}
