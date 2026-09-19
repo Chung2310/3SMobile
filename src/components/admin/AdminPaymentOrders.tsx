@@ -17,12 +17,17 @@ import { api } from '@/services/api/client';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 import { display, type AdminRecord } from '@/services/adminResources';
+import {
+  resolveAdminUsers,
+  formatUserDisplay,
+  type AdminUserParty,
+} from '@/services/adminUsers';
 
 export interface PaymentOrderRecord extends AdminRecord {
   _id?: string;
   id?: string;
   orderCode?: string;
-  userId?: string | AdminRecord;
+  userId?: string | AdminUserParty;
   amountVnd?: number;
   grantCredits?: number;
   gateway?: string;
@@ -106,7 +111,7 @@ function OrderDetailSheet({
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailRowLabel}>Tài khoản người nạp:</Text>
-                <Text style={styles.detailRowValue}>{display(order.userId)}</Text>
+                <Text style={styles.detailRowValue}>{formatUserDisplay(order.userId)}</Text>
               </View>
 
               <View style={styles.detailRow}>
@@ -174,8 +179,10 @@ export function AdminPaymentOrders() {
       const res = await api.getPage<PaymentOrderRecord>(
         `/api/admin/payment-orders?${params.toString()}`
       );
-      setOrders(res.data || []);
-      setTotal(res.meta?.total ?? res.data.length);
+      const raw = res.data || [];
+      const resolved = await resolveAdminUsers(raw, ['userId']);
+      setOrders(resolved);
+      setTotal(res.meta?.total ?? raw.length);
       setPages(Math.max(1, res.meta?.totalPages || 1));
     } catch (e) {
       setError(messageOf(e));
@@ -395,7 +402,7 @@ export function AdminPaymentOrders() {
                       #{order.orderCode || 'ORDER'}
                     </Text>
                     <Text style={styles.orderUser} numberOfLines={1}>
-                      {display(order.userId)}
+                      {formatUserDisplay(order.userId)}
                     </Text>
                   </View>
 
