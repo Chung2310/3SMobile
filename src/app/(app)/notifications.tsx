@@ -76,6 +76,8 @@ export default function NotificationsScreen() {
     if (resourceType.includes('calendar')) router.push('/(app)/(tabs)/schedule');
     else if (resourceType.includes('report') || resourceType.includes('progress'))
       router.push('/(app)/(tabs)/progress');
+    else if (resourceType.includes('care') || resourceType.includes('package'))
+      router.push('/(app)/customers');
   }
 
   return (
@@ -99,6 +101,8 @@ export default function NotificationsScreen() {
               ? 'calendar'
               : resourceType.includes('report')
               ? 'activity'
+              : resourceType.includes('care') || resourceType.includes('package')
+              ? 'alert-circle'
               : 'bell';
 
             return (
