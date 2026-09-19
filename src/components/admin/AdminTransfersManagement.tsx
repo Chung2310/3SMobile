@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -41,6 +41,30 @@ const displayDate = (value: string) => {
   return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'PENDING', label: 'Chờ tiếp nhận' },
+  { value: 'ACCEPTED', label: 'Đã tiếp nhận' },
+  { value: 'REJECTED', label: 'Đã từ chối' },
+  { value: 'ADMIN_FORCED', label: 'Admin điều chuyển' },
+];
+
+const getStatusBadge = (statusStr: string) => {
+  switch (statusStr) {
+    case 'ACCEPTED':
+      return { label: 'Đã tiếp nhận', bg: '#DCFCE7', color: '#16A34A', icon: 'check-circle' as const };
+    case 'REJECTED':
+      return { label: 'Đã từ chối', bg: '#FEE2E2', color: '#EF4444', icon: 'x-circle' as const };
+    case 'ADMIN_FORCED':
+      return { label: 'Admin điều chuyển', bg: '#E0F2FE', color: '#0284C7', icon: 'shield' as const };
+    case 'CANCELLED':
+      return { label: 'Đã hủy', bg: '#F1F5F9', color: '#64748B', icon: 'slash' as const };
+    case 'PENDING':
+    default:
+      return { label: 'Chờ tiếp nhận', bg: '#FEF3C7', color: '#D97706', icon: 'clock' as const };
+  }
+};
+
 interface TransferParty {
   _id?: string;
   id?: string;
@@ -61,10 +85,21 @@ export function AdminTransfersManagement() {
   const [error, setError] = useState('');
   const [keyword, setKeyword] = useState('');
   const [appliedKeyword, setAppliedKeyword] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [fromPtId, setFromPtId] = useState('');
-  const [toPtId, setToPtId] = useState('');
+
+  // Applied filter state
+  const [appliedStatus, setAppliedStatus] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
+  const [appliedFromPtId, setAppliedFromPtId] = useState('');
+  const [appliedToPtId, setAppliedToPtId] = useState('');
+
+  // Draft filter state inside modal
+  const [draftStatus, setDraftStatus] = useState('');
+  const [draftFromDate, setDraftFromDate] = useState('');
+  const [draftToDate, setDraftToDate] = useState('');
+  const [draftFromPtId, setDraftFromPtId] = useState('');
+  const [draftToPtId, setDraftToPtId] = useState('');
+
   const [trainers, setTrainers] = useState<AdminRecord[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [ptPickerTarget, setPtPickerTarget] = useState<'from' | 'to' | null>(null);
@@ -80,12 +115,13 @@ export function AdminTransfersManagement() {
   const transferPath = useCallback((currentPage: number) => {
     const params = new URLSearchParams({ page: String(currentPage), limit: '20' });
     if (appliedKeyword.trim()) params.set('keyword', appliedKeyword.trim());
-    if (fromDate) params.set('fromDate', fromDate);
-    if (toDate) params.set('toDate', toDate);
-    if (fromPtId) params.set('fromPtId', fromPtId);
-    if (toPtId) params.set('toPtId', toPtId);
+    if (appliedStatus) params.set('status', appliedStatus);
+    if (appliedFromDate) params.set('fromDate', appliedFromDate);
+    if (appliedToDate) params.set('toDate', appliedToDate);
+    if (appliedFromPtId) params.set('fromPtId', appliedFromPtId);
+    if (appliedToPtId) params.set('toPtId', appliedToPtId);
     return resource.path + '?' + params.toString();
-  }, [resource.path, appliedKeyword, fromDate, toDate, fromPtId, toPtId]);
+  }, [resource.path, appliedKeyword, appliedStatus, appliedFromDate, appliedToDate, appliedFromPtId, appliedToPtId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -97,9 +133,15 @@ export function AdminTransfersManagement() {
 
   useEffect(() => {
     let active = true;
-    void api.getPage<AdminRecord>(listPath(resources.pts, 1, '', ''))
+    void api.getPage<AdminRecord>('/api/users?role=PT&limit=100')
       .then((result) => { if (active) setTrainers(result.data || []); })
-      .catch(() => {});
+      .catch(() => {
+        if (active) {
+          void api.getPage<AdminRecord>(listPath(resources.pts, 1, '', ''))
+            .then((res) => { if (active) setTrainers(res.data || []); })
+            .catch(() => {});
+        }
+      });
     return () => { active = false; };
   }, []);
 
@@ -144,6 +186,49 @@ export function AdminTransfersManagement() {
     setRefreshing(true);
     void load();
   }, [load]);
+
+  const handleOpenFilter = () => {
+    setDraftStatus(appliedStatus);
+    setDraftFromDate(appliedFromDate);
+    setDraftToDate(appliedToDate);
+    setDraftFromPtId(appliedFromPtId);
+    setDraftToPtId(appliedToPtId);
+    setFilterOpen(true);
+  };
+
+  const handleApplyFilter = () => {
+    setAppliedStatus(draftStatus);
+    setAppliedFromDate(draftFromDate);
+    setAppliedToDate(draftToDate);
+    setAppliedFromPtId(draftFromPtId);
+    setAppliedToPtId(draftToPtId);
+    setPage(1);
+    setFilterOpen(false);
+  };
+
+  const handleResetDraft = () => {
+    setDraftStatus('');
+    setDraftFromDate('');
+    setDraftToDate('');
+    setDraftFromPtId('');
+    setDraftToPtId('');
+  };
+
+  const handleClearAppliedFilter = () => {
+    setAppliedStatus('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+    setAppliedFromPtId('');
+    setAppliedToPtId('');
+    setPage(1);
+  };
+
+  const hasActiveFilter = Boolean(
+    appliedStatus || appliedFromDate || appliedToDate || appliedFromPtId || appliedToPtId
+  );
+  const hasDraftFilter = Boolean(
+    draftStatus || draftFromDate || draftToDate || draftFromPtId || draftToPtId
+  );
 
   // Quick contact triggers
   const handleCall = (phone?: string) => {
@@ -212,6 +297,59 @@ export function AdminTransfersManagement() {
     );
   });
 
+  // Client-side filtering fallback ensures immediate precision even if server filter behaves loosely
+  const displayedItems = useMemo(() => {
+    return items.filter((item) => {
+      // 1. Status filter
+      if (appliedStatus && item.status !== appliedStatus) {
+        return false;
+      }
+      // 2. From date filter
+      if (appliedFromDate && item.createdAt) {
+        const itemDate = toIsoDate(new Date(String(item.createdAt)));
+        if (itemDate < appliedFromDate) return false;
+      }
+      // 3. To date filter
+      if (appliedToDate && item.createdAt) {
+        const itemDate = toIsoDate(new Date(String(item.createdAt)));
+        if (itemDate > appliedToDate) return false;
+      }
+      // 4. From PT filter
+      if (appliedFromPtId) {
+        const fromVal = item.fromPtId;
+        const fromId =
+          typeof fromVal === 'object' && fromVal !== null
+            ? recordId(fromVal as AdminRecord)
+            : String(fromVal || '');
+        if (fromId !== appliedFromPtId) return false;
+      }
+      // 5. To PT filter
+      if (appliedToPtId) {
+        const toVal = item.toPtId;
+        const toId =
+          typeof toVal === 'object' && toVal !== null
+            ? recordId(toVal as AdminRecord)
+            : String(toVal || '');
+        if (toId !== appliedToPtId) return false;
+      }
+      // 6. Keyword filter fallback
+      if (appliedKeyword.trim()) {
+        const q = appliedKeyword.trim().toLowerCase();
+        const customer = getPartyInfo(item.customerId);
+        const fromPt = getPartyInfo(item.fromPtId);
+        const toPt = getPartyInfo(item.toPtId);
+        const reason = String(item.reason || '').toLowerCase();
+        const match =
+          customer.name.toLowerCase().includes(q) ||
+          Boolean(customer.phone && customer.phone.includes(q)) ||
+          fromPt.name.toLowerCase().includes(q) ||
+          toPt.name.toLowerCase().includes(q) ||
+          reason.includes(q);
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [items, appliedStatus, appliedFromDate, appliedToDate, appliedFromPtId, appliedToPtId, appliedKeyword]);
 
   return (
     <View style={styles.container}>
@@ -226,17 +364,44 @@ export function AdminTransfersManagement() {
             style={styles.searchInput}
             numberOfLines={1}
           />
-          {keyword ? <Pressable onPress={() => setKeyword('')} hitSlop={8}><Feather name="x" size={16} color="#64748B" /></Pressable> : null}
+          {keyword ? (
+            <Pressable onPress={() => setKeyword('')} hitSlop={8}>
+              <Feather name="x" size={16} color="#64748B" />
+            </Pressable>
+          ) : null}
         </View>
-        <Pressable style={styles.filterButton} onPress={() => setFilterOpen(true)} accessibilityLabel="Mở bộ lọc lịch sử chuyển giao">
+        <Pressable
+          style={[styles.filterButton, hasActiveFilter && styles.filterButtonActive]}
+          onPress={handleOpenFilter}
+          accessibilityLabel="Mở bộ lọc lịch sử chuyển giao"
+        >
           <Feather name="sliders" size={16} color={colors.primary} />
           <Text style={styles.filterButtonText}>Lọc</Text>
+          {hasActiveFilter && <View style={styles.filterActiveDot} />}
         </Pressable>
       </View>
-      <View style={styles.activeFilterRow}>
-        {(fromDate || toDate || fromPtId || toPtId) ? <Text style={styles.activeFilterText} numberOfLines={1}>Đang áp dụng bộ lọc</Text> : null}
-        {(fromDate || toDate || fromPtId || toPtId) ? <Pressable onPress={() => { setFromDate(''); setToDate(''); setFromPtId(''); setToPtId(''); setPage(1); }}><Text style={styles.clearFilterText}>Xóa lọc</Text></Pressable> : null}
-      </View>
+
+      {hasActiveFilter ? (
+        <View style={styles.activeFilterRow}>
+          <View style={styles.activeFilterBadge}>
+            <Feather name="filter" size={12} color={colors.primary} />
+            <Text style={styles.activeFilterText} numberOfLines={1}>
+              {[
+                appliedStatus ? STATUS_OPTIONS.find((s) => s.value === appliedStatus)?.label : null,
+                appliedFromDate ? `Từ ${displayDate(appliedFromDate)}` : null,
+                appliedToDate ? `Đến ${displayDate(appliedToDate)}` : null,
+                appliedFromPtId ? `HLV giao: ${getTrainerName(appliedFromPtId)}` : null,
+                appliedToPtId ? `HLV nhận: ${getTrainerName(appliedToPtId)}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </View>
+          <Pressable onPress={handleClearAppliedFilter} hitSlop={6}>
+            <Text style={styles.clearFilterText}>Xóa lọc</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {filterOpen && (
         <Modal
@@ -309,11 +474,11 @@ export function AdminTransfersManagement() {
                     <Pressable
                       style={[
                         styles.ptItem,
-                        (ptPickerTarget === 'from' ? !fromPtId : !toPtId) && styles.ptItemActive,
+                        (ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && styles.ptItemActive,
                       ]}
                       onPress={() => {
-                        if (ptPickerTarget === 'from') setFromPtId('');
-                        else setToPtId('');
+                        if (ptPickerTarget === 'from') setDraftFromPtId('');
+                        else setDraftToPtId('');
                         setPtPickerTarget(null);
                       }}
                     >
@@ -323,12 +488,12 @@ export function AdminTransfersManagement() {
                       <Text
                         style={[
                           styles.ptName,
-                          (ptPickerTarget === 'from' ? !fromPtId : !toPtId) && styles.ptNameActive,
+                          (ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && styles.ptNameActive,
                         ]}
                       >
                         Tất cả HLV
                       </Text>
-                      {(ptPickerTarget === 'from' ? !fromPtId : !toPtId) && (
+                      {(ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && (
                         <Feather name="check" size={16} color={colors.primary} />
                       )}
                     </Pressable>
@@ -340,7 +505,7 @@ export function AdminTransfersManagement() {
                     ) : (
                       filteredTrainers.map((trainer) => {
                         const id = recordId(trainer);
-                        const isSelected = (ptPickerTarget === 'from' ? fromPtId : toPtId) === id;
+                        const isSelected = (ptPickerTarget === 'from' ? draftFromPtId : draftToPtId) === id;
                         const initial = String(trainer.fullName || trainer.username || 'PT')
                           .charAt(0)
                           .toUpperCase();
@@ -349,8 +514,8 @@ export function AdminTransfersManagement() {
                             key={id}
                             style={[styles.ptItem, isSelected && styles.ptItemActive]}
                             onPress={() => {
-                              if (ptPickerTarget === 'from') setFromPtId(id);
-                              else setToPtId(id);
+                              if (ptPickerTarget === 'from') setDraftFromPtId(id);
+                              else setDraftToPtId(id);
                               setPtPickerTarget(null);
                             }}
                           >
@@ -396,10 +561,39 @@ export function AdminTransfersManagement() {
                     </Pressable>
                   </View>
 
+                  {/* Filter: Trạng thái */}
+                  <Text style={styles.filterLabel}>Trạng thái</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.statusChipsRow}
+                  >
+                    {STATUS_OPTIONS.map((opt) => {
+                      const isSelected = draftStatus === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          style={[styles.statusChip, isSelected && styles.statusChipActive]}
+                          onPress={() => setDraftStatus(opt.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.statusChipText,
+                              isSelected && styles.statusChipTextActive,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Filter: Khoảng ngày */}
                   <Text style={styles.filterLabel}>Khoảng ngày</Text>
                   <View style={styles.dateRow}>
                     {(['from', 'to'] as DateField[]).map((field) => {
-                      const value = field === 'from' ? fromDate : toDate;
+                      const value = field === 'from' ? draftFromDate : draftToDate;
                       return (
                         <Pressable
                           key={field}
@@ -420,8 +614,8 @@ export function AdminTransfersManagement() {
                             <Pressable
                               onPress={(e) => {
                                 e.stopPropagation();
-                                if (field === 'from') setFromDate('');
-                                else setToDate('');
+                                if (field === 'from') setDraftFromDate('');
+                                else setDraftToDate('');
                               }}
                               hitSlop={6}
                             >
@@ -433,6 +627,7 @@ export function AdminTransfersManagement() {
                     })}
                   </View>
 
+                  {/* Filter: HLV bàn giao */}
                   <Text style={styles.filterLabel}>HLV bàn giao</Text>
                   <Pressable
                     style={styles.ptSelectorBtn}
@@ -444,19 +639,20 @@ export function AdminTransfersManagement() {
                     accessibilityLabel="Chọn HLV bàn giao"
                   >
                     <View style={styles.ptSelectorLeft}>
-                      <View style={[styles.ptSelectorIconBox, fromPtId ? styles.ptSelectorIconBoxActive : null]}>
-                        <Feather name="user-minus" size={14} color={fromPtId ? colors.primary : '#64748B'} />
+                      <View style={[styles.ptSelectorIconBox, draftFromPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-minus" size={14} color={draftFromPtId ? colors.primary : '#64748B'} />
                       </View>
                       <Text
-                        style={[styles.ptSelectorText, fromPtId ? styles.ptSelectorTextActive : null]}
+                        style={[styles.ptSelectorText, draftFromPtId ? styles.ptSelectorTextActive : null]}
                         numberOfLines={1}
                       >
-                        {getTrainerName(fromPtId)}
+                        {getTrainerName(draftFromPtId)}
                       </Text>
                     </View>
                     <Feather name="chevron-down" size={16} color="#94A3B8" />
                   </Pressable>
 
+                  {/* Filter: HLV tiếp nhận */}
                   <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
                   <Pressable
                     style={styles.ptSelectorBtn}
@@ -468,29 +664,24 @@ export function AdminTransfersManagement() {
                     accessibilityLabel="Chọn HLV tiếp nhận"
                   >
                     <View style={styles.ptSelectorLeft}>
-                      <View style={[styles.ptSelectorIconBox, toPtId ? styles.ptSelectorIconBoxActive : null]}>
-                        <Feather name="user-check" size={14} color={toPtId ? colors.primary : '#64748B'} />
+                      <View style={[styles.ptSelectorIconBox, draftToPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-check" size={14} color={draftToPtId ? colors.primary : '#64748B'} />
                       </View>
                       <Text
-                        style={[styles.ptSelectorText, toPtId ? styles.ptSelectorTextActive : null]}
+                        style={[styles.ptSelectorText, draftToPtId ? styles.ptSelectorTextActive : null]}
                         numberOfLines={1}
                       >
-                        {getTrainerName(toPtId)}
+                        {getTrainerName(draftToPtId)}
                       </Text>
                     </View>
                     <Feather name="chevron-down" size={16} color="#94A3B8" />
                   </Pressable>
 
                   <View style={styles.filterActionsRow}>
-                    {(fromDate || toDate || fromPtId || toPtId) ? (
+                    {hasDraftFilter ? (
                       <Pressable
                         style={styles.resetFilterButton}
-                        onPress={() => {
-                          setFromDate('');
-                          setToDate('');
-                          setFromPtId('');
-                          setToPtId('');
-                        }}
+                        onPress={handleResetDraft}
                       >
                         <Text style={styles.resetFilterText}>Đặt lại</Text>
                       </Pressable>
@@ -498,12 +689,9 @@ export function AdminTransfersManagement() {
                     <Pressable
                       style={[
                         styles.applyFilterButton,
-                        !(fromDate || toDate || fromPtId || toPtId) && { flex: 1 },
+                        !hasDraftFilter && { flex: 1 },
                       ]}
-                      onPress={() => {
-                        setPage(1);
-                        setFilterOpen(false);
-                      }}
+                      onPress={handleApplyFilter}
                     >
                       <Text style={styles.applyFilterText}>Áp dụng</Text>
                     </Pressable>
@@ -542,9 +730,19 @@ export function AdminTransfersManagement() {
                   const day = index - firstDay + 1;
                   const date = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), day);
                   const iso = toIsoDate(date);
-                  const selected = (dateField === 'from' ? fromDate : toDate) === iso;
+                  const selected = (dateField === 'from' ? draftFromDate : draftToDate) === iso;
                   return (
-                    <Pressable key={iso} style={[styles.calendarDay, selected && styles.calendarDaySelected]} onPress={() => { if (dateField === 'from') setFromDate(iso); else setToDate(iso); setDateField(null); }} accessibilityRole="button" accessibilityLabel={`Chọn ngày ${day}`}>
+                    <Pressable
+                      key={iso}
+                      style={[styles.calendarDay, selected && styles.calendarDaySelected]}
+                      onPress={() => {
+                        if (dateField === 'from') setDraftFromDate(iso);
+                        else setDraftToDate(iso);
+                        setDateField(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Chọn ngày ${day}`}
+                    >
                       <Text style={[styles.calendarDayText, selected && styles.calendarDayTextSelected]}>{day}</Text>
                     </Pressable>
                   );
@@ -582,21 +780,35 @@ export function AdminTransfersManagement() {
               <Text style={styles.retryBtnText}>Thử lại</Text>
             </Pressable>
           </View>
-        ) : items.length === 0 ? (
+        ) : displayedItems.length === 0 ? (
           <View style={styles.statusBox}>
             <Ionicons name="swap-horizontal-outline" size={40} color="#94A3B8" />
             <Text style={styles.statusBoxText}>
-              Chưa có lịch sử chuyển giao nào phù hợp.
+              {hasActiveFilter || appliedKeyword
+                ? 'Chưa có lịch sử chuyển giao nào phù hợp bộ lọc.'
+                : 'Chưa có lịch sử chuyển giao nào.'}
             </Text>
-
+            {hasActiveFilter || appliedKeyword ? (
+              <Pressable
+                style={styles.clearFilterBtn}
+                onPress={() => {
+                  handleClearAppliedFilter();
+                  setKeyword('');
+                  setAppliedKeyword('');
+                }}
+              >
+                <Text style={styles.clearFilterText}>Xóa tất cả bộ lọc</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
-          items.map((item) => {
+          displayedItems.map((item) => {
             const tId = recordId(item);
             const customer = getPartyInfo(item.customerId);
             const fromPt = getPartyInfo(item.fromPtId);
             const toPt = getPartyInfo(item.toPtId);
             const timeStr = formatDate(item.createdAt);
+            const badge = getStatusBadge(String(item.status || ''));
 
             return (
               <Pressable
@@ -614,6 +826,12 @@ export function AdminTransfersManagement() {
                   <View style={styles.timeTag}>
                     <Feather name="calendar" size={12} color="#64748B" />
                     <Text style={styles.timeText}>{timeStr}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+                    <Feather name={badge.icon} size={11} color={badge.color} style={{ marginRight: 4 }} />
+                    <Text style={[styles.statusBadgeText, { color: badge.color }]}>
+                      {badge.label}
+                    </Text>
                   </View>
                 </View>
 
@@ -919,9 +1137,17 @@ const styles = StyleSheet.create({
   searchBox: { flex: 1, minWidth: 0, height: 46, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 13, color: colors.text, padding: 0 },
   filterButton: { height: 46, minWidth: 70, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BAE6FD', backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  filterButtonActive: { borderColor: colors.primary, backgroundColor: '#E0F2FE' },
+  filterActiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginLeft: -2 },
   filterButtonText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  activeFilterRow: { minHeight: 4, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  activeFilterText: { color: colors.textMuted, fontSize: 12 },
+  activeFilterRow: { minHeight: 28, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 },
+  activeFilterBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  activeFilterText: { color: colors.textMuted, fontSize: 12, flex: 1 },
+  statusChipsRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  statusChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  statusChipActive: { borderColor: colors.primary, backgroundColor: '#F0F9FF' },
+  statusChipText: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+  statusChipTextActive: { color: colors.primary, fontWeight: '700' },
   filterOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.5)' },
   filterSheet: {
     backgroundColor: '#FFFFFF',
@@ -1226,7 +1452,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
