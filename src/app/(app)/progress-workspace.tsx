@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState, type MutableRefObject } from 'react';
+import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { Feather } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button, Busy, Field, Notice, Sheet } from '@/components/workouts/Controls';
@@ -52,21 +53,31 @@ function getInitials(name: string): string {
 
 const label = (value: unknown) => (value === null || value === undefined ? 'Chưa có' : String(value));
 
+function recordingIssue(plan: JsonRecord, userId: string): string {
+  if (plan.lifecycleStatus !== 'ACTIVE') return 'Học viên chưa có giáo án đang áp dụng để ghi buổi tập.';
+  if (readText(plan, ['ptId']) !== userId) return 'Giáo án đang áp dụng thuộc PT khác. Không thể ghi buổi tập cho giáo án này.';
+  if (!asRecords(plan.sessions).length) return 'Giáo án đang áp dụng chưa có buổi tập để ghi nhận.';
+  return '';
+}
+
 export default function ProgressWorkspaceScreen() {
   const { session } = useAuth();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN' || role === 'SUPER_ADMIN';
   const recordMode = staff && mode === 'record';
+  const backHandlerRef = useRef<(() => boolean) | null>(null);
 
   return (
     <Screen
       title={recordMode ? 'Ghi tiến độ' : 'Tiến độ tập luyện'}
       subtitle={recordMode ? 'Chọn học viên để ghi nhận buổi tập' : 'Theo dõi chỉ số InBody và hành trình'}
-      onBack={() => router.navigate('/(app)/(tabs)')}
+      onBack={() => {
+        if (!backHandlerRef.current?.()) router.navigate('/(app)/(tabs)');
+      }}
     >
       {session && (staff || role === 'CUSTOMER') ? (
-        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} recordMode={recordMode} />
+        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} recordMode={recordMode} backHandlerRef={backHandlerRef} />
       ) : (
         <Notice error text="Tài khoản không có quyền xem tiến độ." />
       )}
@@ -74,7 +85,7 @@ export default function ProgressWorkspaceScreen() {
   );
 }
 
-export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff: boolean; userId: string; recordMode?: boolean }) {
+export function ProgressWorkspace({ staff, userId, recordMode = false, backHandlerRef }: { staff: boolean; userId: string; recordMode?: boolean; backHandlerRef?: MutableRefObject<(() => boolean) | null> }) {
   const [customers, setCustomers] = useState<JsonRecord[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [journey, setJourney] = useState<JsonRecord | null>(null);
@@ -114,14 +125,18 @@ export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff
       } else {
         const data = await api.get<JsonRecord>(journeyPath(staff ? customerId : undefined, range.from, range.to));
         if (request === generation.current) {
-          setJourney(data);
           if (pendingLogCustomerId.current === customerId) {
             pendingLogCustomerId.current = '';
-            const selectedPlan = asRecord(asRecord(data.plans).active);
-            const canRecord = staff && selectedPlan.lifecycleStatus === 'ACTIVE' && readText(selectedPlan, ['ptId']) === userId && asRecords(selectedPlan.sessions).length > 0;
-            if (canRecord) setForm({ kind: 'session' });
-            else setPopup({ message: 'Chưa thể ghi buổi tập. Kiểm tra giáo án đang áp dụng và PT phụ trách.', error: true });
-          }
+            const issue = recordingIssue(asRecord(asRecord(data.plans).active), userId);
+            if (!issue && staff) {
+              setJourney(data);
+              setForm({ kind: 'session' });
+            } else {
+              setCustomerId('');
+              setJourney(null);
+              setPopup({ message: issue || 'Tài khoản không có quyền ghi buổi tập.', error: true });
+            }
+          } else setJourney(data);
         }
       }
     } catch (e) {
@@ -143,7 +158,7 @@ export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff
     }, [load])
   );
 
-  function resetView() {
+  const resetView = useCallback(() => {
     generation.current++;
     pendingLogCustomerId.current = '';
     setJourney(null);
@@ -152,7 +167,28 @@ export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff
     setSelectedDay('');
     setForm(null);
     setDetail(null);
-  }
+  }, []);
+
+  const returnToList = useCallback(() => {
+    if (!staff || !customerId) return false;
+    resetView();
+    setCustomerId('');
+    return true;
+  }, [staff, customerId, resetView]);
+
+  // Native back gestures can remove the route without emitting hardwareBackPress.
+  usePreventRemove(staff && Boolean(customerId), () => {
+    returnToList();
+  });
+
+  useFocusEffect(useCallback(() => {
+    if (backHandlerRef) backHandlerRef.current = returnToList;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', returnToList);
+    return () => {
+      subscription.remove();
+      if (backHandlerRef) backHandlerRef.current = null;
+    };
+  }, [backHandlerRef, returnToList]));
 
   function saved() {
     closeForm();
@@ -202,7 +238,7 @@ export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff
   const attendance = asRecord(analytics.attendance);
   const candidatePlan = asRecord(asRecord(journey?.plans).active);
   const activePlan = staff || candidatePlan.status === 'PUBLISHED' ? candidatePlan : {};
-  const canLog = staff && activePlan.lifecycleStatus === 'ACTIVE' && readText(activePlan, ['ptId']) === userId && asRecords(activePlan.sessions).length > 0;
+  const canLog = staff && !recordingIssue(activePlan, userId);
   const inbodyIds = new Set(inbodyRecords.map(recordId));
   const empty = <Notice text="Chưa có dữ liệu trong khoảng thời gian này." />;
 
@@ -263,10 +299,7 @@ export function ProgressWorkspace({ staff, userId, recordMode = false }: { staff
             {staff && customerId ? (
               <Pressable
                 style={styles.backNavBtn}
-                onPress={() => {
-                  resetView();
-                  setCustomerId('');
-                }}
+                onPress={returnToList}
                 accessibilityRole="button"
                 accessibilityLabel="Quay lại danh sách học viên"
               >

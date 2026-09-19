@@ -148,7 +148,7 @@ export function ProgressForm({
   const submitting = useRef(false);
   const [revision, setRevision] = useState(sessionDraft?.revision || 0);
   const [savedState, setSavedState] = useState(() => JSON.stringify({ form: draft, plan: sessionPlan }));
-  const [draftMessage, setDraftMessage] = useState(restoredFromCache ? 'Đã khôi phục tiến độ tự lưu trên thiết bị.' : sessionDraft ? 'Đã mở bản nháp. Bạn có thể nhập tiếp rồi lưu nháp hoặc lưu chính thức.' : '');
+  const draftMessage = restoredFromCache ? 'Đã khôi phục tiến độ tự lưu trên thiết bị.' : sessionDraft ? 'Đã mở bản nháp. Bạn có thể nhập tiếp rồi lưu chính thức.' : '';
   const [switchPlan, setSwitchPlan] = useState(false);
   const planChanged = kind === 'session' && !matchesDraftPlan(sessionPlan, plan);
   const dirty = JSON.stringify({ form: draft, plan: sessionPlan }) !== savedState;
@@ -163,15 +163,6 @@ export function ProgressForm({
     if (ownerId) await clearSessionDraftCache(ownerId, customerId);
     setRevision(saved.revision); setSavedState(JSON.stringify({ form: draft, plan: sessionPlan }));
     return saved;
-  }
-  async function saveDraft() {
-    if (submitting.current || uploading) return;
-    submitting.current = true; setBusy(true); setError('');
-    try {
-      await persistDraft(retry);
-      setDraftMessage('Đã lưu bản nháp lên máy chủ. PT có thể mở lại để nhập tiếp.');
-    } catch (cause) { setError(messageOf(cause)); }
-    finally { submitting.current = false; setBusy(false); }
   }
   async function closeForm() {
     if (busy || uploading) return;
@@ -233,8 +224,8 @@ export function ProgressForm({
   const completedSessionsCount = attendedPast.length;
   const currentTotalSessionNumber = completedSessionsCount + 1;
   const title = kind === 'session' ? `Ghi nhận buổi tập (Buổi thứ ${currentTotalSessionNumber})` : kind === 'measurement' ? 'Số đo cơ thể' : 'Báo cáo tiến độ';
-  return <Sheet title={title} onClose={() => void closeForm()} locked={busy || uploading} footer={<>{error ? <Notice error text={error} /> : null}{confirm || retry ? <><Button label={retry ? 'Thử lưu lại cùng buổi tập' : 'Xác nhận lưu buổi tập'} busy={busy || uploading} onPress={() => void submit((retry || confirm)!)} />{!retry && <Button secondary label="Quay lại chỉnh sửa" disabled={busy} onPress={() => setConfirm(null)} />}</> : <><Button label={kind === 'session' ? 'Lưu chính thức' : 'Lưu'} busy={busy || uploading} disabled={planChanged} onPress={save} />{kind === 'session' && <Button secondary icon="save" label="Lưu bản nháp" busy={busy || uploading} onPress={() => void saveDraft()} />}</>}</>}>
-    {kind === 'session' && <Notice tone="info" text="Tiến độ đang nhập được tự lưu trên thiết bị và sẽ hiện lại khi mở màn này. Lưu bản nháp để đồng bộ lên máy chủ." />}
+  return <Sheet title={title} onClose={() => void closeForm()} locked={busy || uploading} footer={<>{error ? <Notice error text={error} /> : null}{confirm || retry ? <><Button label={retry ? 'Thử lưu lại cùng buổi tập' : 'Xác nhận lưu buổi tập'} busy={busy || uploading} onPress={() => void submit((retry || confirm)!)} />{!retry && <Button secondary label="Quay lại chỉnh sửa" disabled={busy} onPress={() => setConfirm(null)} />}</> : <><Button label={kind === 'session' ? 'Lưu chính thức' : 'Lưu'} busy={busy || uploading} disabled={planChanged} onPress={save} /></>}</>}>
+    {kind === 'session' && <Notice tone="info" text="Tiến độ đang nhập được tự lưu trên thiết bị và sẽ hiện lại khi mở màn này. Chọn Lưu chính thức khi hoàn tất." />}
     {draftMessage && <Notice tone="success" text={draftMessage} />}
     {planChanged && !retry && <><Notice tone="warning" text="Giáo án đã thay đổi kể từ bản nháp. Kết quả cũ vẫn được giữ. Áp dụng giáo án hiện tại sẽ đặt lại kết quả bài tập; ghi chú, ảnh và số đo vẫn được giữ." /><Button secondary label="Áp dụng giáo án hiện tại" disabled={busy || !recordId(plan)} onPress={() => setSwitchPlan(true)} /></>}
     {confirm || retry ? (retry ? <Notice tone="warning" text="Chưa xác định máy chủ đã lưu hay chưa. Thử lại sẽ dùng cùng mã buổi tập để tránh ghi trùng. Không tạo buổi mới trước khi kiểm tra lịch sử." /> : null) : <View pointerEvents={busy || uploading ? 'none' : 'auto'} style={{ gap: 8 }}>
