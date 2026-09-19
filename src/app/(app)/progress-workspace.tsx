@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState, type MutableRefObject } from 'react';
+import { BackHandler, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { Feather } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { Button, Busy, Field, Notice, Sheet } from '@/components/workouts/Controls';
@@ -52,19 +53,31 @@ function getInitials(name: string): string {
 
 const label = (value: unknown) => (value === null || value === undefined ? 'Chưa có' : String(value));
 
+function recordingIssue(plan: JsonRecord, userId: string): string {
+  if (plan.lifecycleStatus !== 'ACTIVE') return 'Học viên chưa có giáo án đang áp dụng để ghi buổi tập.';
+  if (readText(plan, ['ptId']) !== userId) return 'Giáo án đang áp dụng thuộc PT khác. Không thể ghi buổi tập cho giáo án này.';
+  if (!asRecords(plan.sessions).length) return 'Giáo án đang áp dụng chưa có buổi tập để ghi nhận.';
+  return '';
+}
+
 export default function ProgressWorkspaceScreen() {
   const { session } = useAuth();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const recordMode = staff && mode === 'record';
+  const backHandlerRef = useRef<(() => boolean) | null>(null);
 
   return (
     <Screen
-      title="Tiến độ tập luyện"
-      subtitle="Theo dõi chỉ số InBody và hành trình"
-      onBack={() => router.navigate('/(app)/(tabs)')}
+      title={recordMode ? 'Ghi tiến độ' : 'Tiến độ tập luyện'}
+      subtitle={recordMode ? 'Chọn học viên để ghi nhận buổi tập' : 'Theo dõi chỉ số InBody và hành trình'}
+      onBack={() => {
+        if (!backHandlerRef.current?.()) router.navigate('/(app)/(tabs)');
+      }}
     >
       {session && (staff || role === 'CUSTOMER') ? (
-        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} />
+        <ProgressWorkspace key={session.user.id} staff={staff} userId={session.user.id} recordMode={recordMode} backHandlerRef={backHandlerRef} />
       ) : (
         <Notice error text="Tài khoản không có quyền xem tiến độ." />
       )}
@@ -72,7 +85,7 @@ export default function ProgressWorkspaceScreen() {
   );
 }
 
-export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: string }) {
+export function ProgressWorkspace({ staff, userId, recordMode = false, backHandlerRef }: { staff: boolean; userId: string; recordMode?: boolean; backHandlerRef?: MutableRefObject<(() => boolean) | null> }) {
   const [customers, setCustomers] = useState<JsonRecord[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [journey, setJourney] = useState<JsonRecord | null>(null);
@@ -86,6 +99,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
   const [selectedDay, setSelectedDay] = useState('');
   const [metric, setMetric] = useState('weight');
   const [form, setForm] = useState<{ kind: 'session' | 'measurement' | 'report'; record?: JsonRecord } | null>(null);
+  const pendingLogCustomerId = useRef('');
   const [draftRefresh, setDraftRefresh] = useState(0);
   function closeForm() { setForm(null); setDraftRefresh((value) => value + 1); }
   const [detail, setDetail] = useState<JsonRecord | null>(null);
@@ -110,7 +124,20 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
         }
       } else {
         const data = await api.get<JsonRecord>(journeyPath(staff ? customerId : undefined, range.from, range.to));
-        if (request === generation.current) setJourney(data);
+        if (request === generation.current) {
+          if (pendingLogCustomerId.current === customerId) {
+            pendingLogCustomerId.current = '';
+            const issue = recordingIssue(asRecord(asRecord(data.plans).active), userId);
+            if (!issue && staff) {
+              setJourney(data);
+              setForm({ kind: 'session' });
+            } else {
+              setCustomerId('');
+              setJourney(null);
+              setPopup({ message: issue || 'Tài khoản không có quyền ghi buổi tập.', error: true });
+            }
+          } else setJourney(data);
+        }
       }
     } catch (e) {
       if (request === generation.current) {
@@ -120,7 +147,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
     } finally {
       if (request === generation.current) setBusy(false);
     }
-  }, [staff, customerId, range]);
+  }, [staff, customerId, range, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -131,15 +158,37 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
     }, [load])
   );
 
-  function resetView() {
+  const resetView = useCallback(() => {
     generation.current++;
+    pendingLogCustomerId.current = '';
     setJourney(null);
     setError('');
     setSuccess('');
     setSelectedDay('');
     setForm(null);
     setDetail(null);
-  }
+  }, []);
+
+  const returnToList = useCallback(() => {
+    if (!staff || !customerId) return false;
+    resetView();
+    setCustomerId('');
+    return true;
+  }, [staff, customerId, resetView]);
+
+  // Native back gestures can remove the route without emitting hardwareBackPress.
+  usePreventRemove(staff && Boolean(customerId), () => {
+    returnToList();
+  });
+
+  useFocusEffect(useCallback(() => {
+    if (backHandlerRef) backHandlerRef.current = returnToList;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', returnToList);
+    return () => {
+      subscription.remove();
+      if (backHandlerRef) backHandlerRef.current = null;
+    };
+  }, [backHandlerRef, returnToList]));
 
   function saved() {
     closeForm();
@@ -189,7 +238,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
   const attendance = asRecord(analytics.attendance);
   const candidatePlan = asRecord(asRecord(journey?.plans).active);
   const activePlan = staff || candidatePlan.status === 'PUBLISHED' ? candidatePlan : {};
-  const canLog = staff && activePlan.lifecycleStatus === 'ACTIVE' && readText(activePlan, ['ptId']) === userId && asRecords(activePlan.sessions).length > 0;
+  const canLog = staff && !recordingIssue(activePlan, userId);
   const inbodyIds = new Set(inbodyRecords.map(recordId));
   const empty = <Notice text="Chưa có dữ liệu trong khoảng thời gian này." />;
 
@@ -220,8 +269,10 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
       {staff && !customerId && !busy && !error && (
         <ProgressDashboard
           items={customers}
+          recordOnly={recordMode}
           onSelect={(id, log) => {
             resetView();
+            pendingLogCustomerId.current = log ? id : '';
             setSection(log ? 'sessions' : 'overview');
             setCustomerId(id);
           }}
@@ -248,10 +299,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
             {staff && customerId ? (
               <Pressable
                 style={styles.backNavBtn}
-                onPress={() => {
-                  resetView();
-                  setCustomerId('');
-                }}
+                onPress={returnToList}
                 accessibilityRole="button"
                 accessibilityLabel="Quay lại danh sách học viên"
               >
@@ -369,7 +417,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
             )}
           </View>
 
-          {staff && targetId && <SessionDraftCard key={targetId} customerId={targetId} refreshKey={draftRefresh} onResume={() => setForm({ kind: 'session' })} />}
+          {staff && targetId && <SessionDraftCard key={targetId} ownerId={userId} customerId={targetId} refreshKey={draftRefresh} onResume={() => setForm({ kind: 'session' })} />}
           {/* Horizontal Scrollable Athletic Tab Bar */}
           <View style={styles.tabScrollWrapper}>
             <ScrollView
@@ -914,7 +962,7 @@ export function ProgressWorkspace({ staff, userId }: { staff: boolean; userId: s
 
       {/* Progress Form */}
       {form?.kind === 'session' ? (
-        <SessionDraftForm customerId={targetId} plan={activePlan} pastSessions={sessions} onClose={closeForm} onSaved={saved} />
+        <SessionDraftForm ownerId={userId} customerId={targetId} plan={activePlan} pastSessions={sessions} onClose={closeForm} onSaved={saved} />
       ) : form && (
         <ProgressForm
           kind={form.kind}

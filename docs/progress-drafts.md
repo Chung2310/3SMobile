@@ -1,8 +1,8 @@
 # Bản nháp tiến độ buổi tập
 
-Trong Tiến độ khách hàng, PT mở Ghi nhận buổi tập và chọn **Lưu bản nháp** khi chưa nhập xong. Mở lại khách hàng rồi chọn **Tiếp tục bản nháp** để bổ sung. Nút ghi nhận buổi tập cũng tự mở bản nháp hiện có. Mỗi PT có một bản nháp cho mỗi khách hàng được phân công.
+Trong Tiến độ khách hàng, PT mở Ghi nhận buổi tập. Mỗi thay đổi được tự lưu trên thiết bị theo tài khoản PT và học viên. Khi mở lại màn hình, bản cache chưa đồng bộ được tự khôi phục nếu mới hơn bản nháp trên máy chủ. Nút ghi nhận buổi tập và **Tiếp tục bản nháp** đều mở lại nội dung này. Chọn **Lưu bản nháp** để đồng bộ lên máy chủ. Mỗi PT có một bản nháp cho mỗi khách hàng được phân công.
 
-Nháp giữ kết quả bài/hiệp còn thiếu, ghi chú, cảm nhận, số đo, ảnh đã tải lên và chữ ký. Đây là lưu thủ công lên máy chủ, cần kết nối mạng. Khi đóng form có thay đổi, ứng dụng hỏi lưu nháp hoặc bỏ thay đổi mới. Không tự lưu khi ứng dụng bị tắt đột ngột.
+Nháp giữ kết quả bài/hiệp còn thiếu, ghi chú, cảm nhận, số đo, ảnh đã tải lên và chữ ký. Cache tự lưu trên thiết bị; lưu bản nháp lên máy chủ vẫn cần kết nối mạng. Cache được xóa sau khi đồng bộ bản nháp hoặc lưu buổi tập chính thức thành công.
 
 **Lưu chính thức** kiểm tra dữ liệu đầy đủ và đi qua API buổi tập hiện có. Lưu nháp không tạo lịch sử buổi tập, số đo, ảnh tiến độ hay trừ buổi gói tập. Khi giáo án thay đổi, cần xác nhận áp dụng giáo án mới; kết quả bài/hiệp được đặt lại, các thông tin khác được giữ.
 

@@ -150,3 +150,30 @@ test('calculateNextSessionIndex advances to next session and cycles when plan co
   const d4 = { workoutPlanId: 'p4', name: 'Ngày 4', performedAt: '2026-09-18T09:00:00Z', attendance: 'PRESENT' };
   assert.equal(calculateNextSessionIndex(plan4, [d4, d3, d2, d1]), 0);
 });
+
+
+test('session cache keeps the newest local edit and restores it over an older server draft', async () => {
+  const data = new Map();
+  const storage = {
+    getItem: async key => data.get(key) ?? null,
+    setItem: async (key, value) => { await new Promise(resolve => setTimeout(resolve, value.includes('first') ? 15 : 0)); data.set(key, value); },
+    removeItem: async key => { data.delete(key); },
+  };
+  const { writeSessionDraftCache, readSessionDraftCache, clearSessionDraftCache, restoreSessionDraft } = loadTs(
+    'src/services/sessionDraftCache.ts', { '@react-native-async-storage/async-storage': storage }
+  );
+  const base = { plan, idempotencyKey: 'same-key', revision: 1, updatedAt: '2026-09-15T10:00:00.000Z' };
+  await Promise.all([
+    writeSessionDraftCache('pt1', 'customer1', { ...base, form: { notes: 'first' } }),
+    writeSessionDraftCache('pt1', 'customer1', { ...base, form: { notes: 'last' }, updatedAt: '2026-09-15T10:01:00.000Z' }),
+  ]);
+  const cached = await readSessionDraftCache('pt1', 'customer1');
+  assert.equal(cached.form.notes, 'last');
+  assert.equal(await readSessionDraftCache('pt2', 'customer1'), null);
+  const server = { ...base, form: { notes: 'server' }, pendingPayload: null };
+  assert.equal(restoreSessionDraft(server, cached).draft.form.notes, 'last');
+  assert.equal(restoreSessionDraft({ ...server, updatedAt: '2026-09-15T10:02:00.000Z' }, cached).draft.form.notes, 'server');
+  assert.equal(restoreSessionDraft({ ...server, idempotencyKey: 'new-session' }, cached).draft.form.notes, 'server');
+  await clearSessionDraftCache('pt1', 'customer1');
+  assert.equal(await readSessionDraftCache('pt1', 'customer1'), null);
+});

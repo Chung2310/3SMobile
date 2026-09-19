@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { asRecord, readNumber, readText, formatDate } from '@/services/journey';
 import { recordId } from '@/services/workouts';
 import { colors, typography } from '@/theme';
@@ -9,8 +9,10 @@ import { Button, Field, Notice } from '../workouts/Controls';
 export function ProgressDashboard({
   items,
   onSelect,
+  recordOnly = false,
 }: {
   items: JsonRecord[];
+  recordOnly?: boolean;
   onSelect: (id: string, log: boolean) => void;
 }) {
   const [search, setSearch] = useState('');
@@ -83,46 +85,53 @@ export function ProgressDashboard({
 
           return (
             <View key={id} style={styles.customerCard}>
-              <View style={styles.customerHeader}>
-                <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarText}>{initials}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Xem chi tiết tiến độ của ${name}`}
+                onPress={() => onSelect(id, false)}
+                style={({ pressed }) => [styles.customerDetails, pressed && { opacity: 0.8 }]}
+              >
+                <View style={styles.customerHeader}>
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+                  <View style={styles.customerMeta}>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.customerName}>{name}</Text>
+                    {phone ? (
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={styles.customerPhone}>{phone}</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.sessionBadge}>
+                    <Text style={styles.sessionBadgeText}>{sessionCount} buổi</Text>
+                  </View>
                 </View>
-                <View style={styles.customerMeta}>
-                  <Text numberOfLines={1} style={styles.customerName}>{name}</Text>
-                  {phone ? (
-                    <Text numberOfLines={1} style={styles.customerPhone}>{phone}</Text>
-                  ) : null}
-                </View>
-                <View style={styles.sessionBadge}>
-                  <Text style={styles.sessionBadgeText}>{sessionCount} buổi</Text>
-                </View>
-              </View>
 
-              <View style={styles.detailRow}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricItemLabel}>Cân nặng gần nhất</Text>
-                  <Text style={styles.metricItemValue}>
-                    {weight !== null ? `${weight} kg` : '—'}
-                  </Text>
+                <View style={styles.detailRow}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricItemLabel}>Cân nặng gần nhất</Text>
+                    <Text style={styles.metricItemValue}>
+                      {weight !== null ? `${weight} kg` : '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricItemLabel}>Buổi tập gần nhất</Text>
+                    <Text style={styles.metricItemValue}>
+                      {item.lastSessionAt ? formatDate(String(item.lastSessionAt)) : 'Chưa có'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricItemLabel}>Buổi tập gần nhất</Text>
-                  <Text style={styles.metricItemValue}>
-                    {item.lastSessionAt ? formatDate(String(item.lastSessionAt)) : 'Chưa có'}
-                  </Text>
-                </View>
-              </View>
+              </Pressable>
 
               <View style={styles.actionRow}>
-                <View style={styles.actionButtonHalf}>
+                {!recordOnly && <View style={styles.actionButtonHalf}>
                   <Button
                     secondary
                     icon="trending-up"
                     label="Tiến độ"
                     onPress={() => onSelect(id, false)}
                   />
-                </View>
-                <View style={styles.actionButtonHalf}>
+                </View>}
+                <View style={recordOnly ? { flex: 1 } : styles.actionButtonHalf}>
                   <Button
                     icon="plus"
                     label="Ghi buổi tập"
@@ -202,6 +211,10 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
     marginBottom: 8,
+  },
+  customerDetails: {
+    gap: 10,
+    minHeight: 44,
   },
   customerHeader: {
     flexDirection: 'row',
