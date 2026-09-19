@@ -148,6 +148,93 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
+async function uploadWithXhr<T>(
+  method: 'POST' | 'PATCH',
+  path: string,
+  formData: FormData,
+  onProgress?: (percent: number) => void
+): Promise<T> {
+  let storedSession = await getStoredSession();
+  const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
+  const targetUrl = `${normalizedBase}${path}`;
+
+  const sendRequest = (token?: string): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, targetUrl);
+      xhr.setRequestHeader('Accept', 'application/json');
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      if (onProgress && xhr.upload) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        };
+      }
+      xhr.onload = async () => {
+        // Tự động gia hạn phiên đăng nhập ngầm nếu gặp 401 và có refreshToken
+        if (xhr.status === 401 && storedSession?.refreshToken && !path.includes('/api/auth/')) {
+          try {
+            const refreshRes = await fetch(`${normalizedBase}/api/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ refreshToken: storedSession.refreshToken }),
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              const payload = refreshData?.data || refreshData;
+              if (payload?.token) {
+                const updatedSession = {
+                  ...storedSession,
+                  token: payload.token,
+                  refreshToken: payload.refreshToken || storedSession.refreshToken,
+                };
+                await saveSession(updatedSession);
+                storedSession = updatedSession;
+                // Thử lại tải tệp lên với token mới
+                return sendRequest(payload.token).then(resolve).catch(reject);
+              }
+            }
+          } catch {
+            // Bỏ qua lỗi refresh và xử lý tiếp lỗi 401 bên dưới
+          }
+        }
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            resolve((json?.data !== undefined ? json.data : json) as T);
+          } catch {
+            resolve(xhr.responseText as unknown as T);
+          }
+        } else {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            const finalMessage = getMessage(json, `Tải lên thất bại (${xhr.status}).`, xhr.status);
+            reject(new ApiError(finalMessage, xhr.status, json));
+          } catch {
+            reject(new ApiError(`Tải lên thất bại (${xhr.status}).`, xhr.status));
+          }
+        }
+      };
+      xhr.onerror = () => {
+        reject(
+          new ApiError(
+            `Không thể kết nối máy chủ khi tải tệp lên tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`,
+            0
+          )
+        );
+      };
+      xhr.send(formData);
+    });
+  };
+
+  return sendRequest(storedSession?.token);
+}
+
 async function request<T>(path: string, init: RequestInit = {}, unwrap = true): Promise<T> {
   const storedSession = await getStoredSession();
   const headers = new Headers(init.headers);
@@ -159,6 +246,12 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
       (typeof init.body === 'object' && init.body !== null && '_parts' in (init.body as unknown as Record<string, unknown>)) ||
       (init.body?.constructor && (init.body.constructor as { name?: string }).name === 'FormData')
     );
+
+  // In React Native, fetch() does not support multipart FormData with { uri, name, type } parts
+  // and throws "Unsupported FormDataPart implementation". Always delegate FormData to XMLHttpRequest.
+  if (isFormData && typeof XMLHttpRequest !== 'undefined' && (init.method === 'POST' || init.method === 'PATCH')) {
+    return uploadWithXhr<T>(init.method as 'POST' | 'PATCH', path, init.body as FormData);
+  }
 
   if (isFormData) {
     // For multipart FormData in React Native and Web, fetch automatically attaches the boundary.
@@ -249,68 +342,15 @@ export const api = {
     return request<T>(path, { method: 'PATCH', body: encodeBody(body) });
   },
   uploadPatch<T>(path: string, formData: FormData): Promise<T> {
+    if (typeof XMLHttpRequest !== 'undefined') {
+      return uploadWithXhr<T>('PATCH', path, formData);
+    }
     return request<T>(path, { method: 'PATCH', body: formData });
   },
   upload<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
-    if (!onProgress || typeof XMLHttpRequest === 'undefined') {
-      return request<T>(path, { method: 'POST', body: formData });
+    if (typeof XMLHttpRequest !== 'undefined') {
+      return uploadWithXhr<T>('POST', path, formData, onProgress);
     }
-
-    const storedSessionPromise = getStoredSession();
-    const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
-    const targetUrl = `${normalizedBase}${path}`;
-
-    return new Promise<T>((resolve, reject) => {
-      storedSessionPromise
-        .then((storedSession) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', targetUrl);
-          xhr.setRequestHeader('Accept', 'application/json');
-          if (storedSession?.token) {
-            xhr.setRequestHeader('Authorization', `Bearer ${storedSession.token}`);
-          }
-          if (onProgress && xhr.upload) {
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable && event.total > 0) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                onProgress(percent);
-              }
-            };
-          }
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const json = JSON.parse(xhr.responseText);
-                resolve(json?.data !== undefined ? json.data : json);
-              } catch {
-                resolve(xhr.responseText as unknown as T);
-              }
-            } else {
-              try {
-                const json = JSON.parse(xhr.responseText);
-                reject(
-                  new ApiError(
-                    json?.message || `Tải lên thất bại (${xhr.status}).`,
-                    xhr.status,
-                    json
-                  )
-                );
-              } catch {
-                reject(new ApiError(`Tải lên thất bại (${xhr.status}).`, xhr.status));
-              }
-            }
-          };
-          xhr.onerror = () => {
-            reject(
-              new ApiError(
-                `Không thể kết nối máy chủ khi tải tệp lên tại ${targetUrl}. Kiểm tra mạng hoặc API URL.`,
-                0
-              )
-            );
-          };
-          xhr.send(formData);
-        })
-        .catch(reject);
-    });
+    return request<T>(path, { method: 'POST', body: formData });
   },
 };

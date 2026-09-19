@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,16 +14,14 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import {
   Camera,
-  Check,
   Eye,
   Image as ImageIcon,
-  RefreshCw,
   Search,
   Sparkles,
   Trash2,
   X,
 } from 'lucide-react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { api } from '@/services/api/client';
 import { resolveImageUrl } from '@/services/imageUtils';
 
@@ -42,6 +40,11 @@ interface FoodImageLibraryItem {
   imageUrl: string;
   category?: string;
   source?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  usageCount?: number;
 }
 
 export function DishImageActionSheet({
@@ -56,7 +59,7 @@ export function DishImageActionSheet({
   const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Sub-modal: Zoom image preview
+  // Preview full size image
   const [zoomVisible, setZoomVisible] = useState(false);
 
   // Sub-modal: Browse system food images library
@@ -65,11 +68,13 @@ export function DishImageActionSheet({
   const [librarySearch, setLibrarySearch] = useState('');
   const [libraryItems, setLibraryItems] = useState<FoodImageLibraryItem[]>([]);
 
-  useEffect(() => {
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (prevVisible !== visible) {
+    setPrevVisible(visible);
     if (visible) {
       setErrorMessage(null);
     }
-  }, [visible]);
+  }
 
   // Clean dish name for AI prompt
   const cleanName =
@@ -112,8 +117,9 @@ export function DishImageActionSheet({
         ? 'webp'
         : 'jpg';
 
+      const safeDishName = cleanName || dishName?.trim() || 'Món ăn';
       const formData = new FormData();
-      formData.append('name', cleanName);
+      formData.append('name', safeDishName);
       formData.append('category', 'OTHER');
 
       if (Platform.OS === 'web') {
@@ -128,9 +134,15 @@ export function DishImageActionSheet({
       }
 
       const uploadRes = await api.upload<any>('/api/food-images/upload', formData);
-      const serverUrl = uploadRes?.data?.imageUrl || uploadRes?.imageUrl;
+      const serverUrl =
+        uploadRes?.imageUrl ||
+        uploadRes?.data?.imageUrl ||
+        uploadRes?.url ||
+        uploadRes?.data?.url ||
+        (typeof uploadRes === 'string' ? uploadRes : null);
+
       if (serverUrl && typeof serverUrl === 'string') {
-        return serverUrl;
+        return resolveImageUrl(serverUrl) || serverUrl;
       }
     } catch (uploadErr) {
       // Fallback: nếu upload server gặp lỗi quyền hoặc mạng, vẫn giữ URI thiết bị
