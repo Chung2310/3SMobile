@@ -333,6 +333,7 @@ export function PtNutritionWorkspace() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [plannerModalVisible, setPlannerModalVisible] = useState(false);
   const [editingPlan, setEditingPlan] = useState<NutritionPlanData | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerProfile | null>(null);
   const [initialCalculated, setInitialCalculated] = useState<CalculatedNutrition | null>(null);
   const [aiDraftModalVisible, setAiDraftModalVisible] = useState(false);
 
@@ -619,6 +620,32 @@ export function PtNutritionWorkspace() {
     setPlannerModalVisible(true);
   };
 
+  // Resolve customer from plan or customers list
+  const getPlanCustomer = useCallback(
+    (plan: NutritionPlanData | null): CustomerProfile | null => {
+      if (!plan || !plan.customerId) return null;
+      const planCId =
+        typeof plan.customerId === 'object' && plan.customerId !== null
+          ? (plan.customerId as any)._id || (plan.customerId as any).id
+          : plan.customerId;
+      if (!planCId) return null;
+      const found = customers.find((c) => (c._id || (c as any).id) === planCId);
+      if (found) return found;
+      if (typeof plan.customerId === 'object' && plan.customerId !== null) {
+        const cObj = plan.customerId as any;
+        return {
+          _id: cObj._id || cObj.id || '',
+          fullName: cObj.fullName || 'Học viên',
+          phone: cObj.phone || '',
+          avatar: cObj.avatar,
+          status: 'ACTIVE',
+        } as CustomerProfile;
+      }
+      return null;
+    },
+    [customers]
+  );
+
   // Tab 2 Actions: Plan Management
   const handleOpenNewPlan = () => {
     if (!selectedCustomer) {
@@ -632,6 +659,7 @@ export function PtNutritionWorkspace() {
       });
       return;
     }
+    setEditingCustomer(selectedCustomer);
     setEditingPlan(null);
     setInitialCalculated(null);
     setPlannerModalVisible(true);
@@ -639,6 +667,7 @@ export function PtNutritionWorkspace() {
 
   const handleEditPlan = (plan: NutritionPlanData) => {
     setEditingPlan(plan);
+    setEditingCustomer(getPlanCustomer(plan) || selectedCustomer);
     setInitialCalculated(null);
     setPlannerModalVisible(true);
   };
@@ -2601,11 +2630,12 @@ export function PtNutritionWorkspace() {
       <MealPlannerModal
         visible={plannerModalVisible}
         editingPlan={editingPlan}
-        customer={selectedCustomer}
+        customer={editingPlan ? (editingCustomer || getPlanCustomer(editingPlan) || selectedCustomer) : (editingCustomer || selectedCustomer)}
         initialCalculated={initialCalculated}
         onClose={() => {
           setPlannerModalVisible(false);
           setEditingPlan(null);
+          setEditingCustomer(null);
           setInitialCalculated(null);
         }}
         onSaved={(savedPlan) => {
@@ -2621,6 +2651,8 @@ export function PtNutritionWorkspace() {
           });
           if (selectedCustomerId) {
             loadCustomerNutrition(selectedCustomerId);
+          } else {
+            loadCustomerNutrition();
           }
         }}
       />
