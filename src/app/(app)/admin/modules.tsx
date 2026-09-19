@@ -63,6 +63,7 @@ export default function AdminModulesScreen() {
         }
       }}
       scroll={false}
+      noPadding
     >
       <ScrollView
         style={styles.modulesScroll}

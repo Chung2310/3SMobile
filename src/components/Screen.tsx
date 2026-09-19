@@ -37,7 +37,11 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
 
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        noPadding && { padding: 0, paddingHorizontal: 0, paddingTop: 0 },
+        { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+      ]}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={colors.primary} /> : undefined}
       showsVerticalScrollIndicator={false}
     >

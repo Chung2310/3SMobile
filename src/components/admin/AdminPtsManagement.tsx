@@ -343,6 +343,7 @@ export function AdminPtsManagement() {
       {/* 4. DANH SÁCH THẺ HLV */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={styles.ptListScroll}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
@@ -775,7 +776,14 @@ export function AdminPtsManagement() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     gap: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  ptListScroll: {
+    flex: 1,
   },
   /* Statistics also serve as status filters. */
   statsCard: {

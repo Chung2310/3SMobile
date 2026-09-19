@@ -67,6 +67,8 @@ export function AdminTransfersManagement() {
   const [toPtId, setToPtId] = useState('');
   const [trainers, setTrainers] = useState<AdminRecord[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [ptPickerTarget, setPtPickerTarget] = useState<'from' | 'to' | null>(null);
+  const [ptFilterSearch, setPtFilterSearch] = useState('');
   const [dateField, setDateField] = useState<DateField | null>(null);
   const [pickerMonth, setPickerMonth] = useState(() => new Date());
 
@@ -194,6 +196,22 @@ export function AdminTransfersManagement() {
     }
   };
 
+  const getTrainerName = (id: string) => {
+    if (!id) return 'Tất cả HLV';
+    const found = trainers.find((t) => recordId(t) === id);
+    return found ? String(found.fullName || found.username || id) : id;
+  };
+
+  const filteredTrainers = trainers.filter((t) => {
+    const q = ptFilterSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      String(t.fullName || '').toLowerCase().includes(q) ||
+      String(t.username || '').toLowerCase().includes(q) ||
+      String(t.phone || '').includes(q)
+    );
+  });
+
 
   return (
     <View style={styles.container}>
@@ -220,42 +238,282 @@ export function AdminTransfersManagement() {
         {(fromDate || toDate || fromPtId || toPtId) ? <Pressable onPress={() => { setFromDate(''); setToDate(''); setFromPtId(''); setToPtId(''); setPage(1); }}><Text style={styles.clearFilterText}>Xóa lọc</Text></Pressable> : null}
       </View>
 
-      {filterOpen && <Modal transparent animationType="slide" visible onRequestClose={() => setFilterOpen(false)}>
-        <View style={styles.filterOverlay}>
-          <View style={styles.filterSheet}>
-            <View style={styles.filterHeader}><Text style={styles.filterTitle}>Lọc lịch sử chuyển giao</Text><Pressable onPress={() => setFilterOpen(false)} hitSlop={10}><Feather name="x" size={20} color={colors.text} /></Pressable></View>
-            <Text style={styles.filterLabel}>Khoảng ngày</Text>
-            <View style={styles.dateRow}>
-              {(['from', 'to'] as DateField[]).map((field) => {
-                const value = field === 'from' ? fromDate : toDate;
-                return (
+      {filterOpen && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible
+          onRequestClose={() => {
+            if (ptPickerTarget) setPtPickerTarget(null);
+            else setFilterOpen(false);
+          }}
+        >
+          <View style={styles.filterOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => {
+                if (ptPickerTarget) setPtPickerTarget(null);
+                else setFilterOpen(false);
+              }}
+            />
+            <View style={styles.filterSheet}>
+              {ptPickerTarget ? (
+                /* BOTTOM SHEET: CHỌN HLV BÀN GIAO / TIẾP NHẬN */
+                <View style={styles.pickerView}>
+                  <View style={styles.sheetHandle} />
+                  <View style={styles.filterHeader}>
+                    <Pressable
+                      onPress={() => setPtPickerTarget(null)}
+                      style={styles.sheetBackBtn}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Quay lại"
+                    >
+                      <Feather name="arrow-left" size={18} color={colors.text} />
+                    </Pressable>
+                    <Text style={styles.filterTitle}>
+                      {ptPickerTarget === 'from' ? 'Chọn HLV bàn giao' : 'Chọn HLV tiếp nhận'}
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        setPtPickerTarget(null);
+                        setFilterOpen(false);
+                      }}
+                      hitSlop={8}
+                      style={styles.sheetCloseBtnMini}
+                      accessibilityRole="button"
+                      accessibilityLabel="Đóng"
+                    >
+                      <Feather name="x" size={18} color={colors.text} />
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.ptSearchBox}>
+                    <Feather name="search" size={15} color="#94A3B8" />
+                    <TextInput
+                      value={ptFilterSearch}
+                      onChangeText={setPtFilterSearch}
+                      placeholder="Tìm theo tên HLV, SĐT..."
+                      placeholderTextColor="#94A3B8"
+                      style={styles.ptSearchInput}
+                    />
+                    {ptFilterSearch ? (
+                      <Pressable onPress={() => setPtFilterSearch('')} hitSlop={6}>
+                        <Feather name="x-circle" size={15} color="#94A3B8" />
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  <ScrollView style={styles.ptList} showsVerticalScrollIndicator={false}>
+                    {/* Option: Tất cả HLV */}
+                    <Pressable
+                      style={[
+                        styles.ptItem,
+                        (ptPickerTarget === 'from' ? !fromPtId : !toPtId) && styles.ptItemActive,
+                      ]}
+                      onPress={() => {
+                        if (ptPickerTarget === 'from') setFromPtId('');
+                        else setToPtId('');
+                        setPtPickerTarget(null);
+                      }}
+                    >
+                      <View style={styles.ptAvatarAll}>
+                        <Feather name="users" size={15} color={colors.primary} />
+                      </View>
+                      <Text
+                        style={[
+                          styles.ptName,
+                          (ptPickerTarget === 'from' ? !fromPtId : !toPtId) && styles.ptNameActive,
+                        ]}
+                      >
+                        Tất cả HLV
+                      </Text>
+                      {(ptPickerTarget === 'from' ? !fromPtId : !toPtId) && (
+                        <Feather name="check" size={16} color={colors.primary} />
+                      )}
+                    </Pressable>
+
+                    {filteredTrainers.length === 0 ? (
+                      <View style={styles.ptEmptyBox}>
+                        <Text style={styles.ptEmptyText}>Không tìm thấy HLV phù hợp</Text>
+                      </View>
+                    ) : (
+                      filteredTrainers.map((trainer) => {
+                        const id = recordId(trainer);
+                        const isSelected = (ptPickerTarget === 'from' ? fromPtId : toPtId) === id;
+                        const initial = String(trainer.fullName || trainer.username || 'PT')
+                          .charAt(0)
+                          .toUpperCase();
+                        return (
+                          <Pressable
+                            key={id}
+                            style={[styles.ptItem, isSelected && styles.ptItemActive]}
+                            onPress={() => {
+                              if (ptPickerTarget === 'from') setFromPtId(id);
+                              else setToPtId(id);
+                              setPtPickerTarget(null);
+                            }}
+                          >
+                            <View style={styles.ptAvatar}>
+                              <Text style={styles.ptAvatarText}>{initial}</Text>
+                            </View>
+                            <View style={styles.ptInfo}>
+                              <Text
+                                style={[styles.ptName, isSelected && styles.ptNameActive]}
+                                numberOfLines={1}
+                              >
+                                {String(trainer.fullName || trainer.username || id)}
+                              </Text>
+                              {trainer.phone ? (
+                                <Text style={styles.ptSubText} numberOfLines={1}>
+                                  {String(trainer.phone)}
+                                </Text>
+                              ) : null}
+                            </View>
+                            {isSelected && (
+                              <Feather name="check" size={16} color={colors.primary} />
+                            )}
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </ScrollView>
+                </View>
+              ) : (
+                /* MAIN FILTER SHEET */
+                <View style={styles.filterMainView}>
+                  <View style={styles.sheetHandle} />
+                  <View style={styles.filterHeader}>
+                    <Text style={styles.filterTitle}>Lọc lịch sử chuyển giao</Text>
+                    <Pressable
+                      onPress={() => setFilterOpen(false)}
+                      hitSlop={8}
+                      style={styles.sheetCloseBtnMini}
+                      accessibilityRole="button"
+                      accessibilityLabel="Đóng"
+                    >
+                      <Feather name="x" size={18} color={colors.text} />
+                    </Pressable>
+                  </View>
+
+                  <Text style={styles.filterLabel}>Khoảng ngày</Text>
+                  <View style={styles.dateRow}>
+                    {(['from', 'to'] as DateField[]).map((field) => {
+                      const value = field === 'from' ? fromDate : toDate;
+                      return (
+                        <Pressable
+                          key={field}
+                          style={styles.dateInput}
+                          onPress={() => {
+                            setDateField(field);
+                            const selected = value ? new Date(`${value}T00:00:00`) : new Date();
+                            setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={field === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                        >
+                          <Feather name="calendar" size={15} color="#64748B" />
+                          <Text style={value ? styles.dateValue : styles.datePlaceholder} numberOfLines={1}>
+                            {value ? displayDate(value) : field === 'from' ? 'Từ ngày' : 'Đến ngày'}
+                          </Text>
+                          {value ? (
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                if (field === 'from') setFromDate('');
+                                else setToDate('');
+                              }}
+                              hitSlop={6}
+                            >
+                              <Feather name="x" size={14} color="#94A3B8" />
+                            </Pressable>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={styles.filterLabel}>HLV bàn giao</Text>
                   <Pressable
-                    key={field}
-                    style={styles.dateInput}
+                    style={styles.ptSelectorBtn}
                     onPress={() => {
-                      setDateField(field);
-                      const selected = value ? new Date(`${value}T00:00:00`) : new Date();
-                      setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                      setPtPickerTarget('from');
+                      setPtFilterSearch('');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={field === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                    accessibilityLabel="Chọn HLV bàn giao"
                   >
-                    <Feather name="calendar" size={16} color="#64748B" />
-                    <Text style={value ? styles.dateValue : styles.datePlaceholder} numberOfLines={1}>
-                      {value ? displayDate(value) : field === 'from' ? 'Từ ngày' : 'Đến ngày'}
-                    </Text>
+                    <View style={styles.ptSelectorLeft}>
+                      <View style={[styles.ptSelectorIconBox, fromPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-minus" size={14} color={fromPtId ? colors.primary : '#64748B'} />
+                      </View>
+                      <Text
+                        style={[styles.ptSelectorText, fromPtId ? styles.ptSelectorTextActive : null]}
+                        numberOfLines={1}
+                      >
+                        {getTrainerName(fromPtId)}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={16} color="#94A3B8" />
                   </Pressable>
-                );
-              })}
+
+                  <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
+                  <Pressable
+                    style={styles.ptSelectorBtn}
+                    onPress={() => {
+                      setPtPickerTarget('to');
+                      setPtFilterSearch('');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn HLV tiếp nhận"
+                  >
+                    <View style={styles.ptSelectorLeft}>
+                      <View style={[styles.ptSelectorIconBox, toPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-check" size={14} color={toPtId ? colors.primary : '#64748B'} />
+                      </View>
+                      <Text
+                        style={[styles.ptSelectorText, toPtId ? styles.ptSelectorTextActive : null]}
+                        numberOfLines={1}
+                      >
+                        {getTrainerName(toPtId)}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={16} color="#94A3B8" />
+                  </Pressable>
+
+                  <View style={styles.filterActionsRow}>
+                    {(fromDate || toDate || fromPtId || toPtId) ? (
+                      <Pressable
+                        style={styles.resetFilterButton}
+                        onPress={() => {
+                          setFromDate('');
+                          setToDate('');
+                          setFromPtId('');
+                          setToPtId('');
+                        }}
+                      >
+                        <Text style={styles.resetFilterText}>Đặt lại</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      style={[
+                        styles.applyFilterButton,
+                        !(fromDate || toDate || fromPtId || toPtId) && { flex: 1 },
+                      ]}
+                      onPress={() => {
+                        setPage(1);
+                        setFilterOpen(false);
+                      }}
+                    >
+                      <Text style={styles.applyFilterText}>Áp dụng</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
-            <Text style={styles.filterLabel}>HLV bàn giao</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choiceRow}><Pressable style={[styles.choicePill, !fromPtId && styles.choicePillActive]} onPress={() => setFromPtId('')}><Text>Tất cả</Text></Pressable>{trainers.map((trainer) => { const id=recordId(trainer); return <Pressable key={id} style={[styles.choicePill, fromPtId===id && styles.choicePillActive]} onPress={() => setFromPtId(id)}><Text numberOfLines={1}>{String(trainer.fullName || trainer.username || id)}</Text></Pressable>; })}</ScrollView>
-            <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choiceRow}><Pressable style={[styles.choicePill, !toPtId && styles.choicePillActive]} onPress={() => setToPtId('')}><Text>Tất cả</Text></Pressable>{trainers.map((trainer) => { const id=recordId(trainer); return <Pressable key={id} style={[styles.choicePill, toPtId===id && styles.choicePillActive]} onPress={() => setToPtId(id)}><Text numberOfLines={1}>{String(trainer.fullName || trainer.username || id)}</Text></Pressable>; })}</ScrollView>
-            <Pressable style={styles.applyFilterButton} onPress={() => { setPage(1); setFilterOpen(false); }}><Text style={styles.applyFilterText}>Áp dụng</Text></Pressable>
           </View>
-        </View>
-      </Modal>}
+        </Modal>
+      )}
 
       {dateField && (
         <Modal transparent animationType="fade" visible onRequestClose={() => setDateField(null)}>
@@ -665,19 +923,242 @@ const styles = StyleSheet.create({
   activeFilterRow: { minHeight: 4, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeFilterText: { color: colors.textMuted, fontSize: 12 },
   filterOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.5)' },
-  filterSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 10, maxHeight: '80%' },
-  filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  filterTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  filterLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 4 },
-  dateRow: { flexDirection: 'row', gap: 8 },
-  dateInput: { flex: 1, height: 44, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', color: colors.text, fontSize: 12 },
-  dateValue: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.text, fontWeight: '600' },
-  datePlaceholder: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.textMuted },
+  filterSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 24,
+    maxHeight: '85%',
+  },
+  filterMainView: {
+    gap: 10,
+  },
+  pickerView: {
+    gap: 10,
+    maxHeight: 480,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sheetCloseBtnMini: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetBackBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 4,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateInput: {
+    flex: 1,
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    gap: 6,
+  },
+  dateValue: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  datePlaceholder: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  ptSelectorBtn: {
+    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ptSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+    gap: 8,
+  },
+  ptSelectorIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptSelectorIconBoxActive: {
+    backgroundColor: '#E0F2FE',
+  },
+  ptSelectorText: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: '#64748B',
+    flex: 1,
+  },
+  ptSelectorTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  filterActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  resetFilterButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetFilterText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  applyFilterButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyFilterText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  ptSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 38,
+    gap: 6,
+    marginBottom: 4,
+  },
+  ptSearchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  ptList: {
+    maxHeight: 280,
+  },
+  ptItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+  },
+  ptItemActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  ptAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptAvatarAll: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptAvatarText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  ptInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ptName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  ptNameActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  ptSubText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  ptEmptyBox: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  ptEmptyText: {
+    fontSize: 12.5,
+    color: colors.textMuted,
+  },
   datePickerOverlay: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(15,23,42,0.5)' },
   datePickerSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, gap: 14 },
   calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   calendarNavButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
-  calendarMonthLabel: { fontSize: 16, fontWeight: '700', color: colors.text },
+  calendarMonthLabel: { fontSize: 15, fontWeight: '700', color: colors.text },
   weekdayRow: { flexDirection: 'row' },
   weekdayText: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: colors.textMuted },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -685,11 +1166,6 @@ const styles = StyleSheet.create({
   calendarDaySelected: { borderRadius: 22, backgroundColor: colors.primary },
   calendarDayText: { fontSize: 14, color: colors.text },
   calendarDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
-  choiceRow: { gap: 8, paddingVertical: 2 },
-  choicePill: { maxWidth: 180, minHeight: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', justifyContent: 'center' },
-  choicePillActive: { borderColor: colors.primary, backgroundColor: '#F0F9FF' },
-  applyFilterButton: { minHeight: 48, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  applyFilterText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 32,

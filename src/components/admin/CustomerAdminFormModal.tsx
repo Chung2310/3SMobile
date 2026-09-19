@@ -12,8 +12,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { api } from '@/services/api/client';
 import { formPayload, recordId, resources, type AdminRecord } from '@/services/adminResources';
+import { DatePickerModal } from '@/components/DatePickerModal';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 
@@ -73,6 +75,7 @@ function CustomerAdminFormModalInner({
   const [medicalNotes, setMedicalNotes] = useState(() => String(item?.medicalNotes || ''));
   const [internalNotes, setInternalNotes] = useState(() => String(item?.internalNotes || ''));
   const [status, setStatus] = useState<'ACTIVE' | 'LEAD' | 'INACTIVE'>(() => (item?.status as any) || 'ACTIVE');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Assigned PT
   const initialPtId = () => {
@@ -228,8 +231,10 @@ function CustomerAdminFormModalInner({
               onPress={handleCloseAttempt}
               style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
             >
-              <Text style={styles.closeBtnText}>Đóng</Text>
+              <Feather name="x" size={20} color="#475569" />
             </Pressable>
           </View>
 
@@ -237,6 +242,7 @@ function CustomerAdminFormModalInner({
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            style={styles.formScroll}
             contentContainerStyle={styles.formScrollContent}
           >
             {error ? (
@@ -305,17 +311,43 @@ function CustomerAdminFormModalInner({
 
               {/* Ngày sinh */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Ngày sinh (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Ví dụ: 1995-10-24"
-                  placeholderTextColor="#94A3B8"
-                  value={dateOfBirth}
-                  onChangeText={(val) => {
-                    setDateOfBirth(val);
-                    setDirty(true);
-                  }}
-                />
+                <Text style={styles.fieldLabel}>Ngày sinh</Text>
+                <Pressable
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.datePickerBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chọn ngày sinh"
+                >
+                  <Feather
+                    name="calendar"
+                    size={16}
+                    color={dateOfBirth ? colors.primary : '#94A3B8'}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.datePickerText,
+                      !dateOfBirth && styles.datePickerPlaceholder,
+                    ]}
+                  >
+                    {dateOfBirth || 'Chọn ngày sinh (YYYY-MM-DD)'}
+                  </Text>
+                  {dateOfBirth ? (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setDateOfBirth('');
+                        setDirty(true);
+                      }}
+                      hitSlop={8}
+                      style={styles.clearDateBtn}
+                    >
+                      <Feather name="x-circle" size={16} color="#94A3B8" />
+                    </Pressable>
+                  ) : (
+                    <Feather name="chevron-down" size={16} color="#94A3B8" />
+                  )}
+                </Pressable>
               </View>
 
               {/* Giới tính */}
@@ -368,11 +400,13 @@ function CustomerAdminFormModalInner({
                 <Pressable
                   onPress={() => setPtSelectorOpen(true)}
                   style={styles.ptSelectBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chọn HLV phụ trách"
                 >
                   <Text style={styles.ptSelectText} numberOfLines={1}>
                     {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
                   </Text>
-                  <Text style={styles.ptSelectBtnAction}>Chọn HLV</Text>
+                  <Feather name="chevron-down" size={18} color="#64748B" />
                 </Pressable>
               </View>
 
@@ -535,7 +569,7 @@ function CustomerAdminFormModalInner({
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.submitBtnText}>
-                  {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                  {editing ? 'Lưu thay đổi' : 'Lưu khách hàng'}
                 </Text>
               )}
             </Pressable>
@@ -557,9 +591,12 @@ function CustomerAdminFormModalInner({
                 <Text style={styles.ptPickerTitle}>Chọn HLV phụ trách</Text>
                 <Pressable
                   onPress={() => setPtSelectorOpen(false)}
+                  style={styles.ptPickerCloseBtn}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Đóng"
                 >
-                  <Text style={styles.ptPickerCloseText}>Đóng</Text>
+                  <Feather name="x" size={18} color="#64748B" />
                 </Pressable>
               </View>
 
@@ -610,8 +647,8 @@ function CustomerAdminFormModalInner({
                           <Text style={styles.ptPickerUser}>@{String(pt.username || '')} · {String(pt.phone || 'Chưa có SĐT')}</Text>
                         </View>
                         {isSelected && (
-                          <View style={styles.ptPickerCheckBadge}>
-                            <Text style={styles.ptPickerCheckText}>Đã chọn</Text>
+                          <View style={styles.ptPickerCheckIcon}>
+                            <Feather name="check" size={18} color={colors.primary} />
                           </View>
                         )}
                       </Pressable>
@@ -623,6 +660,20 @@ function CustomerAdminFormModalInner({
           </View>
         </Modal>
       )}
+
+      {/* DATE PICKER MODAL */}
+      <DatePickerModal
+        visible={showDatePicker}
+        value={dateOfBirth}
+        title="Chọn ngày sinh"
+        maxDate={new Date()}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(isoDate) => {
+          setDateOfBirth(isoDate);
+          setDirty(true);
+          setShowDatePicker(false);
+        }}
+      />
 
       {/* DISCARD MODAL */}
       {discardModal && (
@@ -671,11 +722,13 @@ const styles = StyleSheet.create({
   },
   keyboardContainer: {
     maxHeight: '92%',
+    width: '100%',
   },
   sheetContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    maxHeight: '100%',
     paddingTop: 16,
     paddingHorizontal: 20,
     shadowColor: '#000000',
@@ -683,6 +736,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
+  },
+  formScroll: {
+    flexShrink: 1,
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -706,18 +762,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
-  },
-  closeBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
   },
   formScrollContent: {
     paddingVertical: 16,
@@ -809,6 +860,29 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
+  datePickerBtn: {
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  datePickerPlaceholder: {
+    color: '#94A3B8',
+    fontWeight: '400',
+  },
+  clearDateBtn: {
+    padding: 4,
+  },
   ptSelectBtn: {
     height: 48,
     backgroundColor: '#FFFFFF',
@@ -826,11 +900,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
     marginRight: 8,
-  },
-  ptSelectBtnAction: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
   },
   statusRow: {
     flexDirection: 'row',
@@ -1008,16 +1077,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 1,
   },
-  ptPickerCheckBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  ptPickerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  ptPickerCheckText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  ptPickerCheckIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   discardCard: {
     width: '100%',
