@@ -17,6 +17,7 @@ import type { CustomerGoalData, InBodyRecordData } from '@/types/inbody';
 import { api } from '@/services/api/client';
 import { analyzeInBody } from '@/services/inbodyAnalytics';
 import { inbodyService } from '@/services/inbodyService';
+import * as Clipboard from 'expo-clipboard';
 import { InBodySummaryBanner } from './InBodySummaryBanner';
 import { InBodyMetricsGrid } from './InBodyMetricsGrid';
 import { InBodySegmentalView } from './InBodySegmentalView';
@@ -56,6 +57,7 @@ export function InBodyDetailSheet({
 }: InBodyDetailSheetProps) {
   const [goals, setGoals] = useState<CustomerGoalData[]>([]);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [copiedConsultation, setCopiedConsultation] = useState(false);
   const { alertConfig, showError } = useAppAlert();
   const [customerGoal, setCustomerGoal] = useState<CustomerGoalData | null>(null);
   const [customerHistory, setCustomerHistory] = useState<InBodyRecordData[]>(historyRecords || []);
@@ -70,6 +72,7 @@ export function InBodyDetailSheet({
     if (!visible || !record) {
       setCustomerGoal(null);
       setCustomerHistory([]);
+      setCopiedConsultation(false);
       return;
     }
     const cId =
@@ -175,6 +178,21 @@ export function InBodyDetailSheet({
     }
   };
 
+  const handleCopyConsultation = async () => {
+    if (!analysis?.quickMessage) {
+      showError('Không tìm thấy nội dung tư vấn để sao chép.');
+      return;
+    }
+    try {
+      await Clipboard.setStringAsync(analysis.quickMessage);
+      setCopiedConsultation(true);
+      setTimeout(() => setCopiedConsultation(false), 2500);
+    } catch (err) {
+      console.warn('[InBodyDetailSheet] Failed to copy consultation message:', err);
+      showError('Không thể sao chép vào bộ nhớ tạm.');
+    }
+  };
+
   const handleShareQuickMessage = async () => {
     if (!analysis?.quickMessage) return;
     try {
@@ -230,7 +248,12 @@ export function InBodyDetailSheet({
           </View>
 
           {/* Action Bar for PT */}
-          <View style={styles.actionBar}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionBarScroll}
+            contentContainerStyle={styles.actionBarContent}
+          >
             <Pressable
               style={[
                 styles.actionBtn,
@@ -249,10 +272,41 @@ export function InBodyDetailSheet({
                     color="#FFFFFF"
                   />
                   <Text style={styles.actionBtnText}>
-                    {isPublished ? 'Thu hồi nháp' : 'Công bố học viên'}
+                    {isPublished ? 'Thu hồi nháp' : 'Công bố'}
                   </Text>
                 </>
               )}
+            </Pressable>
+
+            {/* Nút Sao chép kịch bản tư vấn InBody */}
+            <Pressable
+              style={[
+                styles.actionBtn,
+                copiedConsultation ? styles.actionBtnSuccess : styles.actionBtnCopy,
+              ]}
+              onPress={handleCopyConsultation}
+            >
+              <Ionicons
+                name={copiedConsultation ? 'checkmark-circle' : 'copy-outline'}
+                size={15}
+                color={copiedConsultation ? '#15803D' : '#0284C7'}
+              />
+              <Text
+                style={[
+                  styles.actionBtnText,
+                  { color: copiedConsultation ? '#15803D' : '#0284C7' },
+                ]}
+              >
+                {copiedConsultation ? 'Đã sao chép' : 'Sao chép tư vấn'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.actionBtn, styles.actionBtnSecondary]}
+              onPress={handleShareQuickMessage}
+            >
+              <Ionicons name="share-social-outline" size={15} color={colors.primaryNavy} />
+              <Text style={[styles.actionBtnText, { color: colors.primaryNavy }]}>Chia sẻ</Text>
             </Pressable>
 
             <Pressable
@@ -262,16 +316,8 @@ export function InBodyDetailSheet({
                 onEdit?.(record);
               }}
             >
-              <Ionicons name="create-outline" size={15} color={colors.primary} />
-              <Text style={[styles.actionBtnText, { color: colors.primary }]}>Sửa</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.actionBtn, styles.actionBtnSecondary]}
-              onPress={handleShareQuickMessage}
-            >
-              <Ionicons name="share-social-outline" size={15} color={colors.primaryNavy} />
-              <Text style={[styles.actionBtnText, { color: colors.primaryNavy }]}>Gửi mẫu</Text>
+              <Ionicons name="create-outline" size={15} color={colors.text} />
+              <Text style={[styles.actionBtnText, { color: colors.text }]}>Sửa</Text>
             </Pressable>
 
             {onDelete && (
@@ -283,9 +329,10 @@ export function InBodyDetailSheet({
                 }}
               >
                 <Ionicons name="trash-outline" size={15} color={colors.danger} />
+                <Text style={[styles.actionBtnText, { color: colors.danger }]}>Xóa</Text>
               </Pressable>
             )}
-          </View>
+          </ScrollView>
 
           {/* Scrollable Content */}
           <ScrollView
@@ -470,36 +517,46 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: colors.surfaceMuted,
   },
-  actionBar: {
-    flexDirection: 'row',
+  actionBarScroll: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+    maxHeight: 52,
+  },
+  actionBarContent: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSoft,
+    alignItems: 'center',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 5,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: radius.md,
   },
   actionBtnPublish: {
     backgroundColor: '#0284C7',
-    flex: 1.5,
   },
   actionBtnPublished: {
     backgroundColor: '#64748B',
-    flex: 1.5,
+  },
+  actionBtnCopy: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  actionBtnSuccess: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   },
   actionBtnSecondary: {
     backgroundColor: colors.surfaceIce,
     borderWidth: 1,
     borderColor: '#BAE6FD',
-    flex: 1,
   },
   actionBtnDanger: {
     backgroundColor: '#FEF2F2',
