@@ -45,6 +45,7 @@ export interface FoodItem {
   defaultServingGrams: number;
   servingLabel?: string;
   prepTip?: string;
+  imageUrl?: string;
   isCustom?: boolean;
 }
 
@@ -64,6 +65,7 @@ export interface MealFoodEntry {
   notes?: string;
   amount?: string;
   prepTip?: string;
+  imageUrl?: string;
 }
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
