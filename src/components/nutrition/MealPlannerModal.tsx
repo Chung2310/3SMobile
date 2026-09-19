@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,6 +13,9 @@ import {
   View,
 } from 'react-native';
 import {
+  Camera,
+  Image as ImageIcon,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react-native';
@@ -27,6 +31,8 @@ import type {
 } from '@/types/nutrition';
 import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
+import { api } from '@/services/api/client';
+import { resolveImageUrl } from '@/services/imageUtils';
 import {
   buildWeeksSchedule,
   computeEndDate,
@@ -39,6 +45,7 @@ import {
 } from '@/utils/nutritionScheduleHelper';
 import { FoodLibrarySheet } from './FoodLibrarySheet';
 import { NutritionMacroBar } from './NutritionMacroBar';
+import { DishImageActionSheet } from './DishImageActionSheet';
 
 interface MealPlannerModalProps {
   visible: boolean;
@@ -84,6 +91,17 @@ export function MealPlannerModal({
 
   // Sub-modal for selecting foods
   const [activeMealIndex, setActiveMealIndex] = useState<number | null>(null);
+
+  // Target for Dish Image Action Sheet
+  const [activeDishImageTarget, setActiveDishImageTarget] = useState<{
+    mealIdx: number;
+    itemId?: string;
+    dishName: string;
+    imageUrl?: string;
+  } | null>(null);
+
+  // Loading state per item when calling AI generator: `${mealIdx}-${itemId}`
+  const [generatingItemKey, setGeneratingItemKey] = useState<string | null>(null);
 
   // Active items helpers
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
@@ -257,6 +275,73 @@ export function MealPlannerModal({
     });
   };
 
+  // Cập nhật thông tin món ăn (vd: imageUrl)
+  const handleUpdateFoodItem = (mealIdx: number, itemId: string, updates: Partial<MealFoodEntry>) => {
+    setWeeks((prev) => {
+      const clone = [...prev];
+      if (!clone[selectedWeekIdx]) return prev;
+      const curWeek = { ...clone[selectedWeekIdx] };
+      const curDays = [...curWeek.days];
+      if (!curDays[selectedDayIdx]) return prev;
+      const curDay = { ...curDays[selectedDayIdx] };
+      const curMeals = Array.isArray(curDay.meals) ? [...curDay.meals] : [];
+      if (!curMeals[mealIdx]) return prev;
+      const target = { ...curMeals[mealIdx] };
+      const existingItems = Array.isArray(target.items) ? target.items : [];
+      target.items = existingItems.map((i) => (i.id === itemId ? { ...i, ...updates } : i));
+      curMeals[mealIdx] = target;
+      curDay.meals = curMeals;
+      curDays[selectedDayIdx] = curDay;
+      curWeek.days = curDays;
+      clone[selectedWeekIdx] = curWeek;
+      return clone;
+    });
+  };
+
+  // Cập nhật thông tin bữa ăn (vd: imageUrl)
+  const handleUpdateMeal = (mealIdx: number, updates: Partial<MealBlock>) => {
+    setWeeks((prev) => {
+      const clone = [...prev];
+      if (!clone[selectedWeekIdx]) return prev;
+      const curWeek = { ...clone[selectedWeekIdx] };
+      const curDays = [...curWeek.days];
+      if (!curDays[selectedDayIdx]) return prev;
+      const curDay = { ...curDays[selectedDayIdx] };
+      const curMeals = Array.isArray(curDay.meals) ? [...curDay.meals] : [];
+      if (!curMeals[mealIdx]) return prev;
+      curMeals[mealIdx] = { ...curMeals[mealIdx], ...updates };
+      curDay.meals = curMeals;
+      curDays[selectedDayIdx] = curDay;
+      curWeek.days = curDays;
+      clone[selectedWeekIdx] = curWeek;
+      return clone;
+    });
+  };
+
+  // Tạo nhanh ảnh AI cho món ăn (chuẩn hóa tên món và gọi API như Web)
+  const handleQuickGenerateAiItem = async (mealIdx: number, item: MealFoodEntry) => {
+    const cleanName = item.name.replace(/\([^)]*\)/g, '').trim() || item.name.trim();
+    const itemKey = `${mealIdx}-${item.id}`;
+    setGeneratingItemKey(itemKey);
+    try {
+      const res = await api.post<any>('/api/images/meal-image', {
+        mealName: cleanName,
+        items: [cleanName],
+        aspectRatio: '4:3',
+        forceRegenerate: Boolean(item.imageUrl),
+      });
+      const url = res?.imageUrl || res?.data?.imageUrl;
+      if (url && typeof url === 'string') {
+        handleUpdateFoodItem(mealIdx, item.id, { imageUrl: url });
+        showSuccess(`Đã tạo ảnh món "${cleanName}" thành công!`, 'Thành công');
+      }
+    } catch (err: any) {
+      showError(err?.message || 'Không thể tạo ảnh bằng AI.', 'Lỗi tạo ảnh');
+    } finally {
+      setGeneratingItemKey(null);
+    }
+  };
+
 
 
   // AI auto-generate
@@ -350,6 +435,7 @@ export function MealPlannerModal({
               carbs: i.carbs,
               fat: i.fat,
               prepTip: i.prepTip || i.notes,
+              imageUrl: i.imageUrl,
             })),
             imageUrl: m.imageUrl,
           })),
@@ -748,6 +834,37 @@ export function MealPlannerModal({
             <View style={styles.mealsList}>
               {activeMeals.map((meal, mealIdx) => (
                 <View key={meal.id || `meal-${mealIdx}`} style={styles.mealCard}>
+                  {/* Meal Cover Banner (nếu đã có ảnh) */}
+                  {meal.imageUrl ? (
+                    <View style={styles.mealCoverBanner}>
+                      <Image
+                        source={{ uri: resolveImageUrl(meal.imageUrl) || meal.imageUrl }}
+                        style={styles.mealCoverImg}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.mealCoverActions}>
+                        <Pressable
+                          style={styles.mealCoverActionBtn}
+                          onPress={() =>
+                            setActiveDishImageTarget({
+                              mealIdx,
+                              dishName: meal.title || `Bữa ${mealIdx + 1}`,
+                              imageUrl: meal.imageUrl,
+                            })
+                          }
+                        >
+                          <Camera size={13} color="#FFFFFF" />
+                        </Pressable>
+                        <Pressable
+                          style={[styles.mealCoverActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
+                          onPress={() => handleUpdateMeal(mealIdx, { imageUrl: undefined })}
+                        >
+                          <Trash2 size={13} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null}
+
                   {/* Meal Header */}
                   <View style={styles.mealHeader}>
                     <View>
@@ -755,36 +872,106 @@ export function MealPlannerModal({
                       <Text style={styles.mealTimeHint}>{meal.timeHint}</Text>
                     </View>
 
-                    <View style={styles.mealTotalPill}>
-                      <Text style={styles.mealTotalCalText}>
-                        {meal.totalCalories} kcal
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {!meal.imageUrl && (
+                        <Pressable
+                          style={styles.mealCoverEmptyBtn}
+                          onPress={() =>
+                            setActiveDishImageTarget({
+                              mealIdx,
+                              dishName: meal.title || `Bữa ${mealIdx + 1}`,
+                              imageUrl: undefined,
+                            })
+                          }
+                        >
+                          <ImageIcon size={11} color="#16A34A" />
+                          <Text style={styles.mealCoverEmptyBtnText}>Ảnh bữa</Text>
+                        </Pressable>
+                      )}
+
+                      <View style={styles.mealTotalPill}>
+                        <Text style={styles.mealTotalCalText}>
+                          {meal.totalCalories} kcal
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
                   {/* Food Items List */}
                   {meal.items.length > 0 ? (
                     <View style={styles.foodItemsList}>
-                      {meal.items.map((item) => (
-                        <View key={item.id} style={styles.foodItemRow}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.foodItemName} numberOfLines={1}>
-                              {item.name}
-                            </Text>
-                            <Text style={styles.foodItemSub}>
-                              {item.grams}g • P:{item.protein}g • C:{item.carbs}g • F:{item.fat}g
-                            </Text>
+                      {meal.items.map((item) => {
+                        const itemKey = `${mealIdx}-${item.id}`;
+                        const isGenerating = generatingItemKey === itemKey;
+                        return (
+                          <View key={item.id} style={styles.foodItemRow}>
+                            {/* Thumbnail Image Container */}
+                            <Pressable
+                              style={styles.foodThumbBtn}
+                              disabled={isGenerating}
+                              onPress={() =>
+                                setActiveDishImageTarget({
+                                  mealIdx,
+                                  itemId: item.id,
+                                  dishName: item.name,
+                                  imageUrl: item.imageUrl,
+                                })
+                              }
+                            >
+                              {isGenerating ? (
+                                <View style={styles.foodThumbLoading}>
+                                  <ActivityIndicator size="small" color={colors.primary} />
+                                </View>
+                              ) : item.imageUrl ? (
+                                <View style={styles.foodThumbWrap}>
+                                  <Image
+                                    source={{ uri: resolveImageUrl(item.imageUrl) || item.imageUrl }}
+                                    style={styles.foodThumbImg}
+                                    resizeMode="cover"
+                                  />
+                                </View>
+                              ) : (
+                                <View style={styles.foodThumbPlaceholder}>
+                                  <Camera size={13} color="#0284C7" />
+                                  <Text style={styles.foodThumbPlaceholderText}>+ Ảnh</Text>
+                                </View>
+                              )}
+                            </Pressable>
+
+                            {/* Food Details */}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.foodItemName} numberOfLines={1}>
+                                {item.name}
+                              </Text>
+                              <Text style={styles.foodItemSub}>
+                                {item.grams}g • P:{item.protein}g • C:{item.carbs}g • F:{item.fat}g
+                              </Text>
+                            </View>
+
+                            {/* Quick AI button if item has no image yet */}
+                            {!item.imageUrl && (
+                              <Pressable
+                                hitSlop={6}
+                                style={styles.quickAiBtn}
+                                disabled={isGenerating}
+                                onPress={() => handleQuickGenerateAiItem(mealIdx, item)}
+                              >
+                                <Sparkles size={11} color="#16A34A" />
+                                <Text style={styles.quickAiBtnText}>AI</Text>
+                              </Pressable>
+                            )}
+
+                            <Text style={styles.foodItemCal}>{item.calories} kcal</Text>
+                            <Pressable
+                              hitSlop={8}
+                              onPress={() => handleRemoveFood(mealIdx, item.id)}
+                              style={styles.foodDeleteBtn}
+                            >
+                              <Trash2 size={15} color="#EF4444" />
+                            </Pressable>
                           </View>
-                          <Text style={styles.foodItemCal}>{item.calories} kcal</Text>
-                          <Pressable
-                            hitSlop={8}
-                            onPress={() => handleRemoveFood(mealIdx, item.id)}
-                            style={styles.foodDeleteBtn}
-                          >
-                            <Trash2 size={15} color="#EF4444" />
-                          </Pressable>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
                   ) : (
                     <Text style={styles.mealEmptyText}>
@@ -887,6 +1074,30 @@ export function MealPlannerModal({
         onClose={() => setActiveMealIndex(null)}
         onSelectFood={handleSelectFood}
       />
+
+      {/* Sub-modal: Dish / Meal Image Action Sheet */}
+      {activeDishImageTarget && (
+        <DishImageActionSheet
+          visible={true}
+          dishName={activeDishImageTarget.dishName}
+          currentImageUrl={activeDishImageTarget.imageUrl}
+          onClose={() => setActiveDishImageTarget(null)}
+          onSelectImage={(newUrl) => {
+            if (activeDishImageTarget.itemId) {
+              handleUpdateFoodItem(activeDishImageTarget.mealIdx, activeDishImageTarget.itemId, { imageUrl: newUrl });
+            } else {
+              handleUpdateMeal(activeDishImageTarget.mealIdx, { imageUrl: newUrl });
+            }
+          }}
+          onRemoveImage={() => {
+            if (activeDishImageTarget.itemId) {
+              handleUpdateFoodItem(activeDishImageTarget.mealIdx, activeDishImageTarget.itemId, { imageUrl: undefined });
+            } else {
+              handleUpdateMeal(activeDishImageTarget.mealIdx, { imageUrl: undefined });
+            }
+          }}
+        />
+      )}
 
       <AppAlertModal {...alertConfig} />
     </Modal>
@@ -1345,6 +1556,99 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     gap: 8,
+  },
+  foodThumbBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  foodThumbWrap: {
+    width: '100%',
+    height: '100%',
+  },
+  foodThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  foodThumbLoading: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F9FF',
+  },
+  foodThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  foodThumbPlaceholderText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  quickAiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  quickAiBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  mealCoverBanner: {
+    width: '100%',
+    height: 110,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+  },
+  mealCoverImg: {
+    width: '100%',
+    height: '100%',
+  },
+  mealCoverActions: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  mealCoverActionBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    padding: 5,
+  },
+  mealCoverEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  mealCoverEmptyBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
   },
   foodItemName: {
     fontSize: 12.5,

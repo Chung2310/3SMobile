@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -7,6 +9,10 @@ import {
   Text,
   View,
 } from 'react-native';
+import { resolveImageUrl } from '@/services/imageUtils';
+import { api } from '@/services/api/client';
+import { nutritionService } from '@/services/nutritionService';
+import { DishImageActionSheet } from './DishImageActionSheet';
 import {
   Calendar,
   CheckCircle2,
@@ -22,7 +28,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
-import type { MealBlock, NutritionPlanData } from '@/types/nutrition';
+import type { DayMenuPlan, MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
 import {
   DAYS_OF_WEEK_VI,
   findCurrentWeekAndDay,
@@ -38,6 +44,7 @@ interface PlanDetailViewModalProps {
   plan: NutritionPlanData | null;
   onClose: () => void;
   onEdit?: (plan: NutritionPlanData) => void;
+  onPlanUpdated?: (updatedPlan: NutritionPlanData) => void;
 }
 
 function parseAdviceNotes(rawNotes: string) {
@@ -135,18 +142,135 @@ export function PlanDetailViewModal({
   plan,
   onClose,
   onEdit,
+  onPlanUpdated,
 }: PlanDetailViewModalProps) {
   // Always call all hooks unconditionally at the top level
-  const weeks = useMemo(() => (plan ? normalizePlanToWeeks(plan) : []), [plan]);
-  const initialNav = useMemo(() => findCurrentWeekAndDay(weeks), [weeks]);
+  const [localWeeks, setLocalWeeks] = useState<WeekMenuPlan[]>(() => (plan ? normalizePlanToWeeks(plan) : []));
+  const initialNav = useMemo(() => findCurrentWeekAndDay(localWeeks), [localWeeks]);
 
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+
+  // Target for Dish Image Action Sheet
+  const [activeDishImageTarget, setActiveDishImageTarget] = useState<{
+    weekIdx: number;
+    dayIdx: number;
+    mealIdx: number;
+    dishId: string;
+    dishName: string;
+    imageUrl?: string;
+  } | null>(null);
+
+  // Loading state per dish: `${weekIdx}-${dayIdx}-${mealIdx}-${dishId}`
+  const [generatingDishKey, setGeneratingDishKey] = useState<string | null>(null);
+
+  const planId = plan?._id || (plan as any)?.id;
+  const prevPlanIdRef = useRef<string | null>(null);
+  const prevVisibleRef = useRef<boolean>(false);
 
   useEffect(() => {
-    setSelectedWeekIdx(initialNav.weekIdx);
-    setSelectedDayIdx(initialNav.dayIdx);
-  }, [initialNav]);
+    if (visible && plan) {
+      const normalized = normalizePlanToWeeks(plan);
+      setLocalWeeks(normalized);
+
+      // Chỉ khởi tạo lại vị trí Tuần và Ngày khi mở modal mới hoặc đổi sang kế hoạch khác
+      const isDifferentPlan = planId !== prevPlanIdRef.current;
+      const justOpened = !prevVisibleRef.current && visible;
+
+      if (isDifferentPlan || justOpened) {
+        const nav = findCurrentWeekAndDay(normalized);
+        setSelectedWeekIdx(nav.weekIdx);
+        setSelectedDayIdx(nav.dayIdx);
+      }
+      prevPlanIdRef.current = planId || null;
+      prevVisibleRef.current = true;
+    } else if (!visible) {
+      prevVisibleRef.current = false;
+    }
+  }, [plan, visible, planId]);
+
+  const handleUpdateDishImage = async (
+    weekIdx: number,
+    dayIdx: number,
+    mealIdx: number,
+    dishId: string,
+    newImageUrl?: string
+  ) => {
+    const nextWeeks = [...localWeeks];
+    if (!nextWeeks[weekIdx]?.days?.[dayIdx]?.meals?.[mealIdx]) return;
+    const curMeals = [...nextWeeks[weekIdx].days[dayIdx].meals];
+    const curMeal = { ...curMeals[mealIdx] };
+    curMeal.items = (curMeal.items || []).map((it: any) =>
+      (it.id === dishId || it.name === dishId ? { ...it, imageUrl: newImageUrl } : it)
+    );
+    curMeals[mealIdx] = curMeal;
+    nextWeeks[weekIdx].days[dayIdx].meals = curMeals;
+    setLocalWeeks(nextWeeks);
+
+    const planId = plan?._id || (plan as any)?.id;
+    if (planId) {
+      try {
+        const dailyPlansPayload = nextWeeks.flatMap((w: WeekMenuPlan) =>
+          w.days.map((d: DayMenuPlan) => ({
+            dayOfWeek: d.dayOfWeek,
+            dayNumber: d.dayNumber,
+            date: d.date,
+            meals: d.meals,
+          }))
+        );
+        const menuPayload = nextWeeks.map((w: WeekMenuPlan) => ({
+          weekNumber: w.weekNumber,
+          name: w.name,
+          startDate: w.startDate,
+          endDate: w.endDate,
+          days: w.days.map((d: DayMenuPlan) => ({
+            dayNumber: d.dayNumber,
+            date: d.date,
+            dayOfWeek: d.dayOfWeek,
+            meals: d.meals,
+          })),
+        }));
+
+        const updated = await nutritionService.updatePlan(planId, {
+          dailyPlans: dailyPlansPayload,
+          menu: menuPayload,
+        });
+        if (onPlanUpdated && updated) {
+          onPlanUpdated(updated);
+        }
+      } catch (saveErr) {
+        console.warn('Auto-save plan dish image failed:', saveErr);
+      }
+    }
+  };
+
+  const handleQuickGenerateAi = async (
+    weekIdx: number,
+    dayIdx: number,
+    mealIdx: number,
+    dish: any
+  ) => {
+    const dishKey = `${weekIdx}-${dayIdx}-${mealIdx}-${dish.id || dish.name}`;
+    const cleanName = dish.name.replace(/\([^)]*\)/g, '').trim() || dish.name.trim();
+    setGeneratingDishKey(dishKey);
+    try {
+      const res = await api.post<any>('/api/images/meal-image', {
+        mealName: cleanName,
+        items: [cleanName],
+        aspectRatio: '4:3',
+        forceRegenerate: Boolean(dish.imageUrl),
+      });
+      const url = res?.imageUrl || res?.data?.imageUrl;
+      if (url && typeof url === 'string') {
+        await handleUpdateDishImage(weekIdx, dayIdx, mealIdx, dish.id || dish.name, url);
+      }
+    } catch (err) {
+      console.warn('AI generation failed in plan detail:', err);
+    } finally {
+      setGeneratingDishKey(null);
+    }
+  };
 
   if (!plan || !visible) {
     return null;
@@ -172,11 +296,12 @@ export function PlanDetailViewModal({
   );
   const isUpcoming = Boolean(startDateObj && now < startDateObj);
 
+  const weeks = localWeeks;
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
   const activeDay = activeWeek?.days?.[selectedDayIdx] || activeWeek?.days?.[0];
   const currentMeals: MealBlock[] = activeDay?.meals || [];
 
-  const totalDays = weeks.reduce((sum, w) => sum + (w.days?.length || 0), 0);
+  const totalDays = weeks.reduce((sum: number, w: WeekMenuPlan) => sum + (w.days?.length || 0), 0);
   const totalMeals = currentMeals.length;
   const totalDishes = currentMeals.reduce(
     (acc, m) => acc + (m.items?.length || 0),
@@ -332,11 +457,11 @@ export function PlanDetailViewModal({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.dayTabsScroll}
               >
-                {activeWeek.days.map((day, dIdx) => {
+                {activeWeek.days.map((day: DayMenuPlan, dIdx: number) => {
                   const isSel = selectedDayIdx === dIdx;
                   const isToday = day.date === todayYmd;
                   const dayKcal = day.meals.reduce(
-                    (acc, m) =>
+                    (acc: number, m: any) =>
                       acc +
                       (m.totalCalories ||
                         (m.items || []).reduce((s: number, it: any) => s + (it.calories || 0), 0)),
@@ -488,34 +613,96 @@ export function PlanDetailViewModal({
                     {mealItems.length === 0 ? (
                       <Text style={styles.noDishText}>Chưa có món ăn trong bữa này</Text>
                     ) : (
-                      mealItems.map((dish: any, dishIdx: number) => (
-                        <View
-                          key={dish.id || `dish-${dishIdx}`}
-                          style={[
-                            styles.dishCard,
-                            dishIdx === mealItems.length - 1 && { borderBottomWidth: 0 },
-                          ]}
-                        >
-                          <View style={styles.dishTopRow}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.dishName}>{dish.name}</Text>
-                              <Text style={styles.dishGrams}>
-                                Định lượng: {dish.grams || 100}g
-                              </Text>
-                            </View>
-                            <View style={styles.dishCalRight}>
-                              <Text style={styles.dishCalText}>{dish.calories} kcal</Text>
-                              <Text style={styles.dishMacroText}>
-                                P:{dish.protein}g · C:{dish.carbs}g · F:{dish.fat}g
-                              </Text>
-                            </View>
-                          </View>
+                      mealItems.map((dish: any, dishIdx: number) => {
+                        const dishKey = `${selectedWeekIdx}-${selectedDayIdx}-${mealIdx}-${dish.id || dish.name}`;
+                        const isGenerating = generatingDishKey === dishKey;
 
-                          {dish.notes ? (
-                            <Text style={styles.dishNotes}>{dish.notes}</Text>
-                          ) : null}
-                        </View>
-                      ))
+                        return (
+                          <View
+                            key={dish.id || `dish-${dishIdx}`}
+                            style={[
+                              styles.dishCard,
+                              dishIdx === mealItems.length - 1 && { borderBottomWidth: 0 },
+                            ]}
+                          >
+                            <View style={styles.dishTopRow}>
+                              {/* Dish Thumbnail / Action Trigger */}
+                              <Pressable
+                                disabled={isGenerating}
+                                onPress={() =>
+                                  setActiveDishImageTarget({
+                                    weekIdx: selectedWeekIdx,
+                                    dayIdx: selectedDayIdx,
+                                    mealIdx,
+                                    dishId: dish.id || dish.name,
+                                    dishName: dish.name,
+                                    imageUrl: dish.imageUrl,
+                                  })
+                                }
+                                style={styles.dishThumbBtn}
+                              >
+                                {isGenerating ? (
+                                  <View style={styles.dishThumbLoading}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                  </View>
+                                ) : dish.imageUrl ? (
+                                  <Image
+                                    source={{ uri: resolveImageUrl(dish.imageUrl) || dish.imageUrl }}
+                                    style={styles.dishThumbImg}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <View style={styles.dishThumbPlaceholder}>
+                                    <Sparkles size={13} color="#16A34A" />
+                                    <Text style={styles.dishThumbPlaceholderText}>+ Ảnh</Text>
+                                  </View>
+                                )}
+                              </Pressable>
+
+                              {/* Dish Info & Nút Tạo Ảnh AI */}
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <Text style={styles.dishName}>{dish.name}</Text>
+                                  {!dish.imageUrl && (
+                                    <Pressable
+                                      hitSlop={6}
+                                      disabled={isGenerating}
+                                      style={styles.quickAiDishBtn}
+                                      onPress={() =>
+                                        handleQuickGenerateAi(selectedWeekIdx, selectedDayIdx, mealIdx, dish)
+                                      }
+                                    >
+                                      {isGenerating ? (
+                                        <ActivityIndicator size="small" color="#16A34A" />
+                                      ) : (
+                                        <>
+                                          <Sparkles size={11} color="#16A34A" />
+                                          <Text style={styles.quickAiDishBtnText}>Tạo ảnh AI</Text>
+                                        </>
+                                      )}
+                                    </Pressable>
+                                  )}
+                                </View>
+                                <Text style={styles.dishGrams}>
+                                  Định lượng: {dish.grams || 100}g
+                                </Text>
+                              </View>
+
+                              {/* Calories & Macros */}
+                              <View style={styles.dishCalRight}>
+                                <Text style={styles.dishCalText}>{dish.calories} kcal</Text>
+                                <Text style={styles.dishMacroText}>
+                                  P:{dish.protein}g · C:{dish.carbs}g · F:{dish.fat}g
+                                </Text>
+                              </View>
+                            </View>
+
+                            {dish.notes ? (
+                              <Text style={styles.dishNotes}>{dish.notes}</Text>
+                            ) : null}
+                          </View>
+                        );
+                      })
                     )}
                   </View>
                 </View>
@@ -598,6 +785,54 @@ export function PlanDetailViewModal({
           </Pressable>
         </View>
       </View>
+
+      {/* Sub-modal: Zoom image preview */}
+      {previewImage && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
+          <View style={styles.previewBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setPreviewImage(null)} />
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Text style={styles.previewTitle} numberOfLines={1}>
+                  {previewImage.title}
+                </Text>
+                <Pressable hitSlop={8} onPress={() => setPreviewImage(null)} style={styles.previewCloseBtn}>
+                  <X size={20} color="#FFFFFF" />
+                </Pressable>
+              </View>
+              <Image source={{ uri: previewImage.url }} style={styles.previewImage} resizeMode="contain" />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Sub-modal: Dish Image Action Sheet */}
+      {activeDishImageTarget && (
+        <DishImageActionSheet
+          visible={true}
+          dishName={activeDishImageTarget.dishName}
+          currentImageUrl={activeDishImageTarget.imageUrl}
+          onClose={() => setActiveDishImageTarget(null)}
+          onSelectImage={(newUrl) => {
+            handleUpdateDishImage(
+              activeDishImageTarget.weekIdx,
+              activeDishImageTarget.dayIdx,
+              activeDishImageTarget.mealIdx,
+              activeDishImageTarget.dishId,
+              newUrl
+            );
+          }}
+          onRemoveImage={() => {
+            handleUpdateDishImage(
+              activeDishImageTarget.weekIdx,
+              activeDishImageTarget.dayIdx,
+              activeDishImageTarget.mealIdx,
+              activeDishImageTarget.dishId,
+              undefined
+            );
+          }}
+        />
+      )}
     </Modal>
   );
 }
@@ -1134,8 +1369,92 @@ const styles = StyleSheet.create({
   dishTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
+  },
+  dishThumbBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dishThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  dishThumbLoading: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+  },
+  dishThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  dishThumbPlaceholderText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  quickAiDishBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+  },
+  quickAiDishBtnText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  previewCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  previewCloseBtn: {
+    padding: 4,
+  },
+  previewImage: {
+    width: '100%',
+    height: 280,
+    backgroundColor: '#000000',
   },
   dishName: {
     fontSize: 13,

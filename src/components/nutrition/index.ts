@@ -8,3 +8,4 @@ export * from './CustomerNutritionView';
 export * from './PlanDetailViewModal';
 export * from './AiNutritionDraftModal';
 export * from './FoodItemEditorModal';
+export * from './DishImageActionSheet';

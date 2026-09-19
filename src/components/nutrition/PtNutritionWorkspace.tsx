@@ -2638,6 +2638,19 @@ export function PtNutritionWorkspace() {
           setSelectedPlanForDetail(null);
           handleEditPlan(p);
         }}
+        onPlanUpdated={(updatedPlan) => {
+          setSelectedPlanForDetail(updatedPlan);
+          setPlans((prev) => {
+            const planKey = updatedPlan._id || (updatedPlan as any).id;
+            const idx = prev.findIndex((p) => (p._id || (p as any).id) === planKey);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = updatedPlan;
+              return updated;
+            }
+            return [updatedPlan, ...prev];
+          });
+        }}
       />
 
       {/* 5. Modal Ghi / Sửa Nhật Ký (Tab 5: Calo In/Out) */}

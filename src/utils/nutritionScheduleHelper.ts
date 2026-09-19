@@ -98,6 +98,7 @@ export function normalizeMealBlock(rawMeal: any, fallbackIdx = 0): MealBlock {
     fat: Number(it.fat) || 0,
     notes: it.notes || it.prepTip || '',
     prepTip: it.prepTip || it.notes || '',
+    imageUrl: it.imageUrl,
   })) : [];
 
   const totalCalories = Number(rawMeal.totalCalories) || Number(rawMeal.calories) || Math.round(items.reduce((s: number, i: any) => s + (i.calories || 0), 0));
