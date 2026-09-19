@@ -270,12 +270,6 @@ function AdminForceTransferModalInner({
                 numberOfLines={3}
               />
             </View>
-
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeBoxText}>
-                Lệnh chuyển giao quyền lực quản lý học viên có hiệu lực ngay lập tức. Toàn bộ lịch tập, hồ sơ InBody và tiến độ sẽ được bàn giao cho HLV mới.
-              </Text>
-            </View>
           </ScrollView>
 
           {/* Footer Actions */}

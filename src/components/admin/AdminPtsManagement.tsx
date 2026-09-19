@@ -254,7 +254,7 @@ export function AdminPtsManagement() {
   const handleCall = (phone?: string) => {
     if (!phone) return;
     const cleanPhone = phone.replace(/[^0-9+]/g, '');
-    if (cleanPhone) Linking.openURL(`tel:${cleanPhone}`).catch(() => {});
+    if (cleanPhone) Linking.openURL(`tel:${cleanPhone}`).catch(() => { });
   };
 
   return (
@@ -297,7 +297,7 @@ export function AdminPtsManagement() {
           <Feather name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm theo tên HLV, SĐT, tài khoản..."
+            placeholder="Tìm theo tên HLV, SĐT..."
             placeholderTextColor={colors.textMuted}
             value={keyword}
             onChangeText={setKeyword}
