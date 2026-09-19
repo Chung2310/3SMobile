@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { api } from '@/services/api/client';
 import { display, recordId, type AdminRecord } from '@/services/adminResources';
 import { colors } from '@/theme';
@@ -216,36 +217,42 @@ function AdminForceTransferModalInner({
               </View>
 
               <View style={styles.ptCompareArrow}>
-                <Text style={styles.arrowText}>→</Text>
+                <Feather name="arrow-right" size={18} color={colors.primary} />
               </View>
 
               <View style={styles.ptCompareCol}>
-                <Text style={styles.ptCompareLabel}>HLV tiếp nhận mới</Text>
-                <View style={[styles.ptCurrentBadge, toPtId ? styles.ptTargetActive : null]}>
+                <Text style={styles.ptCompareLabel}>
+                  HLV tiếp nhận mới <Text style={styles.requiredMark}>*</Text>
+                </Text>
+                <Pressable
+                  onPress={() => setPtPickerOpen(true)}
+                  style={({ pressed }) => [
+                    styles.ptCurrentBadge,
+                    styles.ptTargetBadge,
+                    toPtId ? styles.ptTargetActive : styles.ptTargetEmpty,
+                    pressed && styles.ptTargetPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chọn HLV tiếp nhận mới"
+                >
                   <Text
-                    style={[styles.ptCurrentText, toPtId ? { color: colors.primary, fontWeight: '700' } : null]}
+                    style={[
+                      styles.ptCurrentText,
+                      toPtId
+                        ? { color: colors.primary, fontWeight: '700' }
+                        : { color: '#94A3B8' },
+                    ]}
                     numberOfLines={1}
                   >
-                    {toPtId ? selectedPtName() : 'Chưa chọn'}
+                    {loadingPts ? 'Đang tải…' : (toPtId ? selectedPtName() : 'Chọn HLV')}
                   </Text>
-                </View>
+                  <Feather
+                    name="chevron-down"
+                    size={16}
+                    color={toPtId ? colors.primary : '#94A3B8'}
+                  />
+                </Pressable>
               </View>
-            </View>
-
-            {/* Selector Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>
-                Chọn HLV tiếp nhận <Text style={styles.requiredMark}>*</Text>
-              </Text>
-              <Pressable
-                onPress={() => setPtPickerOpen(true)}
-                style={styles.selectBtn}
-              >
-                <Text style={[styles.selectBtnText, !toPtId && { color: '#94A3B8' }]}>
-                  {loadingPts ? 'Đang tải danh sách HLV…' : selectedPtName()}
-                </Text>
-                <Text style={styles.selectBtnAction}>Chọn HLV</Text>
-              </Pressable>
             </View>
 
             {/* Reason Field */}
@@ -475,18 +482,31 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   ptCurrentBadge: {
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
     paddingVertical: 6,
+  },
+  ptTargetBadge: {
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  ptTargetEmpty: {
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
   },
   ptTargetActive: {
     borderColor: colors.primary,
     backgroundColor: '#F0F9FF',
+  },
+  ptTargetPressed: {
+    opacity: 0.75,
+    backgroundColor: '#F1F5F9',
   },
   ptCurrentText: {
     fontSize: 13,
@@ -494,14 +514,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ptCompareArrow: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  arrowText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
+    marginTop: 18,
   },
   fieldGroup: {
     gap: 6,
@@ -513,29 +529,6 @@ const styles = StyleSheet.create({
   },
   requiredMark: {
     color: '#EF4444',
-  },
-  selectBtn: {
-    height: 48,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 1,
-    marginRight: 8,
-  },
-  selectBtnAction: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
