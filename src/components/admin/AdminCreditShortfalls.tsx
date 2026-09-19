@@ -18,12 +18,17 @@ import { api } from '@/services/api/client';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 import { display, type AdminRecord } from '@/services/adminResources';
+import {
+  resolveAdminUsers,
+  formatUserDisplay,
+  type AdminUserParty,
+} from '@/services/adminUsers';
 import { taskTypeFriendlyNames } from './AdminPricing';
 
 export interface CreditShortfallRecord extends AdminRecord {
   _id?: string;
   id?: string;
-  userId?: string | AdminRecord;
+  userId?: string | AdminUserParty;
   taskType?: string;
   billingShortfall?: number;
   reservedCredits?: number;
@@ -96,7 +101,7 @@ function ShortfallDetailSheet({
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailRowLabel}>Tài khoản hội viên:</Text>
-                <Text style={styles.detailRowValue}>{display(record.userId)}</Text>
+                <Text style={styles.detailRowValue}>{formatUserDisplay(record.userId)}</Text>
               </View>
 
               {record.reason ? (
@@ -161,8 +166,10 @@ export function AdminCreditShortfalls() {
       const res = await api.getPage<CreditShortfallRecord>(
         `/api/admin/credit-shortfalls?${params.toString()}`
       );
-      setShortfalls(res.data || []);
-      setTotal(res.meta?.total ?? res.data.length);
+      const raw = res.data || [];
+      const resolved = await resolveAdminUsers(raw, ['userId']);
+      setShortfalls(resolved);
+      setTotal(res.meta?.total ?? raw.length);
       setPages(Math.max(1, res.meta?.totalPages || 1));
     } catch (e) {
       setError(messageOf(e));
@@ -343,7 +350,7 @@ export function AdminCreditShortfalls() {
                       {friendlyName}
                     </Text>
                     <Text style={styles.userName} numberOfLines={1}>
-                      {display(record.userId)}
+                      {formatUserDisplay(record.userId)}
                     </Text>
                   </View>
 

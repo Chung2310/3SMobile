@@ -17,12 +17,17 @@ import { api } from '@/services/api/client';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 import { display, type AdminRecord } from '@/services/adminResources';
+import {
+  resolveAdminUsers,
+  formatUserDisplay,
+  type AdminUserParty,
+} from '@/services/adminUsers';
 import { taskTypeFriendlyNames } from './AdminPricing';
 
 export interface AiUsageRecord extends AdminRecord {
   _id?: string;
   id?: string;
-  userId?: string | AdminRecord;
+  userId?: string | AdminUserParty;
   taskType?: string;
   status?: string;
   settledCredits?: number;
@@ -111,7 +116,7 @@ function UsageDetailSheet({
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailRowLabel}>Tài khoản thực hiện:</Text>
-                <Text style={styles.detailRowValue}>{display(record.userId)}</Text>
+                <Text style={styles.detailRowValue}>{formatUserDisplay(record.userId)}</Text>
               </View>
 
               {record.promptTokens !== undefined ? (
@@ -177,8 +182,10 @@ export function AdminAiUsage() {
       const res = await api.getPage<AiUsageRecord>(
         `/api/admin/ai-usage?${params.toString()}`
       );
-      setUsages(res.data || []);
-      setTotal(res.meta?.total ?? res.data.length);
+      const raw = res.data || [];
+      const resolved = await resolveAdminUsers(raw, ['userId']);
+      setUsages(resolved);
+      setTotal(res.meta?.total ?? raw.length);
       setPages(Math.max(1, res.meta?.totalPages || 1));
     } catch (e) {
       setError(messageOf(e));
@@ -404,7 +411,7 @@ export function AdminAiUsage() {
                       {friendlyName}
                     </Text>
                     <Text style={styles.userName} numberOfLines={1}>
-                      {display(record.userId)}
+                      {formatUserDisplay(record.userId)}
                     </Text>
                   </View>
 
