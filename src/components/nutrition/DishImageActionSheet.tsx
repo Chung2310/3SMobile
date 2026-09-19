@@ -39,6 +39,7 @@ interface FoodImageLibraryItem {
   name: string;
   imageUrl: string;
   category?: string;
+  source?: string;
   calories?: number;
   protein?: number;
   carbs?: number;
