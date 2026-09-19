@@ -70,6 +70,8 @@ export function AdminFoodImages() {
   // Modals
   const [editor, setEditor] = useState<FoodImage | null>();
   const [selected, setSelected] = useState<FoodImage>();
+  const [actionItem, setActionItem] = useState<FoodImage>();
+  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
   const [ai, setAi] = useState<FoodImage | null>();
   const [deleting, setDeleting] = useState<FoodImage>();
   const [busy, setBusy] = useState(false);
@@ -149,12 +151,12 @@ export function AdminFoodImages() {
 
   return (
     <View style={styles.container}>
-      {/* 1. EXECUTIVE STATS CARD */}
+      {/* 1. EXECUTIVE STATS CARD (1 COMPACT ROW) */}
       <View style={styles.statsCard}>
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="images" size={16} color={colors.primary} />
+              <Ionicons name="images" size={13} color={colors.primary} />
             </View>
             <Text style={[styles.statValue, { color: colors.primary }]}>
               {summary?.totalImages ?? total ?? items.length}
@@ -168,7 +170,7 @@ export function AdminFoodImages() {
 
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="repeat" size={16} color="#16A34A" />
+              <Ionicons name="repeat" size={13} color="#16A34A" />
             </View>
             <Text style={[styles.statValue, { color: '#16A34A' }]}>
               {summary?.totalUsage ?? 0}
@@ -182,7 +184,7 @@ export function AdminFoodImages() {
 
           <View style={styles.statItem}>
             <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
-              <Ionicons name="sparkles" size={16} color="#7C3AED" />
+              <Ionicons name="sparkles" size={13} color="#7C3AED" />
             </View>
             <Text style={[styles.statValue, { color: '#7C3AED' }]}>
               {summary?.aiCount ?? 0}
@@ -192,15 +194,6 @@ export function AdminFoodImages() {
             </Text>
           </View>
         </View>
-
-        {summary?.estimatedSavingsVnd !== undefined && (
-          <View style={styles.savingsBanner}>
-            <Ionicons name="trending-up" size={14} color="#0284C7" />
-            <Text style={styles.savingsText}>
-              Tiết kiệm ước tính: {summary.estimatedSavingsVnd.toLocaleString('vi-VN')} VNĐ
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* 2. ACTION TOOLBAR */}
@@ -212,7 +205,7 @@ export function AdminFoodImages() {
             pressed && { opacity: 0.85 },
           ]}
         >
-          <Feather name="upload-cloud" size={16} color="#FFFFFF" />
+          <Feather name="upload-cloud" size={14} color="#FFFFFF" />
           <Text style={styles.uploadBtnText}>Tải ảnh lên</Text>
         </Pressable>
 
@@ -223,7 +216,7 @@ export function AdminFoodImages() {
             pressed && { opacity: 0.85 },
           ]}
         >
-          <Ionicons name="sparkles" size={15} color={colors.primary} />
+          <Ionicons name="sparkles" size={14} color={colors.primary} />
           <Text style={styles.aiGenBtnText}>Tạo bằng AI</Text>
         </Pressable>
 
@@ -235,16 +228,16 @@ export function AdminFoodImages() {
             pressed && { opacity: 0.7 },
           ]}
         >
-          <Feather name="refresh-cw" size={16} color={colors.primary} />
+          <Feather name="refresh-cw" size={15} color={colors.primary} />
         </Pressable>
       </View>
 
-      {/* 3. SEARCH INPUT */}
+      {/* 3. SEARCH INPUT (SHORTENED PLACEHOLDER) */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Feather name="search" size={16} color="#64748B" style={{ marginRight: 8 }} />
+          <Feather name="search" size={15} color="#64748B" style={{ marginRight: 8 }} />
           <TextInput
-            placeholder="Tìm theo tên món ăn hoặc từ khóa…"
+            placeholder="Tìm tên món, từ khóa..."
             placeholderTextColor="#94A3B8"
             style={styles.searchInput}
             value={query}
@@ -264,19 +257,53 @@ export function AdminFoodImages() {
               }}
               hitSlop={8}
             >
-              <Feather name="x-circle" size={16} color="#94A3B8" />
+              <Feather name="x-circle" size={15} color="#94A3B8" />
             </Pressable>
           ) : null}
         </View>
       </View>
 
-      {/* 4. FILTER CHIPS (SOURCES & CATEGORIES) */}
+      {/* 4. FILTER CHIPS (SOURCES + CATEGORY BOTTOM SHEET TRIGGER) */}
       <View style={styles.filtersWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterChipsScroll}
         >
+          {/* Category Bottom Sheet Trigger */}
+          <Pressable
+            onPress={() => setCategorySheetOpen(true)}
+            style={[
+              styles.filterChip,
+              styles.categoryTriggerChip,
+              !!category && styles.filterChipActive,
+            ]}
+          >
+            <Feather
+              name="filter"
+              size={12}
+              color={category ? colors.primary : '#64748B'}
+              style={{ marginRight: 4 }}
+            />
+            <Text
+              style={[
+                styles.filterChipText,
+                !!category && styles.filterChipTextActive,
+              ]}
+            >
+              {category
+                ? availableCategories.find((c) => c.value === category)?.label || 'Dinh dưỡng'
+                : 'Chất dinh dưỡng'}
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={12}
+              color={category ? colors.primary : '#94A3B8'}
+              style={{ marginLeft: 3 }}
+            />
+          </Pressable>
+
+          {/* Source filters */}
           {availableSources.map((s) => {
             const isSelected = source === s.value;
             return (
@@ -303,49 +330,17 @@ export function AdminFoodImages() {
             );
           })}
         </ScrollView>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.filterChipsScroll, { marginTop: 6 }]}
-        >
-          {availableCategories.map((c) => {
-            const isSelected = category === c.value;
-            return (
-              <Pressable
-                key={`cat-${c.value}`}
-                onPress={() => {
-                  setCategory(c.value);
-                  setPage(1);
-                }}
-                style={[
-                  styles.filterChip,
-                  isSelected && styles.filterChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    isSelected && styles.filterChipTextActive,
-                  ]}
-                >
-                  {c.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
       </View>
 
       {/* Success banner */}
       {notice ? (
         <View style={styles.successBanner}>
-          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
           <Text style={styles.successText}>{notice}</Text>
         </View>
       ) : null}
 
-      {/* 5. FOOD IMAGES LIST */}
+      {/* 5. FOOD IMAGES 2-COLUMN GRID */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -364,7 +359,7 @@ export function AdminFoodImages() {
           </View>
         ) : error ? (
           <View style={styles.statusBox}>
-            <Ionicons name="alert-circle-outline" size={40} color="#EF4444" />
+            <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
             <Text style={styles.statusBoxError}>{error}</Text>
             <Pressable onPress={() => setReload((n) => n + 1)} style={styles.retryBtn}>
               <Text style={styles.retryBtnText}>Thử lại</Text>
@@ -372,7 +367,7 @@ export function AdminFoodImages() {
           </View>
         ) : items.length === 0 ? (
           <View style={styles.statusBox}>
-            <Ionicons name="images-outline" size={40} color="#94A3B8" />
+            <Ionicons name="images-outline" size={36} color="#94A3B8" />
             <Text style={styles.statusBoxText}>Chưa có ảnh món ăn nào phù hợp.</Text>
             <Pressable
               onPress={() => {
@@ -388,110 +383,65 @@ export function AdminFoodImages() {
             </Pressable>
           </View>
         ) : (
-          items.map((item) => {
-            const srcLabel =
-              foodSources.find((s) => s.value === item.source)?.label || item.source;
-            const catLabel =
-              foodCategories.find((c) => c.value === item.category)?.label ||
-              item.category ||
-              'Khác';
+          <View style={styles.gridContainer}>
+            {items.map((item) => {
+              const catLabel =
+                foodCategories.find((c) => c.value === item.category)?.label ||
+                item.category ||
+                'Khác';
 
-            return (
-              <View key={item._id} style={styles.foodCard}>
-                {/* Clickable Image & Header area to view details */}
-                <Pressable
-                  onPress={() => setSelected(item)}
-                  style={({ pressed }) => [
-                    styles.cardMainPressable,
-                    pressed && { opacity: 0.94 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Chi tiết món ăn ${item.name}`}
-                >
-                  <FoodPhoto item={item} />
-
-                  <View style={styles.cardInfo}>
-                    <View style={styles.cardHeaderRow}>
-                      <Text style={styles.foodName} numberOfLines={2} ellipsizeMode="tail">
-                        {item.name}
-                      </Text>
-
-                      <View style={styles.usageBadge}>
-                        <Ionicons name="repeat" size={11} color={colors.primary} />
-                        <Text style={styles.usageBadgeText}>{item.usageCount} lượt</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.tagsRow}>
-                      <View style={styles.tagChip}>
-                        <Ionicons name="restaurant" size={11} color="#64748B" />
-                        <Text style={styles.tagChipText}>{catLabel}</Text>
-                      </View>
-
-                      <View style={styles.tagChip}>
-                        <Feather name="layers" size={11} color="#64748B" />
-                        <Text style={styles.tagChipText}>{srcLabel}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </Pressable>
-
-                {/* Actions Row */}
-                <View style={styles.cardActionsRow}>
-                  {/* Xem & Chi tiết */}
+              return (
+                <View key={item._id} style={styles.gridCard}>
+                  {/* Click directly on image to view details */}
                   <Pressable
                     onPress={() => setSelected(item)}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]}
+                    style={styles.gridImagePressable}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Chi tiết món ăn ${item.name}`}
                   >
-                    <Feather name="info" size={14} color="#334155" />
-                    <Text style={styles.actionBtnText}>Chi tiết</Text>
+                    <FoodPhoto item={item} style={styles.gridFoodPhoto} />
+
+                    {/* 3-dots icon at top-right corner */}
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setActionItem(item);
+                      }}
+                      style={styles.moreActionBtn}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Tùy chọn thao tác"
+                    >
+                      <Feather name="more-horizontal" size={15} color="#FFFFFF" />
+                    </Pressable>
                   </Pressable>
 
-                  {/* Sửa */}
+                  {/* Card Info */}
                   <Pressable
-                    onPress={() => setEditor(item)}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]}
+                    onPress={() => setSelected(item)}
+                    style={styles.gridCardInfo}
                   >
-                    <Feather name="edit-2" size={14} color="#334155" />
-                    <Text style={styles.actionBtnText}>Sửa</Text>
-                  </Pressable>
+                    <Text style={styles.gridFoodName} numberOfLines={1} ellipsizeMode="tail">
+                      {item.name}
+                    </Text>
 
-                  {/* Tạo lại AI */}
-                  <Pressable
-                    onPress={() => setAi(item)}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]}
-                  >
-                    <Ionicons name="sparkles" size={14} color={colors.primary} />
-                    <Text style={[styles.actionBtnText, { color: colors.primary }]}>Tạo lại AI</Text>
-                  </Pressable>
+                    <View style={styles.gridMetaRow}>
+                      <View style={styles.gridCatChip}>
+                        <Text style={styles.gridCatChipText} numberOfLines={1}>
+                          {catLabel}
+                        </Text>
+                      </View>
 
-                  {/* Xóa */}
-                  <Pressable
-                    onPress={() => {
-                      setActionError('');
-                      setDeleting(item);
-                    }}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      pressed && styles.actionBtnPressed,
-                    ]}
-                  >
-                    <Feather name="trash-2" size={14} color="#EF4444" />
-                    <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>Xóa</Text>
+                      <View style={styles.gridUsageBadge}>
+                        <Ionicons name="repeat" size={10} color={colors.primary} />
+                        <Text style={styles.gridUsageText}>{item.usageCount}</Text>
+                      </View>
+                    </View>
                   </Pressable>
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </View>
         )}
 
         {/* Pagination */}
@@ -502,7 +452,7 @@ export function AdminFoodImages() {
               disabled={page <= 1}
               style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
             >
-              <Feather name="chevron-left" size={16} color={colors.text} />
+              <Feather name="chevron-left" size={15} color={colors.text} />
               <Text style={styles.pageBtnText}>Trước</Text>
             </Pressable>
 
@@ -516,7 +466,7 @@ export function AdminFoodImages() {
               style={[styles.pageBtn, page >= pages && styles.pageBtnDisabled]}
             >
               <Text style={styles.pageBtnText}>Sau</Text>
-              <Feather name="chevron-right" size={16} color={colors.text} />
+              <Feather name="chevron-right" size={15} color={colors.text} />
             </Pressable>
           </View>
         )}
@@ -708,7 +658,7 @@ export function AdminFoodImages() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <View style={styles.deleteIconBox}>
-                <Feather name="trash-2" size={26} color="#EF4444" />
+                <Feather name="trash-2" size={24} color="#EF4444" />
               </View>
 
               <Text style={styles.modalTitle}>Xóa ảnh món ăn?</Text>
@@ -749,6 +699,175 @@ export function AdminFoodImages() {
           </View>
         </Modal>
       )}
+
+      {/* MODAL 5: 3-DOTS ACTION BOTTOM SHEET */}
+      {actionItem && (
+        <Modal
+          visible={Boolean(actionItem)}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setActionItem(undefined)}
+        >
+          <View style={styles.sheetOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setActionItem(undefined)}
+            />
+
+            <View style={[styles.actionSheetContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+              <View style={styles.sheetHandle} />
+
+              {/* Header preview */}
+              <View style={styles.actionSheetHeader}>
+                <FoodPhoto item={actionItem} style={styles.actionSheetThumb} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.actionSheetTitle} numberOfLines={1} ellipsizeMode="tail">
+                    {actionItem.name}
+                  </Text>
+                  <Text style={styles.actionSheetSub} numberOfLines={1}>
+                    {foodCategories.find((c) => c.value === actionItem.category)?.label || actionItem.category || 'Khác'} · {actionItem.usageCount} lượt dùng
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setActionItem(undefined)}
+                  hitSlop={8}
+                  style={styles.sheetCloseBtn}
+                >
+                  <Feather name="x" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+
+              {/* Action List */}
+              <View style={styles.actionSheetList}>
+                {/* 1. Xem chi tiết */}
+                <Pressable
+                  style={styles.actionSheetRow}
+                  onPress={() => {
+                    const it = actionItem;
+                    setActionItem(undefined);
+                    setSelected(it);
+                  }}
+                >
+                  <View style={[styles.actionSheetIconBox, { backgroundColor: '#F1F5F9' }]}>
+                    <Feather name="info" size={15} color="#334155" />
+                  </View>
+                  <Text style={styles.actionSheetRowText}>Chi tiết món ăn & dinh dưỡng</Text>
+                  <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                </Pressable>
+
+                {/* 2. Sửa */}
+                <Pressable
+                  style={styles.actionSheetRow}
+                  onPress={() => {
+                    const it = actionItem;
+                    setActionItem(undefined);
+                    setEditor(it);
+                  }}
+                >
+                  <View style={[styles.actionSheetIconBox, { backgroundColor: '#F1F5F9' }]}>
+                    <Feather name="edit-2" size={15} color="#334155" />
+                  </View>
+                  <Text style={styles.actionSheetRowText}>Chỉnh sửa thông tin món</Text>
+                  <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                </Pressable>
+
+                {/* 3. Tạo lại AI */}
+                <Pressable
+                  style={styles.actionSheetRow}
+                  onPress={() => {
+                    const it = actionItem;
+                    setActionItem(undefined);
+                    setAi(it);
+                  }}
+                >
+                  <View style={[styles.actionSheetIconBox, { backgroundColor: '#E0F2FE' }]}>
+                    <Ionicons name="sparkles" size={15} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.actionSheetRowText, { color: colors.primary, fontWeight: '600' }]}>
+                    Tạo lại bằng AI
+                  </Text>
+                  <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                </Pressable>
+
+                {/* 4. Xóa */}
+                <Pressable
+                  style={[styles.actionSheetRow, { borderBottomWidth: 0 }]}
+                  onPress={() => {
+                    const it = actionItem;
+                    setActionItem(undefined);
+                    setActionError('');
+                    setDeleting(it);
+                  }}
+                >
+                  <View style={[styles.actionSheetIconBox, { backgroundColor: '#FEF2F2' }]}>
+                    <Feather name="trash-2" size={15} color="#EF4444" />
+                  </View>
+                  <Text style={[styles.actionSheetRowText, { color: '#EF4444', fontWeight: '600' }]}>
+                    Xóa ảnh khỏi kho
+                  </Text>
+                  <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* MODAL 6: CATEGORY FILTER BOTTOM SHEET */}
+      {categorySheetOpen && (
+        <Modal
+          visible={categorySheetOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCategorySheetOpen(false)}
+        >
+          <View style={styles.sheetOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setCategorySheetOpen(false)}
+            />
+
+            <View style={[styles.actionSheetContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+              <View style={styles.sheetHandle} />
+
+              <View style={styles.categorySheetHeader}>
+                <Text style={styles.categorySheetTitle}>Nhóm chất dinh dưỡng</Text>
+                <Pressable
+                  onPress={() => setCategorySheetOpen(false)}
+                  hitSlop={8}
+                  style={styles.sheetCloseBtn}
+                >
+                  <Feather name="x" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+                {availableCategories.map((c) => {
+                  const isSelected = category === c.value;
+                  return (
+                    <Pressable
+                      key={`sheet-cat-${c.value}`}
+                      style={[styles.categoryOptionRow, isSelected && styles.categoryOptionRowActive]}
+                      onPress={() => {
+                        setCategory(c.value);
+                        setCategorySheetOpen(false);
+                        setPage(1);
+                      }}
+                    >
+                      <Text style={[styles.categoryOptionText, isSelected && styles.categoryOptionTextActive]}>
+                        {c.label}
+                      </Text>
+                      {isSelected ? (
+                        <Feather name="check" size={18} color={colors.primary} />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -760,19 +879,19 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
-    gap: 10,
   },
   statsRow: {
     flexDirection: 'row',
@@ -783,49 +902,32 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   statIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     textAlign: 'center',
   },
   statLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
-    fontWeight: '600',
+    fontSize: 10.5,
+    color: '#64748B',
+    fontWeight: '500',
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   statDivider: {
     width: 1,
-    height: 44,
+    height: 32,
     backgroundColor: '#F1F5F9',
-  },
-  savingsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F0F9FF',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  savingsText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0284C7',
   },
   toolbarRow: {
     flexDirection: 'row',
@@ -836,7 +938,7 @@ const styles = StyleSheet.create({
   },
   uploadBtn: {
     flex: 1.2,
-    height: 44,
+    height: 42,
     backgroundColor: colors.primary,
     borderRadius: 12,
     flexDirection: 'row',
@@ -845,18 +947,18 @@ const styles = StyleSheet.create({
     gap: 6,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 2,
   },
   uploadBtnText: {
-    fontSize: 13.5,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   aiGenBtn: {
     flex: 1.2,
-    height: 44,
+    height: 42,
     backgroundColor: '#E0F2FE',
     borderWidth: 1,
     borderColor: '#BAE6FD',
@@ -867,13 +969,13 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   aiGenBtnText: {
-    fontSize: 13.5,
+    fontSize: 12.5,
     fontWeight: '700',
     color: colors.primary,
   },
   refreshBtn: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -893,11 +995,11 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
+    height: 42,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13.5,
+    fontSize: 12.5,
     color: colors.text,
     paddingVertical: 0,
   },
@@ -909,19 +1011,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 5.5,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  categoryTriggerChip: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
   },
   filterChipActive: {
     backgroundColor: '#E0F2FE',
     borderColor: colors.primary,
   },
   filterChipText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -938,19 +1046,19 @@ const styles = StyleSheet.create({
     borderColor: '#86EFAC',
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     marginHorizontal: 16,
     marginBottom: 8,
   },
   successText: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#16A34A',
     fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 40,
-    gap: 12,
+    gap: 10,
   },
   statusBox: {
     alignItems: 'center',
@@ -959,25 +1067,25 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   statusBoxText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
   },
   statusBoxError: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#EF4444',
     textAlign: 'center',
     paddingHorizontal: 20,
   },
   retryBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 8,
   },
   retryBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '600',
     color: colors.primary,
   },
@@ -990,131 +1098,117 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   clearFilterText: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: colors.primary,
     fontWeight: '600',
   },
-  foodCard: {
+
+  /* 2-COLUMN GRID STYLES */
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridCard: {
+    width: '48.5%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 3,
     elevation: 1,
+    marginBottom: 10,
   },
-  cardMainPressable: {
+  gridImagePressable: {
     width: '100%',
+    height: 120,
+    position: 'relative',
+    backgroundColor: '#F1F5F9',
   },
+  gridFoodPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  moreActionBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  gridCardInfo: {
+    padding: 8,
+    gap: 4,
+  },
+  gridFoodName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: colors.text,
+    lineHeight: 16,
+  },
+  gridMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+    gap: 4,
+  },
+  gridCatChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    maxWidth: '70%',
+  },
+  gridCatChipText: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  gridUsageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  gridUsageText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
   foodImage: {
     width: '100%',
-    height: 180,
+    height: '100%',
     backgroundColor: '#F1F5F9',
   },
   photoFallback: {
     width: '100%',
-    height: 180,
+    height: 120,
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   photoFallbackText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94A3B8',
-  },
-  cardInfo: {
-    padding: 12,
-    gap: 6,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  foodName: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    lineHeight: 20,
-  },
-  usageBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#E0F2FE',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  usageBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2.5,
-  },
-  tagChipText: {
-    fontSize: 11,
-    color: '#475569',
-    fontWeight: '500',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    padding: 10,
-    gap: 8,
-  },
-  actionBtn: {
-    flex: 1,
-    minHeight: 38,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    gap: 4,
-  },
-  actionBtnPressed: {
-    opacity: 0.7,
-    backgroundColor: '#F1F5F9',
-  },
-  actionBtnText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: colors.text,
   },
   paginationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   pageBtn: {
     flexDirection: 'row',
@@ -1124,23 +1218,24 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     gap: 4,
   },
   pageBtnDisabled: {
     opacity: 0.5,
   },
   pageBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '600',
     color: colors.text,
   },
   pageInfoText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     fontWeight: '600',
   },
-  // Sheet
+
+  /* BOTTOM SHEETS */
   sheetOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -1159,6 +1254,19 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
+  actionSheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
   sheetHandle: {
     width: 36,
     height: 4,
@@ -1167,6 +1275,89 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 12,
   },
+  actionSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  actionSheetThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+  },
+  actionSheetTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  actionSheetSub: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  actionSheetList: {
+    paddingVertical: 8,
+  },
+  actionSheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+    gap: 12,
+  },
+  actionSheetIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSheetRowText: {
+    flex: 1,
+    fontSize: 13.5,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  categorySheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  categorySheetTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  categoryOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+    borderRadius: 8,
+  },
+  categoryOptionRowActive: {
+    backgroundColor: '#F0F9FF',
+  },
+  categoryOptionText: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  categoryOptionTextActive: {
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1175,57 +1366,57 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   detailTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
   },
   detailSub: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: colors.textMuted,
     marginTop: 2,
   },
   sheetCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
   },
   sheetBody: {
-    paddingVertical: 14,
-    gap: 14,
+    paddingVertical: 12,
+    gap: 12,
   },
   detailPhoto: {
     width: '100%',
-    height: 200,
-    borderRadius: 16,
+    height: 190,
+    borderRadius: 14,
   },
   macrosSection: {
     gap: 8,
   },
   macrosTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#334155',
   },
   macrosGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   macroCard: {
     flex: 1,
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 10,
+    padding: 8,
     alignItems: 'center',
   },
   macroValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
   },
   macroLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#64748B',
     marginTop: 2,
   },
@@ -1234,18 +1425,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
+    padding: 10,
     gap: 6,
   },
   infoBlockLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#475569',
   },
   infoBlockText: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#334155',
-    lineHeight: 18,
+    lineHeight: 17,
   },
   keywordsRow: {
     flexDirection: 'row',
@@ -1261,20 +1452,20 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   keywordTagText: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#334155',
   },
   detailActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingTop: 12,
+    gap: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   detailEditBtn: {
     flex: 1,
-    height: 46,
+    height: 44,
     backgroundColor: colors.primary,
     borderRadius: 12,
     flexDirection: 'row',
@@ -1282,13 +1473,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   detailEditText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   detailAiBtn: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: '#E0F2FE',
     borderWidth: 1,
@@ -1297,8 +1488,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   detailDeleteBtn: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
@@ -1306,6 +1497,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   // Modal Common
   modalOverlay: {
     flex: 1,
@@ -1328,27 +1520,27 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   deleteIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 6,
     textAlign: 'center',
   },
   modalDesc: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
+    lineHeight: 17,
+    marginBottom: 14,
   },
   errorNotice: {
     flexDirection: 'row',
@@ -1357,13 +1549,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCA5A5',
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   errorNoticeText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#EF4444',
   },
   modalActions: {
@@ -1373,27 +1565,27 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#475569',
   },
   deleteConfirmBtn: {
     flex: 1.2,
-    height: 44,
+    height: 42,
     backgroundColor: '#EF4444',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteConfirmText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
