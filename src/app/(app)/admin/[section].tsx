@@ -45,6 +45,25 @@ export default function AdminSection() {
     resource?.title ||
     'Quản trị';
 
+  const isCustomSection = [
+    'pts',
+    'customers',
+    'transfers',
+    'accounts',
+    'packages',
+    'knowledge',
+    'images',
+    'features',
+    'batchTransfers',
+    'credits',
+    'pricing',
+    'creditPackages',
+    'orders',
+    'ledger',
+    'usage',
+    'shortfalls',
+  ].includes(section);
+
   return (
     <Screen
       title={title}
@@ -55,8 +74,8 @@ export default function AdminSection() {
           router.replace('/(app)/admin/modules');
         }
       }}
-      scroll={section !== 'customers' && section !== 'batchTransfers' && section !== 'images'}
-      noPadding={section === 'customers' || section === 'batchTransfers' || section === 'images'}
+      scroll={!isCustomSection}
+      noPadding={isCustomSection}
     >
       {section === 'pts' ? (
         <AdminPtsManagement />
