@@ -242,6 +242,7 @@ function CustomerAdminFormModalInner({
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            style={styles.formScroll}
             contentContainerStyle={styles.formScrollContent}
           >
             {error ? (
@@ -568,7 +569,7 @@ function CustomerAdminFormModalInner({
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.submitBtnText}>
-                  {editing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                  {editing ? 'Lưu thay đổi' : 'Lưu khách hàng'}
                 </Text>
               )}
             </Pressable>
@@ -721,11 +722,13 @@ const styles = StyleSheet.create({
   },
   keyboardContainer: {
     maxHeight: '92%',
+    width: '100%',
   },
   sheetContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    maxHeight: '100%',
     paddingTop: 16,
     paddingHorizontal: 20,
     shadowColor: '#000000',
@@ -733,6 +736,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
+  },
+  formScroll: {
+    flexShrink: 1,
   },
   sheetHeader: {
     flexDirection: 'row',

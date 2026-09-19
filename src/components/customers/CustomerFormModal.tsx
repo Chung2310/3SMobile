@@ -50,27 +50,33 @@ export function CustomerFormModal({
         const profile =
           profileCustomers.find((p) => p._id === editingCustomer.id) ||
           editingCustomer.rawProfile;
-        setForm({
-          fullName: editingCustomer.fullName,
-          dateOfBirth: formatDateDMY(profile?.dateOfBirth),
-          gender: profile?.gender || 'OTHER',
-          phone: editingCustomer.phone,
-          email: profile?.email || editingCustomer.email || '',
-          height: profile?.height != null ? String(profile.height) : '',
-          initialWeight:
-            profile?.initialWeight != null ? String(profile.initialWeight) : '',
-          medicalNotes: profile?.medicalNotes || '',
-          initialGoal: editingCustomer.initialGoal || profile?.initialGoal || '',
-          internalNotes: profile?.internalNotes || '',
-          status: (profile?.status || editingCustomer.status || 'ACTIVE') as
-            | 'ACTIVE'
-            | 'LEAD'
-            | 'INACTIVE',
-        });
+        setTimeout(() => {
+          setForm({
+            fullName: editingCustomer.fullName,
+            dateOfBirth: formatDateDMY(profile?.dateOfBirth),
+            gender: profile?.gender || 'OTHER',
+            phone: editingCustomer.phone,
+            email: profile?.email || editingCustomer.email || '',
+            height: profile?.height != null ? String(profile.height) : '',
+            initialWeight:
+              profile?.initialWeight != null ? String(profile.initialWeight) : '',
+            medicalNotes: profile?.medicalNotes || '',
+            initialGoal: editingCustomer.initialGoal || profile?.initialGoal || '',
+            internalNotes: profile?.internalNotes || '',
+            status: (profile?.status || editingCustomer.status || 'ACTIVE') as
+              | 'ACTIVE'
+              | 'LEAD'
+              | 'INACTIVE',
+          });
+        }, 0);
       } else {
-        setForm(initialCustomerFormState);
+        setTimeout(() => {
+          setForm(initialCustomerFormState);
+        }, 0);
       }
-      setFormError(null);
+      setTimeout(() => {
+        setFormError(null);
+      }, 0);
     }
   }, [visible, editingCustomer, profileCustomers]);
 
@@ -155,6 +161,7 @@ export function CustomerFormModal({
           <ScrollView
             showsVerticalScrollIndicator={true}
             keyboardShouldPersistTaps="handled"
+            style={styles.formScroll}
             contentContainerStyle={styles.formScrollContent}
           >
             {/* Lỗi nếu có */}
@@ -390,7 +397,7 @@ export function CustomerFormModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.btnSubmitText}>
-                  {editingCustomer ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                  {editingCustomer ? 'Lưu thay đổi' : 'Lưu khách hàng'}
                 </Text>
               )}
             </Pressable>
@@ -424,6 +431,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: spacing.lg,
     paddingBottom: Platform.OS === 'ios' ? 34 : spacing.lg,
+  },
+  formScroll: {
+    flexShrink: 1,
   },
   modalHeader: {
     flexDirection: 'row',
