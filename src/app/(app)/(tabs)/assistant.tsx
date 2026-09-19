@@ -562,6 +562,22 @@ export default function AssistantScreen() {
                     <Text style={[styles.msgText, isAi ? styles.textAi : styles.textUser]}>
                       {msg.content ? msg.content.replace(/\*\*/g, '') : ''}
                     </Text>
+                    {isAi && msg.citations && msg.citations.length > 0 && (
+                      <View style={styles.citationsContainer}>
+                        <View style={styles.citationHeader}>
+                          <Feather name="book-open" size={11} color={colors.primary} />
+                          <Text style={styles.citationsTitle}>Nguồn từ kho tri thức:</Text>
+                        </View>
+                        {msg.citations.map((c, cIdx) => (
+                          <View key={c.documentId || `cit-${cIdx}`} style={styles.citationBadge}>
+                            <Feather name="file-text" size={10} color={colors.primary} />
+                            <Text style={styles.citationBadgeText} numberOfLines={1}>
+                              {c.title}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                     {formattedTime ? (
                       <Text style={[styles.msgTime, isAi ? styles.timeAi : styles.timeUser]}>
                         {formattedTime}
@@ -1183,6 +1199,43 @@ const styles = StyleSheet.create({
   },
   timeUser: {
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  citationsContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 4,
+  },
+  citationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  citationsTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  citationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(2, 132, 199, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(2, 132, 199, 0.2)',
+  },
+  citationBadgeText: {
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: '500',
+    flexShrink: 1,
   },
   inputContainer: {
     flexShrink: 0,
