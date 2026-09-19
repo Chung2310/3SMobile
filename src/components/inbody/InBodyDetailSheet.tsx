@@ -57,6 +57,7 @@ export function InBodyDetailSheet({
 }: InBodyDetailSheetProps) {
   const [goals, setGoals] = useState<CustomerGoalData[]>([]);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [copiedConsultation, setCopiedConsultation] = useState(false);
   const { alertConfig, showError } = useAppAlert();
   const [customerGoal, setCustomerGoal] = useState<CustomerGoalData | null>(null);
   const [customerHistory, setCustomerHistory] = useState<InBodyRecordData[]>(historyRecords || []);
@@ -71,6 +72,7 @@ export function InBodyDetailSheet({
     if (!visible || !record) {
       setCustomerGoal(null);
       setCustomerHistory([]);
+      setCopiedConsultation(false);
       return;
     }
     const cId =
@@ -175,8 +177,6 @@ export function InBodyDetailSheet({
       setTogglingStatus(false);
     }
   };
-
-  const [copiedConsultation, setCopiedConsultation] = useState(false);
 
   const handleCopyConsultation = async () => {
     if (!analysis?.quickMessage) {
