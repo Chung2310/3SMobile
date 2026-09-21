@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - develop
+      - production
+      - product
       - "feat/**"
       - "feature/**"
       - "fix/**"
   pull_request:
     branches:
       - develop
+      - production
       - product
 
 concurrency:
