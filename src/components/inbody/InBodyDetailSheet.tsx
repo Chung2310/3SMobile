@@ -520,21 +520,23 @@ const styles = StyleSheet.create({
   actionBarScroll: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSoft,
-    maxHeight: 52,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   actionBarContent: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 10,
     gap: 8,
     alignItems: 'center',
+    flexDirection: 'row',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: radius.md,
   },
   actionBtnPublish: {
@@ -562,15 +564,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   actionBtnText: {
     fontWeight: '600',
     fontSize: 12,
+    lineHeight: 16,
+    includeFontPadding: false,
     color: '#FFFFFF',
   },
   contentScroll: {
-    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     padding: spacing.md,
