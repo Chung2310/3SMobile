@@ -84,12 +84,6 @@ export const SECTION_CATEGORIES: AdminSectionCategory[] = [
     title: 'TÀI CHÍNH & TÍN DỤNG AI',
     items: [
       {
-        key: 'creditPackages',
-        title: 'Gói nạp Credit',
-        desc: 'Bảng giá và các gói nạp điểm AI',
-        iconName: 'card-outline',
-      },
-      {
         key: 'credits',
         title: 'Điều chỉnh Credit',
         desc: 'Cộng/trừ credit thủ công cho tài khoản',
@@ -100,12 +94,6 @@ export const SECTION_CATEGORIES: AdminSectionCategory[] = [
         title: 'Bảng giá tác vụ AI',
         desc: 'Cấu hình chi phí xử lý từng tác vụ',
         iconName: 'pricetags-outline',
-      },
-      {
-        key: 'orders',
-        title: 'Đơn thanh toán',
-        desc: 'Lịch sử nạp credit qua cổng thanh toán',
-        iconName: 'receipt-outline',
       },
       {
         key: 'ledger',

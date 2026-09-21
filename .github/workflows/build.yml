@@ -17,11 +17,14 @@ concurrency:
 jobs:
   build-ios:
     name: iOS IPA (Unsigned)
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     env:
       CI: "1"
       EXPO_NO_TELEMETRY: "1"
+      # Expo SDK 57 requires Xcode 26.4+. Keep nested ExpoModulesJSI builds
+      # on the same toolchain as CocoaPods and the app build.
+      DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
       EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
 
     steps:
@@ -30,16 +33,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select Xcode version
+      - name: Verify Xcode toolchain
         run: |
-          if [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+          if [ ! -d "$DEVELOPER_DIR" ]; then
+            echo "::error::Required Xcode 26.4.1 is missing from this runner image."
+            exit 1
           fi
           xcodebuild -version
+          xcrun swift --version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
