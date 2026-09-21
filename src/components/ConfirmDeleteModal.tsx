@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { ContextIcon } from '@/components/LibraryIcon';
 import { colors } from '@/theme/colors';
 

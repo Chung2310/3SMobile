@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import type { FoodCategory, FoodItem, MealFoodEntry } from '@/types/nutrition';

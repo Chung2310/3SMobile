@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '@/theme';
 

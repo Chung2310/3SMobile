@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { X } from 'lucide-react-native';
 import { colors, radius, spacing } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';

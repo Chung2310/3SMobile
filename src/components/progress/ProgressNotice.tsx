@@ -1,4 +1,5 @@
-import { Modal, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContextIcon } from '@/components/LibraryIcon';
 import { colors } from '@/theme';

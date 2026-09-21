@@ -1,6 +1,7 @@
 import { ContextIcon, LibraryIconContext } from '@/components/LibraryIcon';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme';
 import { useRouter } from 'expo-router';
