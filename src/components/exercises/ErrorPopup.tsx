@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LibraryIcon } from '@/components/LibraryIcon';
 import { colors } from '@/theme';

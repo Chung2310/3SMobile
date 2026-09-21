@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LibraryIcon } from '@/components/LibraryIcon';
 import { Stack } from 'expo-router';
