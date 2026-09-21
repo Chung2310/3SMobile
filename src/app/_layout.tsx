@@ -9,6 +9,8 @@ import { JourneyProvider } from '@/context/JourneyContext';
 import { colors } from '@/theme';
 import { homeForRole } from '@/services/adminAccess';
 
+export { ErrorBoundary } from 'expo-router';
+
 const LOGO_WHITE = require('../../assets/public/logo-white.png');
 
 function NavigationGate() {
