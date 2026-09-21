@@ -1,8 +1,9 @@
-name: Build IPA & APK (Product)
+name: Build IPA & APK (Production)
 
 on:
   push:
     branches:
+      - production
       - product
   workflow_dispatch:
 
