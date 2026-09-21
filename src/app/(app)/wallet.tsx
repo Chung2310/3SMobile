@@ -1,26 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppAlertModal } from '@/components/AppAlertModal';
 import { DatePickerModal } from '@/components/DatePickerModal';
-import { PayosCheckoutModal, type MobilePaymentOrder } from '@/components/credits/PayosCheckoutModal';
 import { api } from '@/services/api/client';
-
-const BANNER_WALLET = require('../../../assets/public/banner-wallet.png');
 
 export interface CreditWallet {
   id?: string;
@@ -55,20 +49,7 @@ export const DATE_FILTER_OPTIONS: DateFilterOption[] = [
   { key: 'THIS_MONTH', label: 'Tháng này' },
 ];
 
-interface PresetOption {
-  amount: number;
-  credits: number;
-  isHot?: boolean;
-}
 
-const DEFAULT_PRESETS: PresetOption[] = [
-  { amount: 50000, credits: 500 },
-  { amount: 100000, credits: 1000, isHot: true },
-  { amount: 200000, credits: 2000 },
-  { amount: 500000, credits: 5000 },
-  { amount: 1000000, credits: 10000 },
-  { amount: 2000000, credits: 20000 },
-];
 
 const formatDate = (isoStr?: string) => {
   if (!isoStr) return '';
@@ -99,16 +80,6 @@ export default function WalletScreen() {
   // Trạng thái refresh
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // Nhập / chọn số tiền nạp
-  const [selectedAmount, setSelectedAmount] = useState<number>(100000);
-  const [customAmountText, setCustomAmountText] = useState<string>('100000');
-
-  // Quản lý thanh toán PayOS thực tế
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState<boolean>(false);
-  const [activeOrder, setActiveOrder] = useState<MobilePaymentOrder | null>(null);
-  const [creatingPayment, setCreatingPayment] = useState<boolean>(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-
   // Lọc theo ngày tháng trong lịch sử giao dịch
   const [dateFilter, setDateFilter] = useState<DateFilterType>('ALL');
   const [showDateFilterModal, setShowDateFilterModal] = useState<boolean>(false);
@@ -120,10 +91,7 @@ export default function WalletScreen() {
   const [customEndDisplay, setCustomEndDisplay] = useState<string>(''); // DD/MM/YYYY
   const [datePickerTarget, setDatePickerTarget] = useState<'START' | 'END' | null>(null);
 
-  // Tính số credit nhận được tương ứng với số tiền (100đ = 1 credit)
-  const calculatedCredits = useMemo(() => {
-    return Math.floor(selectedAmount / 100);
-  }, [selectedAmount]);
+
 
   // Gọi API lấy thông tin số dư ví từ backend
   const fetchWalletData = useCallback(async () => {
@@ -345,51 +313,7 @@ export default function WalletScreen() {
     setShowDateFilterModal(true);
   };
 
-  // Xử lý chọn mức nạp có sẵn
-  const handleSelectPreset = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmountText(String(amount));
-  };
 
-  // Xử lý nhập số tiền tùy chọn
-  const handleCustomAmountChange = (text: string) => {
-    const rawNumber = text.replace(/[^0-9]/g, '');
-    setCustomAmountText(rawNumber);
-    const num = Number(rawNumber) || 0;
-    setSelectedAmount(num);
-  };
-
-  // Khởi tạo đơn nạp PayOS thực tế
-  const handleCreatePayment = async () => {
-    if (!selectedAmount || selectedAmount < 10000) {
-      setPaymentError('Số tiền nạp tối thiểu là 10.000đ');
-      return;
-    }
-    setCreatingPayment(true);
-    setPaymentError(null);
-    try {
-      const res = await api.post<any>('/api/credits/topups', {
-        gateway: 'PAYOS',
-        customAmountVnd: selectedAmount,
-      });
-      const order = res?.data || res;
-      if (order?.orderCode) {
-        setActiveOrder(order);
-        setCheckoutModalOpen(true);
-      } else {
-        throw new Error(order?.message || 'Không tạo được đơn thanh toán');
-      }
-    } catch (err: any) {
-      setPaymentError(err?.message || 'Không thể tạo đơn thanh toán. Vui lòng thử lại.');
-    } finally {
-      setCreatingPayment(false);
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    fetchWalletData();
-    fetchLedgerData();
-  };
 
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}>
@@ -412,7 +336,7 @@ export default function WalletScreen() {
         </Pressable>
         <View style={styles.titleWrap}>
           <Text style={styles.pageTitle}>Ví credit AI</Text>
-          <Text style={styles.pageSubtitle}>Nạp credit sử dụng các tính năng AI</Text>
+          <Text style={styles.pageSubtitle}>Theo dõi số dư và nhật ký sử dụng AI</Text>
         </View>
         <View style={styles.topBalanceBadge}>
           <Ionicons name="sparkles" size={12} color="#0284C7" style={{ marginRight: 4 }} />
@@ -437,104 +361,37 @@ export default function WalletScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 40 },
         ]}
       >
-        {/* ================= CARD NẠP CREDIT (PAYOS) ================= */}
-        <View style={styles.topupCard}>
-          <Text style={styles.sectionHeading}>Nạp credit</Text>
-          <Text style={styles.sectionSubtitle}>
-            Tỉ giá: 1.000đ = 10 credit
-          </Text>
-
-          {/* Nhóm chọn số tiền */}
-          <View style={styles.amountSelectBox}>
-            <Text style={styles.subHeading}>Mức nạp nhanh phổ biến:</Text>
-            <View style={styles.presetsGrid}>
-              {DEFAULT_PRESETS.map((pkg) => {
-                const isSelected = selectedAmount === pkg.amount;
-                return (
-                  <Pressable
-                    key={pkg.amount}
-                    style={[styles.presetPill, isSelected && styles.presetPillSelected]}
-                    onPress={() => handleSelectPreset(pkg.amount)}
-                  >
-                    {pkg.isHot && (
-                      <View style={styles.hotBadge}>
-                        <Text style={styles.hotBadgeText}>Hot</Text>
-                      </View>
-                    )}
-                    <Text style={[styles.presetAmountText, isSelected && styles.presetAmountTextSelected]}>
-                      {pkg.amount.toLocaleString()}đ
-                    </Text>
-                    <Text style={[styles.presetCreditText, isSelected && styles.presetCreditTextSelected]}>
-                      {pkg.credits.toLocaleString()} cr
-                    </Text>
-                  </Pressable>
-                );
-              })}
+        {/* ================= THẺ SỐ DƯ CREDIT AI ================= */}
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceCardTop}>
+            <View style={styles.balanceIconWrap}>
+              <Ionicons name="sparkles" size={22} color="#0284C7" />
             </View>
-
-            {/* Ô nhập số tiền tùy chọn */}
-            <Text style={[styles.subHeading, { marginTop: 12 }]}>Số tiền tùy chọn:</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={styles.amountInput}
-                keyboardType="numeric"
-                value={customAmountText}
-                onChangeText={handleCustomAmountChange}
-                placeholder="Nhập số tiền khác"
-                placeholderTextColor="#94A3B8"
-              />
-              <Text style={styles.currencySuffix}>đ</Text>
+            <View style={styles.balanceTitleBox}>
+              <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
+              <Text style={styles.balanceValue}>
+                {loadingWallet ? '...' : (wallet?.availableCredits ?? 0).toLocaleString('vi-VN')}{' '}
+                <Text style={styles.balanceUnit}>Credit</Text>
+              </Text>
             </View>
           </View>
 
-          {/* Phương thức thanh toán */}
-          <View style={styles.paymentMethodBox}>
-            <View style={styles.methodHeaderRow}>
-              <View style={styles.methodHeaderLeft}>
-                <Ionicons name="qr-code-outline" size={16} color="#0284C7" style={{ marginRight: 6 }} />
-                <Text style={styles.methodTitle}>Thanh toán</Text>
-              </View>
+          {Boolean(wallet?.reservedCredits) && (
+            <View style={styles.reservedRow}>
+              <Text style={styles.reservedLabel}>Credit đang giữ chỗ tác vụ:</Text>
+              <Text style={styles.reservedValue}>
+                {(wallet?.reservedCredits ?? 0).toLocaleString('vi-VN')} Credit
+              </Text>
             </View>
-            <Text style={styles.bankSupportText}>
-              Hỗ trợ quét mã bằng tất cả ngân hàng và ví điện tử
+          )}
+
+          <View style={styles.balanceDivider} />
+
+          <View style={styles.balanceInfoBox}>
+            <Ionicons name="information-circle-outline" size={16} color="#0284C7" style={{ marginTop: 2, marginRight: 6 }} />
+            <Text style={styles.balanceInfoText}>
+              Credit được cấp dùng để xử lý các tác vụ AI như phân tích InBody, xây dựng thực đơn dinh dưỡng và thiết kế lộ trình tập luyện.
             </Text>
-            <Image
-              source={BANNER_WALLET}
-              style={styles.bankBannerImage}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Tóm tắt thanh toán & Nút nạp */}
-          <View style={styles.checkoutBar}>
-            <View style={styles.checkoutSummary}>
-              <Text style={styles.checkoutLabel}>SỐ TIỀN THANH TOÁN:</Text>
-              <Text style={styles.checkoutAmount}>{selectedAmount.toLocaleString()} đ</Text>
-              <Text style={styles.checkoutCredits}>
-                Nhận ngay: +{calculatedCredits.toLocaleString()} credit
-              </Text>
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.createQrBtn,
-                pressed && { opacity: 0.85 },
-                creatingPayment && { opacity: 0.7 },
-              ]}
-              onPress={handleCreatePayment}
-              disabled={creatingPayment}
-              accessibilityRole="button"
-              accessibilityLabel="Thanh toán"
-            >
-              {creatingPayment ? (
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
-              ) : (
-                <Ionicons name="qr-code" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              )}
-              <Text style={styles.createQrBtnText}>
-                {creatingPayment ? 'Đang tạo...' : 'Thanh toán'}
-              </Text>
-            </Pressable>
           </View>
         </View>
 
@@ -575,11 +432,19 @@ export default function WalletScreen() {
                 </Text>
               </Pressable>
               <Pressable
+                style={[styles.filterPill, filterType === 'USAGE' && styles.filterPillActive]}
+                onPress={() => handleFilterChange('USAGE')}
+              >
+                <Text style={[styles.filterText, filterType === 'USAGE' && styles.filterTextActive]}>
+                  Sử dụng AI
+                </Text>
+              </Pressable>
+              <Pressable
                 style={[styles.filterPill, filterType === 'TOPUP' && styles.filterPillActive]}
                 onPress={() => handleFilterChange('TOPUP')}
               >
                 <Text style={[styles.filterText, filterType === 'TOPUP' && styles.filterTextActive]}>
-                  Nạp credit
+                  Cộng credit
                 </Text>
               </Pressable>
               <Pressable
@@ -640,9 +505,9 @@ export default function WalletScreen() {
                 const isTopup = tx.type === 'TOPUP' || tx.type === 'ADJUSTMENT' || deltaNum > 0;
                 const isUsage = tx.type === 'SETTLE' || tx.type === 'RESERVE' || tx.type === 'USAGE' || deltaNum < 0;
 
-                let typeLabel = 'Nạp credit';
+                let typeLabel = 'Cộng credit';
                 if (isTopup) {
-                  typeLabel = 'Nạp credit';
+                  typeLabel = 'Cộng credit';
                 } else if (isUsage) {
                   typeLabel = 'Sử dụng AI';
                 } else if (tx.type === 'RELEASE') {
@@ -706,23 +571,7 @@ export default function WalletScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal thanh toán PayOS thực tế */}
-      <PayosCheckoutModal
-        visible={checkoutModalOpen}
-        order={activeOrder}
-        onClose={() => setCheckoutModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
-      />
 
-      {/* Popup thông báo lỗi nạp */}
-      <AppAlertModal
-        visible={!!paymentError}
-        type="error"
-        title="Lỗi tạo đơn nạp"
-        message={paymentError || ''}
-        confirmLabel="Đóng"
-        onConfirm={() => setPaymentError(null)}
-      />
 
       {/* Modal lọc theo ngày tháng */}
       <Modal
@@ -948,154 +797,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  /* CARD SỐ DƯ */
-  balanceCard: {
-    backgroundColor: '#0284C7',
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  balanceHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  balanceCardTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#E0F2FE',
-    letterSpacing: 0.8,
-  },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  refreshBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  loadingWalletWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 8,
-  },
-  loadingWalletText: {
-    fontSize: 12,
-    color: '#E0F2FE',
-    fontWeight: '600',
-  },
-  errorWalletWrap: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 6,
-  },
-  errorWalletText: {
-    fontSize: 12,
-    color: '#FEE2E2',
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  retryBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  balanceBody: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  availableCol: {
-    flex: 1,
-  },
-  availableLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#BAE6FD',
-    letterSpacing: 0.5,
-  },
-  availableValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    marginTop: 2,
-  },
-  availableNumber: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  availableUnit: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#BAE6FD',
-  },
-  holdBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: 'flex-end',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  holdLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#E0F2FE',
-    letterSpacing: 0.5,
-  },
-  holdValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginTop: 1,
-  },
-  holdNumber: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  holdUnit: {
-    fontSize: 11,
-    color: '#BAE6FD',
-    fontWeight: '600',
-  },
 
-  /* CARD NẠP TIỀN */
-  topupCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
   sectionHeading: {
     fontSize: 15,
     fontWeight: '800',
@@ -1107,172 +809,90 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 12,
   },
-  amountSelectBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
-  },
-  subHeading: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  presetsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetPill: {
-    width: '31%',
+  balanceCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    alignItems: 'center',
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    position: 'relative',
+    borderColor: '#BAE6FD',
+    marginBottom: 16,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  presetPillSelected: {
-    borderColor: '#0284C7',
-    backgroundColor: '#F0F9FF',
+  balanceCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
-  hotBadge: {
-    position: 'absolute',
-    top: -6,
-    right: 4,
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
+  balanceIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  hotBadgeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  balanceTitleBox: {
+    flex: 1,
   },
-  presetAmountText: {
+  balanceLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  presetAmountTextSelected: {
-    color: '#0284C7',
-    fontWeight: '800',
-  },
-  presetCreditText: {
-    fontSize: 10,
+    fontWeight: '600',
     color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  balanceValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#0284C7',
     marginTop: 2,
   },
-  presetCreditTextSelected: {
-    color: '#0284C7',
+  balanceUnit: {
+    fontSize: 15,
     fontWeight: '700',
+    color: '#0369A1',
   },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  currencySuffix: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  paymentMethodBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
-  },
-  methodHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  methodHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  methodTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  bankSupportText: {
-    fontSize: 11,
-    color: '#64748B',
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  bankBannerImage: {
-    width: '100%',
-    height: 140,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  checkoutBar: {
+  reservedRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 12,
   },
-  checkoutSummary: {
-    flex: 1,
-  },
-  checkoutLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+  reservedLabel: {
+    fontSize: 12,
     color: '#64748B',
+    fontWeight: '500',
   },
-  checkoutAmount: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0284C7',
-    marginTop: 1,
-  },
-  checkoutCredits: {
-    fontSize: 11,
+  reservedValue: {
+    fontSize: 12,
+    color: '#475569',
     fontWeight: '700',
-    color: '#16A34A',
   },
-  createQrBtn: {
+  balanceDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 14,
+  },
+  balanceInfoBox: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0284C7',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    alignItems: 'flex-start',
+    backgroundColor: '#F0F9FF',
+    padding: 10,
+    borderRadius: 10,
   },
-  createQrBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  balanceInfoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#0369A1',
+    lineHeight: 17,
   },
 
   /* CARD LỊCH SỬ */

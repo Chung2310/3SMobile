@@ -40,8 +40,8 @@ export interface CreditLedgerRecord extends AdminRecord {
 }
 
 const typeMap: Record<string, { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  GRANT: { label: 'Nạp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
-  TOPUP: { label: 'Nạp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
+  GRANT: { label: 'Cấp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
+  TOPUP: { label: 'Cộng credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
   CONSUME: { label: 'Sử dụng tác vụ AI', color: '#EF4444', bg: '#FEE2E2', icon: 'flash' },
   SETTLE: { label: 'Sử dụng tác vụ AI', color: '#EF4444', bg: '#FEE2E2', icon: 'flash' },
   ADJUSTMENT: { label: 'Admin điều chỉnh', color: '#0284C7', bg: '#E0F2FE', icon: 'options' },
@@ -386,7 +386,7 @@ export function AdminCreditLedger() {
       <View style={styles.filterPillsRow}>
         {[
           { value: '', label: 'Tất cả' },
-          { value: 'TOPUP', label: 'Nạp credit' },
+          { value: 'TOPUP', label: 'Cộng credit' },
           { value: 'SETTLE', label: 'Dùng AI' },
           { value: 'ADJUSTMENT', label: 'Điều chỉnh' },
           { value: 'RELEASE', label: 'Hoàn trả' },

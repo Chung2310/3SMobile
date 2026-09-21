@@ -74,11 +74,11 @@ const ADMIN_TABS: TabDef[] = [
     route: 'index',
   },
   {
-    name: 'wallet',
-    label: 'Ví Credit',
-    activeIcon: 'wallet',
-    inactiveIcon: 'wallet-outline',
-    route: '/(app)/wallet',
+    name: 'modules',
+    label: 'Chức năng',
+    activeIcon: 'grid',
+    inactiveIcon: 'grid-outline',
+    route: '/(app)/admin/modules',
   },
   {
     name: 'settings',
