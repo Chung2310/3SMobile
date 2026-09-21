@@ -18,9 +18,10 @@ interface ScreenProps {
   scroll?: boolean;
   noPadding?: boolean;
   onBack?: (() => void) | null;
+  rightAction?: ReactNode;
 }
 
-export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, noPadding = false, onBack }: ScreenProps) {
+export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, noPadding = false, onBack, rightAction }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const handleBack =
     onBack === null
@@ -79,6 +80,9 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
                   </Text>
                 ) : null}
               </View>
+              {rightAction ? (
+                <View style={styles.rightActionWrap}>{rightAction}</View>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -116,6 +120,9 @@ const styles = StyleSheet.create({
   titleWrap: {
     flex: 1,
     justifyContent: 'center',
+  },
+  rightActionWrap: {
+    marginLeft: 10,
   },
   title: {
     fontSize: 16,

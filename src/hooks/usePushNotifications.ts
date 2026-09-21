@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 import * as Device from 'expo-device';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { router } from 'expo-router';
-import { isRunningInExpoGo } from 'expo';
 import type * as NotificationsType from 'expo-notifications';
 import { api } from '@/services/api/client';
 
@@ -30,15 +30,19 @@ if (!isAndroidExpoGo) {
 
 // Cấu hình hiển thị notification khi app đang mở
 if (Notifications) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (err) {
+    console.warn('[Push] Lỗi khi setNotificationHandler:', err);
+  }
 }
 
 async function registerForPushNotifications(): Promise<string | null> {
@@ -47,9 +51,9 @@ async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  // Push notification chỉ hoạt động trên thiết bị thật
-  if (!Device.isDevice) {
-    console.log('[Push] Thiết bị ảo không hỗ trợ push notification');
+  // Trên iOS giả lập không hỗ trợ push notification từ xa
+  if (Platform.OS === 'ios' && !Device.isDevice) {
+    console.log('[Push] Giả lập iOS không hỗ trợ push notification');
     return null;
   }
 
@@ -71,6 +75,9 @@ async function registerForPushNotifications(): Promise<string | null> {
   try {
     // Lấy projectId từ Constants (Expo Go hoặc EAS Build)
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) {
+      console.warn('[Push] Lưu ý: Chưa cấu hình "extra.eas.projectId" trong app.json.');
+    }
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: projectId || undefined,
     });
@@ -120,23 +127,27 @@ export function usePushNotifications() {
     });
 
     // 2. Lắng nghe notification nhận được khi app đang mở
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      const { title, body } = notification.request.content;
-      console.log('[Push] Nhận notification:', title, body);
-    });
+    try {
+      notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+        const { title, body } = notification.request.content;
+        console.log('[Push] Nhận notification:', title, body);
+      });
 
-    // 3. Lắng nghe khi user tap vào notification
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, string> | undefined;
+      // 3. Lắng nghe khi user tap vào notification
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as Record<string, string> | undefined;
 
-      if (data?.screen === 'care') {
-        router.push('/notifications');
-      } else if (data?.screen) {
-        router.push(`/${data.screen}` as never);
-      } else {
-        router.push('/notifications');
-      }
-    });
+        if (data?.screen === 'care') {
+          router.push('/notifications');
+        } else if (data?.screen) {
+          router.push(`/${data.screen}` as never);
+        } else {
+          router.push('/notifications');
+        }
+      });
+    } catch (listenerError) {
+      console.warn('[Push] Lỗi khi thiết lập notification listener:', listenerError);
+    }
 
     return () => {
       if (notificationListener.current) {
@@ -147,4 +158,42 @@ export function usePushNotifications() {
       }
     };
   }, []);
+}
+
+/**
+ * Bắn một thông báo cục bộ (Local Notification) ngay trên thiết bị.
+ * Hoạt động trên bản build APK / Standalone / iOS mà không cần phụ thuộc Firebase remote push.
+ */
+export async function triggerLocalNotification(
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<boolean> {
+  if (!Notifications) {
+    return false;
+  }
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Mặc định',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0EA5E9',
+      });
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: 'default',
+        data,
+      },
+      trigger: null,
+    });
+    return true;
+  } catch (error) {
+    console.warn('[Push] Lỗi khi kích hoạt local notification:', error);
+    return false;
+  }
 }
