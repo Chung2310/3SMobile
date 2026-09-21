@@ -14,18 +14,21 @@ concurrency:
   group: build-product-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CI: "1"
+  EXPO_NO_TELEMETRY: "1"
+  APP_VERSION: ${{ vars.APP_VERSION }}
+  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
+
 jobs:
   build-ios:
     name: iOS IPA (Unsigned)
     runs-on: macos-26
     timeout-minutes: 90
     env:
-      CI: "1"
-      EXPO_NO_TELEMETRY: "1"
       # Expo SDK 57 requires Xcode 26.4+. Keep nested ExpoModulesJSI builds
       # on the same toolchain as CocoaPods and the app build.
       DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
-      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
 
     steps:
       - name: Checkout code
@@ -50,6 +53,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Prepare shared release version
+        run: node scripts/prepare-release.cjs
 
       - name: Typecheck
         run: npm run typecheck
@@ -86,6 +92,7 @@ jobs:
 
       - name: Step summary
         run: |
+          echo "- Version: $APP_VERSION / Build: $APP_BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
           echo "### 📱 3S Gym iOS IPA" >> "$GITHUB_STEP_SUMMARY"
           echo "Tải file **3SGym-unsigned.ipa** từ mục Artifacts của run này." >> "$GITHUB_STEP_SUMMARY"
           echo "Cài đặt trực tiếp lên iPhone thông qua Sideloadly, AltStore, Scarlet hoặc TrollStore (không cần tài khoản Apple Developer trả phí)." >> "$GITHUB_STEP_SUMMARY"
@@ -94,11 +101,6 @@ jobs:
     name: Android APK
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    env:
-      CI: "1"
-      EXPO_NO_TELEMETRY: "1"
-      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -128,13 +130,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare shared release version
+        run: node scripts/prepare-release.cjs
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Unit tests
         run: npm test
 
-      - name: Prepare Android release signing & version code
+      - name: Prepare Android release signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -151,7 +156,11 @@ jobs:
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 \
             2>&1 | tee "$RUNNER_TEMP/3s-gradle.log"
 
-      - name: Sign APK
+      - name: Sign and verify updateable APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           # Tìm file APK được gradle build ra
           RAW_APK="$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)"
@@ -160,12 +169,23 @@ jobs:
           test -n "$APKSIGNER"
 
           echo "Signing $RAW_APK using $APP_ANDROID_KEYSTORE..."
+          SIGNING_ARGS=()
+          if [ -n "$ANDROID_KEY_ALIAS" ]; then
+            SIGNING_ARGS+=(--ks-key-alias "$ANDROID_KEY_ALIAS")
+          fi
           "$APKSIGNER" sign --ks "$APP_ANDROID_KEYSTORE" \
-            --ks-pass "pass:$APP_ANDROID_KEYSTORE_PASSWORD" \
-            --key-pass "pass:$APP_ANDROID_KEYSTORE_PASSWORD" \
-            "$RAW_APK"
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            "${SIGNING_ARGS[@]}" "$RAW_APK"
 
-          "$APKSIGNER" verify --verbose "$RAW_APK"
+          "$APKSIGNER" verify --verbose --print-certs "$RAW_APK"
+          AAPT="$(dirname "$APKSIGNER")/aapt"
+          APK_PACKAGE="$("$AAPT" dump badging "$RAW_APK" | sed -n '1p')"
+          echo "$APK_PACKAGE"
+          if [[ "$APK_PACKAGE" != *"name='vn.gym3s.mobile'"* || "$APK_PACKAGE" != *"versionCode='$APP_BUILD_NUMBER'"* ]]; then
+            echo "::error::APK package name or versionCode does not match the release configuration."
+            exit 1
+          fi
 
           mkdir -p "$RUNNER_TEMP/3s-android-artifacts"
           cp "$RAW_APK" "$RUNNER_TEMP/3s-android-artifacts/3SGym.apk"
@@ -191,5 +211,5 @@ jobs:
         run: |
           echo "### 🤖 3S Gym Android APK" >> "$GITHUB_STEP_SUMMARY"
           echo "Tải file **3SGym.apk** từ mục Artifacts của run này để cài đặt trực tiếp trên mọi thiết bị Android." >> "$GITHUB_STEP_SUMMARY"
-          echo "- VersionCode: $APP_ANDROID_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Version: $APP_VERSION / Build: $APP_BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
           echo "- Production Key: $APP_IS_PRODUCTION_KEY" >> "$GITHUB_STEP_SUMMARY"
