@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
@@ -7,7 +7,6 @@ import { Screen } from '@/components/Screen';
 import { ErrorState, LoadingState } from '@/components/UI';
 import { api } from '@/services/api/client';
 import { formatDate, readText } from '@/services/journey';
-import { triggerLocalNotification } from '@/hooks/usePushNotifications';
 import type { AppNotification } from '@/types/domain';
 
 type NotificationResponse =
@@ -29,42 +28,6 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [creatingTest, setCreatingTest] = useState(false);
-
-  const handleCreateTestNotification = async () => {
-    if (creatingTest) return;
-    setCreatingTest(true);
-    try {
-      const res = await api.post<any>('/api/notifications/test', {});
-      const newNotification = res?.data || res;
-      const pushSent = res?.meta?.pushSent || 0;
-      if (newNotification && (newNotification._id || newNotification.id)) {
-        setItems((prev) => [newNotification, ...prev]);
-        const title = readText(newNotification, ['title'], 'Thông báo thử nghiệm');
-        const message = readText(newNotification, ['message'], 'Bạn vừa nhận một thông báo mới.');
-        const localSent = await triggerLocalNotification(title, message, {
-          screen: 'notifications',
-          resourceType: readText(newNotification, ['resourceType']),
-          resourceId: notificationId(newNotification),
-        });
-
-        const alertNote = (pushSent > 0 || localSent)
-          ? '\n\n✅ Đã bắn 1 thông báo ra thanh trạng thái / màn hình khóa điện thoại.'
-          : '\n\nℹ️ Đã lưu vào app & danh sách thông báo. (Trên Expo Go Android, tính năng đẩy ra thanh thông báo bị Expo SDK 53 chặn; trên bản APK cài vào máy sẽ đẩy ra ngoài bình thường).';
-
-        Alert.alert('🔔 ' + title, message + alertNote, [
-          { text: 'Đóng', style: 'cancel' },
-          { text: 'Xem chi tiết', onPress: () => openResource(newNotification) },
-        ]);
-      } else {
-        void load(true);
-      }
-    } catch (cause) {
-      Alert.alert('Lỗi', cause instanceof Error ? cause.message : 'Không tạo được thông báo thử nghiệm.');
-    } finally {
-      setCreatingTest(false);
-    }
-  };
 
   const load = useCallback(async (isRefresh = false) => {
     setError(null);
@@ -124,24 +87,6 @@ export default function NotificationsScreen() {
       refreshing={refreshing}
       onRefresh={() => load(true)}
       onBack={() => router.navigate('/(app)/(tabs)')}
-      rightAction={
-        <Pressable
-          onPress={handleCreateTestNotification}
-          disabled={creatingTest}
-          style={({ pressed }) => [
-            styles.testHeaderBtn,
-            pressed && styles.testHeaderBtnPressed,
-            creatingTest && styles.testHeaderBtnDisabled,
-          ]}
-          hitSlop={8}
-          accessibilityLabel="Thử tạo thông báo"
-        >
-          <Feather name="bell" size={13} color="#0284C7" />
-          <Text style={styles.testHeaderBtnText}>
-            {creatingTest ? 'Đang gửi...' : 'Test bắn chuông'}
-          </Text>
-        </Pressable>
-      }
     >
       {loading ? (
         <LoadingState />
@@ -149,25 +94,6 @@ export default function NotificationsScreen() {
         <ErrorState message={error} onRetry={() => void load()} />
       ) : items.length ? (
         <View style={styles.listContainer}>
-          {/* Quick Test Action Banner */}
-          <Pressable
-            onPress={handleCreateTestNotification}
-            disabled={creatingTest}
-            style={({ pressed }) => [styles.testBanner, pressed && styles.testBannerPressed]}
-          >
-            <View style={styles.testBannerIconWrap}>
-              <Feather name="send" size={14} color="#0284C7" />
-            </View>
-            <View style={styles.testBannerContent}>
-              <Text style={styles.testBannerTitle}>
-                {creatingTest ? 'Đang tạo thông báo...' : 'Bắn thông báo ngẫu nhiên để test 🔔'}
-              </Text>
-              <Text style={styles.testBannerSub}>
-                Tạo 1 thông báo ngẫu nhiên gửi ra màn hình và lưu vào danh sách
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={16} color="#94A3B8" />
-          </Pressable>
           {items.map((item, index) => {
             const unread = !item.readAt;
             const resourceType = readText(item, ['resourceType']).toLowerCase();
@@ -236,20 +162,6 @@ export default function NotificationsScreen() {
           <Text style={styles.emptyDesc}>
             Các cập nhật về lịch, báo cáo và kế hoạch sẽ hiển thị tại đây.
           </Text>
-          <Pressable
-            onPress={handleCreateTestNotification}
-            disabled={creatingTest}
-            style={({ pressed }) => [
-              styles.emptyTestBtn,
-              pressed && styles.emptyTestBtnPressed,
-              creatingTest && { opacity: 0.6 },
-            ]}
-          >
-            <Feather name="plus-circle" size={15} color="#FFFFFF" />
-            <Text style={styles.emptyTestBtnText}>
-              {creatingTest ? 'Đang tạo...' : 'Tạo 1 thông báo ngẫu nhiên'}
-            </Text>
-          </Pressable>
         </View>
       )}
     </Screen>
@@ -257,86 +169,6 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  testHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 14,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  testHeaderBtnPressed: {
-    backgroundColor: '#E0F2FE',
-    transform: [{ scale: 0.96 }],
-  },
-  testHeaderBtnDisabled: {
-    opacity: 0.6,
-  },
-  testHeaderBtnText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#0284C7',
-  },
-  testBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    gap: 10,
-    marginBottom: 4,
-  },
-  testBannerPressed: {
-    backgroundColor: '#E0F2FE',
-    transform: [{ scale: 0.99 }],
-  },
-  testBannerIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  testBannerContent: {
-    flex: 1,
-  },
-  testBannerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0369A1',
-  },
-  testBannerSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  emptyTestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginTop: 14,
-  },
-  emptyTestBtnPressed: {
-    backgroundColor: '#0369A1',
-    transform: [{ scale: 0.96 }],
-  },
-  emptyTestBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   listContainer: {
     gap: 12,
   },
