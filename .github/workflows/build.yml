@@ -22,7 +22,7 @@ jobs:
     env:
       CI: "1"
       EXPO_NO_TELEMETRY: "1"
-      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.3sgym.vn' }}
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
 
     steps:
       - name: Checkout code
@@ -96,7 +96,7 @@ jobs:
     env:
       CI: "1"
       EXPO_NO_TELEMETRY: "1"
-      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.3sgym.vn' }}
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
 
     steps:
       - name: Checkout code
