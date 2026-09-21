@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
-import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { JourneyProvider } from '@/context/JourneyContext';
@@ -12,6 +12,18 @@ import { homeForRole } from '@/services/adminAccess';
 export { ErrorBoundary } from 'expo-router';
 
 const LOGO_WHITE = require('../../assets/public/logo-white.png');
+
+function AndroidNavigationSafeArea({ children }: { children: ReactNode }) {
+  if (Platform.OS !== 'android') return children;
+
+  return (
+    <SafeAreaView style={styles.navigationContainer} edges={['bottom', 'left', 'right']}>
+      {/* Measure the inset content bounds so tabs and screens do not add the
+          system navigation inset again. Top insets remain owned by screens. */}
+      <SafeAreaProvider>{children}</SafeAreaProvider>
+    </SafeAreaView>
+  );
+}
 
 function NavigationGate() {
   const { session, loading } = useAuth();
@@ -40,10 +52,12 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
   if (!fontsLoaded && !fontError) return <View style={styles.splashContainer}><ActivityIndicator color={colors.primary} /></View>;
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
         <JourneyProvider>
-          <NavigationGate />
+          <AndroidNavigationSafeArea>
+            <NavigationGate />
+          </AndroidNavigationSafeArea>
         </JourneyProvider>
       </AuthProvider>
     </SafeAreaProvider>
@@ -55,6 +69,10 @@ export function IndexRedirect() {
 }
 
 const styles = StyleSheet.create({
+  navigationContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   splashContainer: {
     flex: 1,
     alignItems: 'center',
