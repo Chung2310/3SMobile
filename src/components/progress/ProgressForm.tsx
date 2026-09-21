@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { ProgressComparison } from './ProgressComparison';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SessionAttachments } from './SessionAttachments';
@@ -6,11 +7,12 @@ import { ProgressNotice } from './ProgressNotice';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { TimePicker } from '@/components/workouts/TimePicker';
 import { sessionDraftPath, sessionDraftBody, matchesDraftPlan, type SessionDraft } from '@/services/sessionDrafts';
+import { clearSessionDraftCache, writeSessionDraftCache } from '@/services/sessionDraftCache';
 import { messageOf } from '@/utils/error';
 import { api, ApiError } from '@/services/api/client';
 import { asRecord, asRecords, readText } from '@/services/journey';
 import { exerciseMetrics, recordId } from '@/services/workouts';
-import { ATTENDANCE, dayKey, localTime, initialResult, sessionPayload, measurementPayload, reportPayload, MEASUREMENTS, RESULT_FIELDS, calculateNextSessionIndex } from '@/services/progress';
+import { dayKey, localTime, initialResult, sessionPayload, measurementPayload, reportPayload, MEASUREMENTS, RESULT_FIELDS, calculateNextSessionIndex } from '@/services/progress';
 import type { JsonRecord } from '@/types/domain';
 import { Button, Field, Notice, Picker, Sheet, ws } from '../workouts/Controls';
 
@@ -96,6 +98,8 @@ function DatePickerField({
 export function ProgressForm({
   kind,
   customerId,
+  ownerId,
+  restoredFromCache = false,
   plan = {},
   record = {},
   pastSessions = [], sessionDraft,
@@ -104,6 +108,8 @@ export function ProgressForm({
 }: {
   kind: 'session' | 'measurement' | 'report';
   customerId: string;
+  ownerId?: string;
+  restoredFromCache?: boolean;
   plan?: JsonRecord;
   record?: JsonRecord;
   pastSessions?: JsonRecord[]; sessionDraft?: SessionDraft;
@@ -143,31 +149,35 @@ export function ProgressForm({
   const submitting = useRef(false);
   const [revision, setRevision] = useState(sessionDraft?.revision || 0);
   const [savedState, setSavedState] = useState(() => JSON.stringify({ form: draft, plan: sessionPlan }));
-  const [draftMessage, setDraftMessage] = useState(sessionDraft ? 'Đã mở bản nháp. Bạn có thể nhập tiếp rồi lưu nháp hoặc lưu chính thức.' : '');
-  const [closePrompt, setClosePrompt] = useState(false);
+  const draftMessage = restoredFromCache ? 'Đã khôi phục tiến độ tự lưu trên thiết bị.' : sessionDraft ? 'Đã mở bản nháp. Bạn có thể nhập tiếp rồi lưu chính thức.' : '';
   const [switchPlan, setSwitchPlan] = useState(false);
   const planChanged = kind === 'session' && !matchesDraftPlan(sessionPlan, plan);
   const dirty = JSON.stringify({ form: draft, plan: sessionPlan }) !== savedState;
+  useEffect(() => {
+    if (kind !== 'session' || !ownerId || !dirty) return;
+    void writeSessionDraftCache(ownerId, customerId, {
+      form: draft, plan: sessionPlan, idempotencyKey: key, revision, updatedAt: new Date().toISOString(),
+    }).catch(cause => setError(`Không thể tự lưu tiến độ trên thiết bị: ${messageOf(cause)}`));
+  }, [kind, ownerId, customerId, draft, sessionPlan, key, revision, dirty]);
   async function persistDraft(pending: JsonRecord | null = null) {
     const saved = await api.patch<SessionDraft>(sessionDraftPath(customerId), sessionDraftBody(draft, sessionPlan, key, revision, pending));
+    if (ownerId) await clearSessionDraftCache(ownerId, customerId);
     setRevision(saved.revision); setSavedState(JSON.stringify({ form: draft, plan: sessionPlan }));
     return saved;
   }
-  async function saveDraft(close = false) {
-    if (submitting.current || uploading) return;
-    submitting.current = true; setBusy(true); setError('');
-    try {
-      await persistDraft(retry);
-      setDraftMessage('Đã lưu bản nháp lên máy chủ. PT có thể mở lại để nhập tiếp.');
-      setClosePrompt(false);
-      if (close) onClose();
-    } catch (cause) { setError(messageOf(cause)); }
-    finally { submitting.current = false; setBusy(false); }
-  }
-  function closeForm() {
+  async function closeForm() {
     if (busy || uploading) return;
-    if (kind === 'session' && dirty && !retry) setClosePrompt(true);
-    else onClose();
+    if (kind === 'session' && ownerId && dirty) {
+      try {
+        await writeSessionDraftCache(ownerId, customerId, {
+          form: draft, plan: sessionPlan, idempotencyKey: key, revision, updatedAt: new Date().toISOString(),
+        });
+      } catch (cause) {
+        setError(`Không thể tự lưu tiến độ trên thiết bị: ${messageOf(cause)}`);
+        return;
+      }
+    }
+    onClose();
   }
   const set = (field: string, value: unknown) => setDraft((old) => ({ ...old, [field]: value }));
   const field = (name: string, label: string, numeric = false, multiline = false) => <Field key={name} label={label} value={String(draft[name] ?? '')} onChange={(value) => set(name, value)} numeric={numeric} multiline={multiline} />;
@@ -180,6 +190,7 @@ export function ProgressForm({
         // Persist the retry key and exact payload before sending a request that consumes a session.
         // A reopened draft can safely retry even if the final response was lost.
         const stored = retry ? null : await persistDraft(payload);
+        if (ownerId) await clearSessionDraftCache(ownerId, customerId);
         finalRequestStarted = true;
         await api.post('/api/workout-sessions', payload);
         // GET also retires drafts whose idempotency key already exists in workout history.
@@ -214,7 +225,8 @@ export function ProgressForm({
   const completedSessionsCount = attendedPast.length;
   const currentTotalSessionNumber = completedSessionsCount + 1;
   const title = kind === 'session' ? `Ghi nhận buổi tập (Buổi thứ ${currentTotalSessionNumber})` : kind === 'measurement' ? 'Số đo cơ thể' : 'Báo cáo tiến độ';
-  return <Sheet title={title} onClose={closeForm} locked={busy || uploading} footer={<>{error ? <Notice error text={error} /> : null}{confirm || retry ? <><Button label={retry ? 'Thử lưu lại cùng buổi tập' : 'Xác nhận lưu buổi tập'} busy={busy || uploading} onPress={() => void submit((retry || confirm)!)} />{!retry && <Button secondary label="Quay lại chỉnh sửa" disabled={busy} onPress={() => setConfirm(null)} />}</> : <><Button label={kind === 'session' ? 'Lưu chính thức' : 'Lưu'} busy={busy || uploading} disabled={planChanged} onPress={save} />{kind === 'session' && <Button secondary icon="save" label="Lưu bản nháp" busy={busy || uploading} onPress={() => void saveDraft()} />}</>}</>}>
+  return <Sheet title={title} onClose={() => void closeForm()} locked={busy || uploading} footer={<>{error ? <Notice error text={error} /> : null}{confirm || retry ? <><Button label={retry ? 'Thử lưu lại cùng buổi tập' : 'Xác nhận lưu buổi tập'} busy={busy || uploading} onPress={() => void submit((retry || confirm)!)} />{!retry && <Button secondary label="Quay lại chỉnh sửa" disabled={busy} onPress={() => setConfirm(null)} />}</> : <><Button label={kind === 'session' ? 'Lưu chính thức' : 'Lưu'} busy={busy || uploading} disabled={planChanged} onPress={save} /></>}</>}>
+    {kind === 'session' && <Notice tone="info" text="Tiến độ đang nhập được tự lưu trên thiết bị và sẽ hiện lại khi mở màn này. Chọn Lưu chính thức khi hoàn tất." />}
     {draftMessage && <Notice tone="success" text={draftMessage} />}
     {planChanged && !retry && <><Notice tone="warning" text="Giáo án đã thay đổi kể từ bản nháp. Kết quả cũ vẫn được giữ. Áp dụng giáo án hiện tại sẽ đặt lại kết quả bài tập; ghi chú, ảnh và số đo vẫn được giữ." /><Button secondary label="Áp dụng giáo án hiện tại" disabled={busy || !recordId(plan)} onPress={() => setSwitchPlan(true)} /></>}
     {confirm || retry ? (retry ? <Notice tone="warning" text="Chưa xác định máy chủ đã lưu hay chưa. Thử lại sẽ dùng cùng mã buổi tập để tránh ghi trùng. Không tạo buổi mới trước khi kiểm tra lịch sử." /> : null) : <View pointerEvents={busy || uploading ? 'none' : 'auto'} style={{ gap: 8 }}>
@@ -232,8 +244,8 @@ export function ProgressForm({
       </>}
       {kind === 'measurement' && <><DatePickerField label="Ngày đo" value={String(draft.date || dayKey(new Date()))} onSelect={(iso) => set('date', iso)} title="Chọn ngày đo" />{MEASUREMENTS.map(([name, label, unit]) => field(name, `${label} (${unit})`, true))}</>}
       {kind === 'report' && <><DatePickerField label="Từ ngày" value={String(draft.from || dayKey(new Date()))} onSelect={(iso) => set('from', iso)} title="Chọn từ ngày" /><DatePickerField label="Đến ngày" value={String(draft.to || dayKey(new Date()))} onSelect={(iso) => set('to', iso)} title="Chọn đến ngày" />{field('summary', 'Nội dung báo cáo', false, true)}</>}
+      {kind !== 'report' && <ProgressComparison customerId={customerId} kind={kind} draft={draft} plan={sessionPlan} excludeId={recordId(record)} />}
     </View>}
-    {closePrompt && <Sheet title="Giữ lại tiến độ đang nhập?" onClose={() => setClosePrompt(false)} locked={busy} footer={<><Button label="Lưu nháp và đóng" busy={busy} onPress={() => void saveDraft(true)} /><Button secondary label="Tiếp tục nhập" disabled={busy} onPress={() => setClosePrompt(false)} /><Button secondary destructive label="Thoát không lưu thay đổi" disabled={busy} onPress={onClose} /></>}><Notice text="Lưu bản nháp để lần sau tiếp tục. Thoát không lưu chỉ bỏ thay đổi mới; bản nháp đã lưu trước đó vẫn còn." />{error && <Notice error text={error} />}</Sheet>}
     {switchPlan && <Sheet title="Đổi giáo án cho bản nháp?" onClose={() => setSwitchPlan(false)}><Notice tone="warning" text="Kết quả từng bài và hiệp trong bản nháp sẽ được đặt lại theo giáo án hiện tại." /><Button label="Áp dụng và đặt lại kết quả" onPress={() => { setSessionPlan(plan); setDraft(old => ({...old,sessionIndex:String(nextSessionIndex),results:asRecords(asRecords(plan.sessions)[nextSessionIndex]?.exercises).map(initialResult)})); setSwitchPlan(false); }} /><Button secondary label="Giữ bản nháp hiện tại" onPress={() => setSwitchPlan(false)} /></Sheet>}
     <ProgressNotice message={popupError} error onClose={() => setPopupError('')} />
   </Sheet>;

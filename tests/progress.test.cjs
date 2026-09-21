@@ -1,3 +1,4 @@
+/* global __dirname */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -149,4 +150,97 @@ test('calculateNextSessionIndex advances to next session and cycles when plan co
   // When 4 sessions are completed in plan4, cycles back to index 0
   const d4 = { workoutPlanId: 'p4', name: 'Ngày 4', performedAt: '2026-09-18T09:00:00Z', attendance: 'PRESENT' };
   assert.equal(calculateNextSessionIndex(plan4, [d4, d3, d2, d1]), 0);
+});
+
+
+test('session cache keeps the newest local edit and restores it over an older server draft', async () => {
+  const data = new Map();
+  const storage = {
+    getItem: async key => data.get(key) ?? null,
+    setItem: async (key, value) => { await new Promise(resolve => setTimeout(resolve, value.includes('first') ? 15 : 0)); data.set(key, value); },
+    removeItem: async key => { data.delete(key); },
+  };
+  const { writeSessionDraftCache, readSessionDraftCache, clearSessionDraftCache, restoreSessionDraft } = loadTs(
+    'src/services/sessionDraftCache.ts', { '@react-native-async-storage/async-storage': storage }
+  );
+  const base = { plan, idempotencyKey: 'same-key', revision: 1, updatedAt: '2026-09-15T10:00:00.000Z' };
+  await Promise.all([
+    writeSessionDraftCache('pt1', 'customer1', { ...base, form: { notes: 'first' } }),
+    writeSessionDraftCache('pt1', 'customer1', { ...base, form: { notes: 'last' }, updatedAt: '2026-09-15T10:01:00.000Z' }),
+  ]);
+  const cached = await readSessionDraftCache('pt1', 'customer1');
+  assert.equal(cached.form.notes, 'last');
+  assert.equal(await readSessionDraftCache('pt2', 'customer1'), null);
+  const server = { ...base, form: { notes: 'server' }, pendingPayload: null };
+  assert.equal(restoreSessionDraft(server, cached).draft.form.notes, 'last');
+  assert.equal(restoreSessionDraft({ ...server, updatedAt: '2026-09-15T10:02:00.000Z' }, cached).draft.form.notes, 'server');
+  assert.equal(restoreSessionDraft({ ...server, idempotencyKey: 'new-session' }, cached).draft.form.notes, 'server');
+  await clearSessionDraftCache('pt1', 'customer1');
+  assert.equal(await readSessionDraftCache('pt1', 'customer1'), null);
+});
+
+const { priorRecords, lastExerciseResult, comparisonValue } = loadTs('src/services/progressComparison.ts');
+const comparisonPlan = { _id: 'p1', version: 3 };
+const comparisonExercise = { exerciseId: 'e1', trackingType: 'STRENGTH' };
+const recordedSession = (overrides = {}) => ({
+  _id: 's1', customerId: 'c1', performedAt: '2026-09-15T09:00:00Z', attendance: 'PRESENT',
+  workoutPlanId: 'p1', workoutPlanVersion: 3, planSnapshot: { sessionIndex: 0 },
+  exerciseLogs: [{ exerciseId: 'e1', trackingType: 'STRENGTH', result: { sets: [{ reps: 8, weight: 40, completed: true }] } }],
+  ...overrides,
+});
+test('comparison selects chronological history before the entry and excludes other customers and edited record', () => {
+  const input = [recordedSession(), recordedSession({ _id: 'new', performedAt: '2026-09-17T09:00:00Z' }),
+    recordedSession({ _id: 'old', performedAt: '2026-09-14T09:00:00Z' }),
+    recordedSession({ _id: 'other', customerId: { _id: 'c2' } }), recordedSession({ _id: 'bad', performedAt: 'bad' })];
+  const copy = JSON.stringify(input);
+  assert.deepEqual(priorRecords(input, '2026-09-16T09:00:00Z', 'c1').map(row => row._id), ['s1', 'old']);
+  assert.deepEqual(priorRecords(input, '2026-09-15T09:00:00Z', 'c1').map(row => row._id), ['old']);
+  assert.deepEqual(priorRecords(input, '2026-09-16T09:00:00Z', 'c1', 's1').map(row => row._id), ['old']);
+  assert.deepEqual(priorRecords(input, 'bad', 'c1'), []);
+  assert.equal(JSON.stringify(input), copy);
+});
+test('comparison reads actual backend exerciseLogs and skips absent sessions', () => {
+  const older = recordedSession();
+  const found = lastExerciseResult([recordedSession({ attendance: 'ABSENT', performedAt: '2026-09-16T09:00:00Z' }), older], comparisonExercise, comparisonPlan, 0, 0);
+  assert.equal(found.date, older.performedAt);
+  assert.equal(found.result.sets[0].weight, 40);
+  assert.equal(lastExerciseResult([older], { exerciseId: 'different', trackingType: 'STRENGTH' }, comparisonPlan, 0, 0), null);
+});
+test('comparison follows exercise identity across reordered plans, but rejects changed tracking units', () => {
+  const historical = recordedSession({ workoutPlanId: 'old-plan', workoutPlanVersion: 1 });
+  assert.equal(lastExerciseResult([historical], comparisonExercise, comparisonPlan, 2, 4).result.sets[0].reps, 8);
+  assert.equal(lastExerciseResult([historical], { ...comparisonExercise, trackingType: 'BODYWEIGHT' }, comparisonPlan, 0, 0), null);
+});
+test('unnamed identity uses only the exact plan version and stored session slot', () => {
+  const historical = recordedSession({ exerciseLogs: [{ trackingType: 'STRENGTH', result: { sets: [] } }] });
+  assert.ok(lastExerciseResult([historical], { trackingType: 'STRENGTH' }, comparisonPlan, 0, 0));
+  assert.equal(lastExerciseResult([historical], { trackingType: 'STRENGTH' }, { ...comparisonPlan, version: 4 }, 0, 0), null);
+  assert.equal(lastExerciseResult([historical], { trackingType: 'STRENGTH' }, comparisonPlan, 1, 0), null);
+});
+test('duplicate exercise identities are not guessed across unrelated slots', () => {
+  const log = recordedSession().exerciseLogs[0];
+  const historical = recordedSession({ exerciseLogs: [log, { ...log, result: { sets: [{ reps: 3 }] } }] });
+  assert.equal(lastExerciseResult([historical], comparisonExercise, comparisonPlan, 1, 0), null);
+  assert.equal(lastExerciseResult([historical], comparisonExercise, comparisonPlan, 0, 1).result.sets[0].reps, 3);
+});
+test('comparison retains missing values, real zero, decimal deltas and percentage point units', () => {
+  assert.equal(comparisonValue('', 40, 'kg'), 'Lần trước: 40 kg');
+  assert.equal(comparisonValue('0', 0), 'Lần trước: 0 · Không đổi');
+  assert.equal(comparisonValue('40.1', 40, 'kg'), 'Lần trước: 40 kg · Tăng 0.1 kg');
+  assert.equal(comparisonValue('19', 20, '%'), 'Lần trước: 20 % · Giảm 1 điểm %');
+  for (const missing of [undefined, null, '', NaN, Infinity]) assert.equal(comparisonValue(1, missing), 'Lần trước: chưa có dữ liệu');
+  assert.equal(comparisonValue('-1', 40), 'Lần trước: 40');
+});
+test('body comparison picks the latest measurement rather than a stale populated field', () => {
+  const measurements = [{ _id: 'old', measuredAt: '2026-09-14', weight: 70 },
+    { _id: 'latest', measuredAt: '2026-09-15', measurements: { waist: 80 } }];
+  const latest = priorRecords(measurements, '2026-09-15T23:59:00Z', 'c1')[0];
+  assert.equal(latest._id, 'latest');
+  assert.equal(comparisonValue(69, latest.weight, 'kg'), 'Lần trước: chưa có dữ liệu');
+});
+
+test('same-day measurement ties use the most recently created record', () => {
+  const records = [{ _id: 'a', measuredAt: '2026-09-15', createdAt: '2026-09-15T08:00:00Z' },
+    { _id: 'b', measuredAt: '2026-09-15', createdAt: '2026-09-15T10:00:00Z' }];
+  assert.equal(priorRecords(records, '2026-09-16', 'c1')[0]._id, 'b');
 });

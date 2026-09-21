@@ -2,31 +2,33 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { isRunningInExpoGo } from 'expo';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { router } from 'expo-router';
 import type * as NotificationsType from 'expo-notifications';
 import { api } from '@/services/api/client';
 
-// Remote push notifications bị gỡ khỏi Expo Go trên Android từ SDK 53.
-// Chỉ require expo-notifications khi KHÔNG PHẢI Expo Go trên Android để tránh crash app.
-const isExpoGo = typeof isRunningInExpoGo === 'function' ? isRunningInExpoGo() : Constants.appOwnership === 'expo';
-const isExpoGoOnAndroid = Platform.OS === 'android' && Boolean(isExpoGo);
+type NotificationsModule = typeof NotificationsType;
 
-function getNotifications(): typeof NotificationsType | null {
-  if (isExpoGoOnAndroid) {
-    return null;
-  }
+// Android remote push notifications via expo-notifications were removed from Expo Go in SDK 53+.
+// Guard loading to avoid crashing in Expo Go on Android.
+const isExpoGo =
+  isRunningInExpoGo() ||
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+  (Constants as Record<string, unknown>).appOwnership === 'expo';
+
+const isAndroidExpoGo = Platform.OS === 'android' && isExpoGo;
+
+let Notifications: NotificationsModule | null = null;
+if (!isAndroidExpoGo) {
   try {
-    return require('expo-notifications');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Notifications = require('expo-notifications');
   } catch (error) {
-    console.warn('[Push] Không thể nạp module expo-notifications:', error);
-    return null;
+    console.warn('[Push] Không thể nạp expo-notifications:', error);
   }
 }
 
-const Notifications = getNotifications();
-
-// Cấu hình hiển thị notification khi app đang mở (nếu hỗ trợ)
+// Cấu hình hiển thị notification khi app đang mở
 if (Notifications) {
   try {
     Notifications.setNotificationHandler({
@@ -44,8 +46,8 @@ if (Notifications) {
 }
 
 async function registerForPushNotifications(): Promise<string | null> {
-  if (isExpoGoOnAndroid || !Notifications) {
-    console.log('[Push] Android Push notifications không hỗ trợ trên Expo Go (SDK 53+). Dùng Development Build để nhận push.');
+  if (isAndroidExpoGo || !Notifications) {
+    console.log('[Push] Push notifications không được hỗ trợ trong Expo Go trên Android (SDK 53+). Vui lòng dùng development build.');
     return null;
   }
 
@@ -106,7 +108,9 @@ export function usePushNotifications() {
   const responseListener = useRef<NotificationsType.EventSubscription | null>(null);
 
   useEffect(() => {
-    if (!Notifications) return;
+    if (isAndroidExpoGo || !Notifications) {
+      return;
+    }
 
     // 1. Đăng ký push token
     registerForPushNotifications().then(async (token) => {

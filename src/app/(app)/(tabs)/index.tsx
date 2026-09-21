@@ -487,7 +487,10 @@ export default function HomeScreen() {
             {QUICK_FEATURES.map((item) => (
               <Pressable
                 key={item.id}
-                onPress={() => router.push(item.route as any)}
+                onPress={() => {
+                  if (item.id === 'progress') router.push({ pathname: '/(app)/progress-workspace', params: { mode: 'record' } });
+                  else router.push(item.route as any);
+                }}
                 style={({ pressed }) => [
                   styles.featureItem,
                   pressed && styles.featureItemPressed,
