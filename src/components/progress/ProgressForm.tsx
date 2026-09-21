@@ -1,3 +1,4 @@
+import { ProgressComparison } from './ProgressComparison';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -243,6 +244,7 @@ export function ProgressForm({
       </>}
       {kind === 'measurement' && <><DatePickerField label="Ngày đo" value={String(draft.date || dayKey(new Date()))} onSelect={(iso) => set('date', iso)} title="Chọn ngày đo" />{MEASUREMENTS.map(([name, label, unit]) => field(name, `${label} (${unit})`, true))}</>}
       {kind === 'report' && <><DatePickerField label="Từ ngày" value={String(draft.from || dayKey(new Date()))} onSelect={(iso) => set('from', iso)} title="Chọn từ ngày" /><DatePickerField label="Đến ngày" value={String(draft.to || dayKey(new Date()))} onSelect={(iso) => set('to', iso)} title="Chọn đến ngày" />{field('summary', 'Nội dung báo cáo', false, true)}</>}
+      {kind !== 'report' && <ProgressComparison customerId={customerId} kind={kind} draft={draft} plan={sessionPlan} excludeId={recordId(record)} />}
     </View>}
     {switchPlan && <Sheet title="Đổi giáo án cho bản nháp?" onClose={() => setSwitchPlan(false)}><Notice tone="warning" text="Kết quả từng bài và hiệp trong bản nháp sẽ được đặt lại theo giáo án hiện tại." /><Button label="Áp dụng và đặt lại kết quả" onPress={() => { setSessionPlan(plan); setDraft(old => ({...old,sessionIndex:String(nextSessionIndex),results:asRecords(asRecords(plan.sessions)[nextSessionIndex]?.exercises).map(initialResult)})); setSwitchPlan(false); }} /><Button secondary label="Giữ bản nháp hiện tại" onPress={() => setSwitchPlan(false)} /></Sheet>}
     <ProgressNotice message={popupError} error onClose={() => setPopupError('')} />
