@@ -35,6 +35,11 @@ if [[ ${#apps[@]} -ne 1 ]]; then
 fi
 app="${apps[0]}"
 plist="$app/Info.plist"
+: "${APP_VERSION:?APP_VERSION must be set by prepare-release.cjs}"
+: "${APP_BUILD_NUMBER:?APP_BUILD_NUMBER must be set by prepare-release.cjs}"
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" == "vn.3sgym.mobile" ]]
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" == "$APP_VERSION" ]]
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")" == "$APP_BUILD_NUMBER" ]]
 platform="$(/usr/libexec/PlistBuddy -c 'Print :DTPlatformName' "$plist")"
 [[ "$platform" == "iphoneos" ]]
 executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")"
