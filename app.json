@@ -35,7 +35,7 @@
       }
     },
     "android": {
-      "package": "vn.3sgym.mobile",
+      "package": "vn.gym3s.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
