@@ -1,3 +1,4 @@
+import { isValidPassword, PASSWORD_ERROR, PASSWORD_HINT } from '@/services/passwordValidation';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -29,7 +30,6 @@ import {
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
-import { canAccessAdmin } from '@/services/adminAccess';
 import { colors, radius, spacing } from '@/theme';
 
 interface ProfileFormState {
@@ -82,7 +82,7 @@ const getGenderLabel = (val?: string | null): string => {
   return 'Khác';
 };
 
-const isSixDigitPassword = (val: string) => /^\d{6}$/.test(val.trim());
+
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -404,12 +404,12 @@ export default function ProfileScreen() {
       return;
     }
 
-    if (!isSixDigitPassword(form.newPassword)) {
+    if (!isValidPassword(form.newPassword)) {
       setAlertConfig({
         visible: true,
         type: 'warning',
         title: 'Mật khẩu không hợp lệ',
-        message: 'Mật khẩu mới phải gồm đúng 6 chữ số (ví dụ: 123456).',
+        message: PASSWORD_ERROR,
         onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
       });
       return;
@@ -494,7 +494,13 @@ export default function ProfileScreen() {
       {/* 1. TOP BAR */}
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.navigate('/(app)/(tabs)')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.navigate('/(app)/(tabs)');
+            }
+          }}
           hitSlop={12}
           style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
           accessibilityLabel="Quay lại"
@@ -507,19 +513,7 @@ export default function ProfileScreen() {
           <Text style={styles.topBarSubtitle}>Huấn luyện viên 3S</Text>
         </View>
 
-        {/* Nút sửa nhanh trên Top Bar */}
-        <Pressable
-          onPress={() => {
-            if (profile) applyProfileToForm(profile);
-            setSheetTab('profile');
-            setShowEditSheet(true);
-          }}
-          hitSlop={12}
-          style={({ pressed }) => [styles.topEditBtn, pressed && styles.backBtnPressed]}
-          accessibilityLabel="Sửa hồ sơ"
-        >
-          <Feather name="edit-3" size={18} color="#0284C7" />
-        </Pressable>
+        <View style={styles.topBarRightSpacer} />
       </View>
 
       <ScrollView
@@ -754,26 +748,6 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* NÚT CHUYỂN SANG TRANG QUẢN TRỊ (KHI CÓ QUYỀN ADMIN) */}
-            {canAccessAdmin(session?.user) && (
-              <Pressable
-                style={({ pressed }) => [styles.adminBarBtn, pressed && styles.securityBarBtnPressed]}
-                onPress={() => router.push('/(app)/admin')}
-                accessibilityRole="button"
-                accessibilityLabel="Chuyển sang trang Quản trị"
-              >
-                <View style={styles.securityBarLeft}>
-                  <View style={[styles.securityIconCircle, { backgroundColor: '#E0F2FE' }]}>
-                    <Ionicons name="shield-checkmark" size={17} color="#0284C7" />
-                  </View>
-                  <View>
-                    <Text style={styles.securityBarTitle}>Trang Quản trị hệ thống</Text>
-                    <Text style={styles.adminBarSub}>Quản lý tài khoản, khách hàng & tài chính</Text>
-                  </View>
-                </View>
-                <Feather name="chevron-right" size={18} color={colors.textMuted} />
-              </Pressable>
-            )}
 
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
@@ -788,7 +762,7 @@ export default function ProfileScreen() {
                   <Feather name="lock" size={16} color="#0284C7" />
                 </View>
                 <View>
-                  <Text style={styles.securityBarTitle}>Bảo mật & Đổi mật khẩu</Text>
+                  <Text style={styles.securityBarTitle}>Bảo mật & đổi mật khẩu</Text>
                   
                 </View>
               </View>
@@ -846,7 +820,7 @@ export default function ProfileScreen() {
                 </View>
                 <View>
                   <Text style={styles.sheetTitle}>
-                    {sheetTab === 'profile' ? 'Chỉnh sửa hồ sơ' : 'Bảo mật & Đổi mật khẩu'}
+                    {sheetTab === 'profile' ? 'Chỉnh sửa hồ sơ' : 'Bảo mật & đổi mật khẩu'}
                   </Text>
                   <Text style={styles.sheetSubtitle}>{displayName}</Text>
                 </View>
@@ -1112,7 +1086,7 @@ export default function ProfileScreen() {
                       <Text style={styles.passwordRuleTitle}>Quy tắc mật khẩu</Text>
                     </View>
                     <Text style={styles.passwordRuleDesc}>
-                      Mật khẩu tối thiểu 6 kí tự. Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
+                      {PASSWORD_HINT}. Vui lòng nhập mật khẩu hiện tại trước khi đổi sang mật khẩu mới.
                     </Text>
                   </View>
 
@@ -1129,8 +1103,8 @@ export default function ProfileScreen() {
                         placeholder="Nhập mật khẩu hiện tại..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showCurrentPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}
@@ -1149,18 +1123,18 @@ export default function ProfileScreen() {
                   {/* Mật khẩu mới */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
-                      Mật khẩu mới (tối thiểu 6 kí tự) <Text style={styles.requiredStar}>*</Text>
+                      Mật khẩu mới (tối thiểu 8 ký tự) <Text style={styles.requiredStar}>*</Text>
                     </Text>
                     <View style={styles.passwordInputWrap}>
                       <TextInput
                         style={styles.passwordInput}
                         value={form.newPassword}
                         onChangeText={(val) => setForm((prev) => ({ ...prev, newPassword: val }))}
-                        placeholder="Nhập mật khẩu mới..."
+                        placeholder="Nhập mật khẩu mới từ 8 ký tự"
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showNewPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}
@@ -1189,8 +1163,8 @@ export default function ProfileScreen() {
                         placeholder="Nhập lại mật khẩu mới..."
                         placeholderTextColor={colors.textMuted}
                         secureTextEntry={!showConfirmPassword}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        keyboardType="default"
+                        autoCapitalize="none" autoCorrect={false}
                       />
                       <Pressable
                         style={styles.eyeBtn}
@@ -1337,15 +1311,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  topEditBtn: {
+  topBarRightSpacer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
   },
   backBtnPressed: {
     backgroundColor: '#E2E8F0',

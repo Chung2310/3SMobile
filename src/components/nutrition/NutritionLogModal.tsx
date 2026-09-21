@@ -208,7 +208,7 @@ export function NutritionLogModal({
                 </View>
                 <View>
                   <Text style={styles.headerTitle}>
-                    {isEditing ? 'Chỉnh Sửa Nhật Ký' : 'Ghi Nhật Ký Dinh Dưỡng & Vận Động'}
+                    {isEditing ? 'Chỉnh sửa nhật ký' : 'Ghi nhật ký dinh dưỡng & vận động'}
                   </Text>
                   <Text style={styles.headerSubtitle}>
                     {type === 'FOOD' ? 'Ghi nhận calo nạp vào cơ thể' : 'Ghi nhận năng lượng đốt cháy qua vận động'}

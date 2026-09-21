@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,7 +12,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api/client';
 import {
@@ -21,10 +20,50 @@ import {
   resources,
   type AdminRecord,
 } from '@/services/adminResources';
+import { resolveTransferTrainers } from '@/services/transferTrainers';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
 
 const ICON_ZALO = require('../../../assets/public/zalo-icon.png');
+
+type DateField = 'from' | 'to';
+
+const toIsoDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const displayDate = (value: string) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+};
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'PENDING', label: 'Chờ tiếp nhận' },
+  { value: 'ACCEPTED', label: 'Đã tiếp nhận' },
+  { value: 'REJECTED', label: 'Đã từ chối' },
+  { value: 'ADMIN_FORCED', label: 'Admin điều chuyển' },
+];
+
+const getStatusBadge = (statusStr: string) => {
+  switch (statusStr) {
+    case 'ACCEPTED':
+      return { label: 'Đã tiếp nhận', bg: '#DCFCE7', color: '#16A34A', icon: 'check-circle' as const };
+    case 'REJECTED':
+      return { label: 'Đã từ chối', bg: '#FEE2E2', color: '#EF4444', icon: 'x-circle' as const };
+    case 'ADMIN_FORCED':
+      return { label: 'Admin điều chuyển', bg: '#E0F2FE', color: '#0284C7', icon: 'shield' as const };
+    case 'CANCELLED':
+      return { label: 'Đã hủy', bg: '#F1F5F9', color: '#64748B', icon: 'slash' as const };
+    case 'PENDING':
+    default:
+      return { label: 'Chờ tiếp nhận', bg: '#FEF3C7', color: '#D97706', icon: 'clock' as const };
+  }
+};
 
 interface TransferParty {
   _id?: string;
@@ -41,30 +80,84 @@ export function AdminTransfersManagement() {
   const [items, setItems] = useState<AdminRecord[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [total, setTotal] = useState<number>();
-  const [keyword, setKeyword] = useState('');
-  const [applied, setApplied] = useState('');
-  const [status, setStatus] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [appliedKeyword, setAppliedKeyword] = useState('');
+
+  // Applied filter state
+  const [appliedStatus, setAppliedStatus] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
+  const [appliedFromPtId, setAppliedFromPtId] = useState('');
+  const [appliedToPtId, setAppliedToPtId] = useState('');
+
+  // Draft filter state inside modal
+  const [draftStatus, setDraftStatus] = useState('');
+  const [draftFromDate, setDraftFromDate] = useState('');
+  const [draftToDate, setDraftToDate] = useState('');
+  const [draftFromPtId, setDraftFromPtId] = useState('');
+  const [draftToPtId, setDraftToPtId] = useState('');
+
+  const [trainers, setTrainers] = useState<AdminRecord[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [ptPickerTarget, setPtPickerTarget] = useState<'from' | 'to' | null>(null);
+  const [ptFilterSearch, setPtFilterSearch] = useState('');
+  const [dateField, setDateField] = useState<DateField | null>(null);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
 
   // Selected transfer for detail sheet
   const [selectedTransfer, setSelectedTransfer] = useState<AdminRecord | null>(null);
 
   const version = useRef(0);
 
+  const transferPath = useCallback((currentPage: number) => {
+    const params = new URLSearchParams({ page: String(currentPage), limit: '20' });
+    if (appliedKeyword.trim()) params.set('keyword', appliedKeyword.trim());
+    if (appliedStatus) params.set('status', appliedStatus);
+    if (appliedFromDate) params.set('fromDate', appliedFromDate);
+    if (appliedToDate) params.set('toDate', appliedToDate);
+    if (appliedFromPtId) params.set('fromPtId', appliedFromPtId);
+    if (appliedToPtId) params.set('toPtId', appliedToPtId);
+    return resource.path + '?' + params.toString();
+  }, [resource.path, appliedKeyword, appliedStatus, appliedFromDate, appliedToDate, appliedFromPtId, appliedToPtId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setAppliedKeyword(keyword.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let active = true;
+    void api.getPage<AdminRecord>('/api/users?role=PT&limit=100')
+      .then((result) => { if (active) setTrainers(result.data || []); })
+      .catch(() => {
+        if (active) {
+          void api.getPage<AdminRecord>(listPath(resources.pts, 1, '', ''))
+            .then((res) => { if (active) setTrainers(res.data || []); })
+            .catch(() => {});
+        }
+      });
+    return () => { active = false; };
+  }, []);
+
   const load = useCallback(async () => {
     const request = ++version.current;
     setLoading(true);
     setError('');
     try {
-      const statusParam = status === 'ALL' ? '' : status;
-      const path = listPath(resource, page, applied, statusParam);
+      const path = transferPath(page);
       const result = await api.getPage<AdminRecord>(path);
       if (version.current !== request) return;
-      setItems(result.data || []);
-      setTotal(result.meta?.total ?? result.data?.length ?? 0);
+      const transfers = await resolveTransferTrainers(result.data || [], (trainerPage) =>
+        api.getPage<AdminRecord>(listPath(resources.pts, trainerPage, '', '')),
+      );
+      if (version.current !== request) return;
+      setItems(transfers);
       setPages(Math.max(1, result.meta?.totalPages || 1));
       if (result.meta && page > Math.max(1, result.meta.totalPages)) {
         setPage(Math.max(1, result.meta.totalPages));
@@ -77,19 +170,65 @@ export function AdminTransfersManagement() {
         setRefreshing(false);
       }
     }
-  }, [resource, page, applied, status]);
+  }, [page, transferPath]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void load();
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      version.current += 1;
+    };
   }, [load]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     void load();
   }, [load]);
+
+  const handleOpenFilter = () => {
+    setDraftStatus(appliedStatus);
+    setDraftFromDate(appliedFromDate);
+    setDraftToDate(appliedToDate);
+    setDraftFromPtId(appliedFromPtId);
+    setDraftToPtId(appliedToPtId);
+    setFilterOpen(true);
+  };
+
+  const handleApplyFilter = () => {
+    setAppliedStatus(draftStatus);
+    setAppliedFromDate(draftFromDate);
+    setAppliedToDate(draftToDate);
+    setAppliedFromPtId(draftFromPtId);
+    setAppliedToPtId(draftToPtId);
+    setPage(1);
+    setFilterOpen(false);
+  };
+
+  const handleResetDraft = () => {
+    setDraftStatus('');
+    setDraftFromDate('');
+    setDraftToDate('');
+    setDraftFromPtId('');
+    setDraftToPtId('');
+  };
+
+  const handleClearAppliedFilter = () => {
+    setAppliedStatus('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+    setAppliedFromPtId('');
+    setAppliedToPtId('');
+    setPage(1);
+  };
+
+  const hasActiveFilter = Boolean(
+    appliedStatus || appliedFromDate || appliedToDate || appliedFromPtId || appliedToPtId
+  );
+  const hasDraftFilter = Boolean(
+    draftStatus || draftFromDate || draftToDate || draftFromPtId || draftToPtId
+  );
 
   // Quick contact triggers
   const handleCall = (phone?: string) => {
@@ -125,22 +264,6 @@ export function AdminTransfersManagement() {
     return { name: String(val) };
   };
 
-  // Status mapping
-  const getStatusBadge = (st?: string) => {
-    switch (st) {
-      case 'ACCEPTED':
-        return { label: 'Đã tiếp nhận', color: '#16A34A', bg: '#DCFCE7', icon: 'check-circle' as const };
-      case 'ADMIN_FORCED':
-        return { label: 'Admin điều chuyển', color: '#7C3AED', bg: '#F3E8FF', icon: 'shield' as const };
-      case 'PENDING':
-        return { label: 'Chờ tiếp nhận', color: '#D97706', bg: '#FEF3C7', icon: 'clock' as const };
-      case 'REJECTED':
-        return { label: 'Đã từ chối', color: '#EF4444', bg: '#FEE2E2', icon: 'x-circle' as const };
-      default:
-        return { label: st || 'Chưa rõ', color: '#64748B', bg: '#F1F5F9', icon: 'help-circle' as const };
-    }
-  };
-
   // Format date helper
   const formatDate = (val?: unknown) => {
     if (!val) return '—';
@@ -158,224 +281,477 @@ export function AdminTransfersManagement() {
     }
   };
 
-  // Quick stats derived from items if total provided
-  const acceptedCount = items.filter((i) => i.status === 'ACCEPTED').length;
-  const forcedCount = items.filter((i) => i.status === 'ADMIN_FORCED').length;
-  const pendingCount = items.filter((i) => i.status === 'PENDING').length;
-  const rejectedCount = items.filter((i) => i.status === 'REJECTED').length;
+  const getTrainerName = (id: string) => {
+    if (!id) return 'Tất cả HLV';
+    const found = trainers.find((t) => recordId(t) === id);
+    return found ? String(found.fullName || found.username || id) : id;
+  };
+
+  const filteredTrainers = trainers.filter((t) => {
+    const q = ptFilterSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      String(t.fullName || '').toLowerCase().includes(q) ||
+      String(t.username || '').toLowerCase().includes(q) ||
+      String(t.phone || '').includes(q)
+    );
+  });
+
+  // Client-side filtering fallback ensures immediate precision even if server filter behaves loosely
+  const displayedItems = useMemo(() => {
+    return items.filter((item) => {
+      // 1. Status filter
+      if (appliedStatus && item.status !== appliedStatus) {
+        return false;
+      }
+      // 2. From date filter
+      if (appliedFromDate && item.createdAt) {
+        const itemDate = toIsoDate(new Date(String(item.createdAt)));
+        if (itemDate < appliedFromDate) return false;
+      }
+      // 3. To date filter
+      if (appliedToDate && item.createdAt) {
+        const itemDate = toIsoDate(new Date(String(item.createdAt)));
+        if (itemDate > appliedToDate) return false;
+      }
+      // 4. From PT filter
+      if (appliedFromPtId) {
+        const fromVal = item.fromPtId;
+        const fromId =
+          typeof fromVal === 'object' && fromVal !== null
+            ? recordId(fromVal as AdminRecord)
+            : String(fromVal || '');
+        if (fromId !== appliedFromPtId) return false;
+      }
+      // 5. To PT filter
+      if (appliedToPtId) {
+        const toVal = item.toPtId;
+        const toId =
+          typeof toVal === 'object' && toVal !== null
+            ? recordId(toVal as AdminRecord)
+            : String(toVal || '');
+        if (toId !== appliedToPtId) return false;
+      }
+      // 6. Keyword filter fallback
+      if (appliedKeyword.trim()) {
+        const q = appliedKeyword.trim().toLowerCase();
+        const customer = getPartyInfo(item.customerId);
+        const fromPt = getPartyInfo(item.fromPtId);
+        const toPt = getPartyInfo(item.toPtId);
+        const reason = String(item.reason || '').toLowerCase();
+        const match =
+          customer.name.toLowerCase().includes(q) ||
+          Boolean(customer.phone && customer.phone.includes(q)) ||
+          fromPt.name.toLowerCase().includes(q) ||
+          toPt.name.toLowerCase().includes(q) ||
+          reason.includes(q);
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [items, appliedStatus, appliedFromDate, appliedToDate, appliedFromPtId, appliedToPtId, appliedKeyword]);
 
   return (
     <View style={styles.container}>
-      {/* 1. EXECUTIVE STATS BANNER */}
-      <View style={styles.statsCard}>
-        <View style={styles.statsRow}>
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ALL');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="swap-horizontal" size={17} color={colors.primary} />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{total ?? items.length}</Text>
-              <Text style={styles.statLabel}>Tổng lượt</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ACCEPTED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="checkmark-done" size={17} color="#16A34A" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#16A34A' }]}>{acceptedCount}</Text>
-              <Text style={styles.statLabel}>Tiếp nhận</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ADMIN_FORCED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
-              <Ionicons name="shield-checkmark" size={17} color="#7C3AED" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#7C3AED' }]}>{forcedCount}</Text>
-              <Text style={styles.statLabel}>Admin chuyển</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('PENDING');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="time" size={17} color="#D97706" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#D97706' }]}>{pendingCount}</Text>
-              <Text style={styles.statLabel}>Chờ duyệt</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.statDivider} />
-
-          <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('REJECTED');
-              setPage(1);
-            }}
-          >
-            <View style={[styles.statIconBox, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="close-circle" size={17} color="#EF4444" />
-            </View>
-            <View>
-              <Text style={[styles.statValue, { color: '#EF4444' }]}>{rejectedCount}</Text>
-              <Text style={styles.statLabel}>Từ chối</Text>
-            </View>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* 2. TOOLBAR: BATCH TRANSFER BUTTON */}
-      <View style={styles.actionToolbar}>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/(app)/admin/[section]',
-              params: { section: 'batchTransfers' },
-            })
-          }
-          style={({ pressed }) => [
-            styles.batchTransferBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-          accessibilityLabel="Chuyển giao hàng loạt"
-        >
-          <Feather name="repeat" size={15} color={colors.primary} />
-          <Text style={styles.batchTransferText}>Chuyển giao hàng loạt</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => void load()}
-          style={({ pressed }) => [
-            styles.refreshBtn,
-            pressed && { opacity: 0.8 },
-          ]}
-          accessibilityLabel="Làm mới dữ liệu"
-        >
-          <Feather name="refresh-cw" size={15} color={colors.text} />
-          <Text style={styles.refreshBtnText}>Làm mới</Text>
-        </Pressable>
-      </View>
-
-      {/* 3. SEARCH BAR */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
-          <Feather name="search" size={16} color="#64748B" style={{ marginLeft: 4 }} />
+          <Feather name="search" size={16} color="#64748B" />
           <TextInput
             value={keyword}
             onChangeText={setKeyword}
-            placeholder="Tìm theo tên học viên, HLV, lý do…"
+            placeholder="Tìm học viên, HLV, lý do..."
             placeholderTextColor="#94A3B8"
             style={styles.searchInput}
-            returnKeyType="search"
-            onSubmitEditing={() => {
-              setApplied(keyword);
-              setPage(1);
-            }}
+            numberOfLines={1}
           />
           {keyword ? (
-            <Pressable
-              onPress={() => {
-                setKeyword('');
-                setApplied('');
-                setPage(1);
-              }}
-              hitSlop={8}
-            >
+            <Pressable onPress={() => setKeyword('')} hitSlop={8}>
               <Feather name="x" size={16} color="#64748B" />
             </Pressable>
           ) : null}
         </View>
-
         <Pressable
-          onPress={() => {
-            setApplied(keyword);
-            setPage(1);
-          }}
-          style={({ pressed }) => [
-            styles.searchTriggerBtn,
-            pressed && { opacity: 0.8 },
-          ]}
+          style={[styles.filterButton, hasActiveFilter && styles.filterButtonActive]}
+          onPress={handleOpenFilter}
+          accessibilityLabel="Mở bộ lọc lịch sử chuyển giao"
         >
-          <Text style={styles.searchTriggerText}>Tìm</Text>
+          <Feather name="sliders" size={16} color={colors.primary} />
+          <Text style={styles.filterButtonText}>Lọc</Text>
+          {hasActiveFilter && <View style={styles.filterActiveDot} />}
         </Pressable>
       </View>
 
-      {/* 4. PILL STATUS FILTERS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterPillsRow}
-      >
-        {(
-          [
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'ACCEPTED', label: 'Đã tiếp nhận' },
-            { key: 'ADMIN_FORCED', label: 'Admin điều chuyển' },
-            { key: 'PENDING', label: 'Chờ duyệt' },
-            { key: 'REJECTED', label: 'Đã từ chối' },
-          ] as const
-        ).map((pill) => {
-          const isActive = status === pill.key;
-          return (
-            <Pressable
-              key={pill.key}
-              onPress={() => {
-                setStatus(pill.key);
-                setPage(1);
-              }}
-              style={[
-                styles.filterPill,
-                isActive && styles.filterPillActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  isActive && styles.filterPillTextActive,
-                ]}
-              >
-                {pill.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      {hasActiveFilter ? (
+        <View style={styles.activeFilterRow}>
+          <View style={styles.activeFilterBadge}>
+            <Feather name="filter" size={12} color={colors.primary} />
+            <Text style={styles.activeFilterText} numberOfLines={1}>
+              {[
+                appliedStatus ? STATUS_OPTIONS.find((s) => s.value === appliedStatus)?.label : null,
+                appliedFromDate ? `Từ ${displayDate(appliedFromDate)}` : null,
+                appliedToDate ? `Đến ${displayDate(appliedToDate)}` : null,
+                appliedFromPtId ? `HLV giao: ${getTrainerName(appliedFromPtId)}` : null,
+                appliedToPtId ? `HLV nhận: ${getTrainerName(appliedToPtId)}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </View>
+          <Pressable onPress={handleClearAppliedFilter} hitSlop={6}>
+            <Text style={styles.clearFilterText}>Xóa lọc</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
+      {filterOpen && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible
+          onRequestClose={() => {
+            if (ptPickerTarget) setPtPickerTarget(null);
+            else setFilterOpen(false);
+          }}
+        >
+          <View style={styles.filterOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => {
+                if (ptPickerTarget) setPtPickerTarget(null);
+                else setFilterOpen(false);
+              }}
+            />
+            <View style={styles.filterSheet}>
+              {ptPickerTarget ? (
+                /* BOTTOM SHEET: CHỌN HLV BÀN GIAO / TIẾP NHẬN */
+                <View style={styles.pickerView}>
+                  <View style={styles.sheetHandle} />
+                  <View style={styles.filterHeader}>
+                    <Pressable
+                      onPress={() => setPtPickerTarget(null)}
+                      style={styles.sheetBackBtn}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Quay lại"
+                    >
+                      <Feather name="arrow-left" size={18} color={colors.text} />
+                    </Pressable>
+                    <Text style={styles.filterTitle}>
+                      {ptPickerTarget === 'from' ? 'Chọn HLV bàn giao' : 'Chọn HLV tiếp nhận'}
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        setPtPickerTarget(null);
+                        setFilterOpen(false);
+                      }}
+                      hitSlop={8}
+                      style={styles.sheetCloseBtnMini}
+                      accessibilityRole="button"
+                      accessibilityLabel="Đóng"
+                    >
+                      <Feather name="x" size={18} color={colors.text} />
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.ptSearchBox}>
+                    <Feather name="search" size={15} color="#94A3B8" />
+                    <TextInput
+                      value={ptFilterSearch}
+                      onChangeText={setPtFilterSearch}
+                      placeholder="Tìm theo tên HLV, SĐT..."
+                      placeholderTextColor="#94A3B8"
+                      style={styles.ptSearchInput}
+                    />
+                    {ptFilterSearch ? (
+                      <Pressable onPress={() => setPtFilterSearch('')} hitSlop={6}>
+                        <Feather name="x-circle" size={15} color="#94A3B8" />
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  <ScrollView style={styles.ptList} showsVerticalScrollIndicator={false}>
+                    {/* Option: Tất cả HLV */}
+                    <Pressable
+                      style={[
+                        styles.ptItem,
+                        (ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && styles.ptItemActive,
+                      ]}
+                      onPress={() => {
+                        if (ptPickerTarget === 'from') setDraftFromPtId('');
+                        else setDraftToPtId('');
+                        setPtPickerTarget(null);
+                      }}
+                    >
+                      <View style={styles.ptAvatarAll}>
+                        <Feather name="users" size={15} color={colors.primary} />
+                      </View>
+                      <Text
+                        style={[
+                          styles.ptName,
+                          (ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && styles.ptNameActive,
+                        ]}
+                      >
+                        Tất cả HLV
+                      </Text>
+                      {(ptPickerTarget === 'from' ? !draftFromPtId : !draftToPtId) && (
+                        <Feather name="check" size={16} color={colors.primary} />
+                      )}
+                    </Pressable>
+
+                    {filteredTrainers.length === 0 ? (
+                      <View style={styles.ptEmptyBox}>
+                        <Text style={styles.ptEmptyText}>Không tìm thấy HLV phù hợp</Text>
+                      </View>
+                    ) : (
+                      filteredTrainers.map((trainer) => {
+                        const id = recordId(trainer);
+                        const isSelected = (ptPickerTarget === 'from' ? draftFromPtId : draftToPtId) === id;
+                        const initial = String(trainer.fullName || trainer.username || 'PT')
+                          .charAt(0)
+                          .toUpperCase();
+                        return (
+                          <Pressable
+                            key={id}
+                            style={[styles.ptItem, isSelected && styles.ptItemActive]}
+                            onPress={() => {
+                              if (ptPickerTarget === 'from') setDraftFromPtId(id);
+                              else setDraftToPtId(id);
+                              setPtPickerTarget(null);
+                            }}
+                          >
+                            <View style={styles.ptAvatar}>
+                              <Text style={styles.ptAvatarText}>{initial}</Text>
+                            </View>
+                            <View style={styles.ptInfo}>
+                              <Text
+                                style={[styles.ptName, isSelected && styles.ptNameActive]}
+                                numberOfLines={1}
+                              >
+                                {String(trainer.fullName || trainer.username || id)}
+                              </Text>
+                              {trainer.phone ? (
+                                <Text style={styles.ptSubText} numberOfLines={1}>
+                                  {String(trainer.phone)}
+                                </Text>
+                              ) : null}
+                            </View>
+                            {isSelected && (
+                              <Feather name="check" size={16} color={colors.primary} />
+                            )}
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </ScrollView>
+                </View>
+              ) : (
+                /* MAIN FILTER SHEET */
+                <View style={styles.filterMainView}>
+                  <View style={styles.sheetHandle} />
+                  <View style={styles.filterHeader}>
+                    <Text style={styles.filterTitle}>Lọc lịch sử chuyển giao</Text>
+                    <Pressable
+                      onPress={() => setFilterOpen(false)}
+                      hitSlop={8}
+                      style={styles.sheetCloseBtnMini}
+                      accessibilityRole="button"
+                      accessibilityLabel="Đóng"
+                    >
+                      <Feather name="x" size={18} color={colors.text} />
+                    </Pressable>
+                  </View>
+
+                  {/* Filter: Trạng thái */}
+                  <Text style={styles.filterLabel}>Trạng thái</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.statusChipsRow}
+                  >
+                    {STATUS_OPTIONS.map((opt) => {
+                      const isSelected = draftStatus === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          style={[styles.statusChip, isSelected && styles.statusChipActive]}
+                          onPress={() => setDraftStatus(opt.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.statusChipText,
+                              isSelected && styles.statusChipTextActive,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Filter: Khoảng ngày */}
+                  <Text style={styles.filterLabel}>Khoảng ngày</Text>
+                  <View style={styles.dateRow}>
+                    {(['from', 'to'] as DateField[]).map((field) => {
+                      const value = field === 'from' ? draftFromDate : draftToDate;
+                      return (
+                        <Pressable
+                          key={field}
+                          style={styles.dateInput}
+                          onPress={() => {
+                            setDateField(field);
+                            const selected = value ? new Date(`${value}T00:00:00`) : new Date();
+                            setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={field === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                        >
+                          <Feather name="calendar" size={15} color="#64748B" />
+                          <Text style={value ? styles.dateValue : styles.datePlaceholder} numberOfLines={1}>
+                            {value ? displayDate(value) : field === 'from' ? 'Từ ngày' : 'Đến ngày'}
+                          </Text>
+                          {value ? (
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                if (field === 'from') setDraftFromDate('');
+                                else setDraftToDate('');
+                              }}
+                              hitSlop={6}
+                            >
+                              <Feather name="x" size={14} color="#94A3B8" />
+                            </Pressable>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Filter: HLV bàn giao */}
+                  <Text style={styles.filterLabel}>HLV bàn giao</Text>
+                  <Pressable
+                    style={styles.ptSelectorBtn}
+                    onPress={() => {
+                      setPtPickerTarget('from');
+                      setPtFilterSearch('');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn HLV bàn giao"
+                  >
+                    <View style={styles.ptSelectorLeft}>
+                      <View style={[styles.ptSelectorIconBox, draftFromPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-minus" size={14} color={draftFromPtId ? colors.primary : '#64748B'} />
+                      </View>
+                      <Text
+                        style={[styles.ptSelectorText, draftFromPtId ? styles.ptSelectorTextActive : null]}
+                        numberOfLines={1}
+                      >
+                        {getTrainerName(draftFromPtId)}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={16} color="#94A3B8" />
+                  </Pressable>
+
+                  {/* Filter: HLV tiếp nhận */}
+                  <Text style={styles.filterLabel}>HLV tiếp nhận</Text>
+                  <Pressable
+                    style={styles.ptSelectorBtn}
+                    onPress={() => {
+                      setPtPickerTarget('to');
+                      setPtFilterSearch('');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn HLV tiếp nhận"
+                  >
+                    <View style={styles.ptSelectorLeft}>
+                      <View style={[styles.ptSelectorIconBox, draftToPtId ? styles.ptSelectorIconBoxActive : null]}>
+                        <Feather name="user-check" size={14} color={draftToPtId ? colors.primary : '#64748B'} />
+                      </View>
+                      <Text
+                        style={[styles.ptSelectorText, draftToPtId ? styles.ptSelectorTextActive : null]}
+                        numberOfLines={1}
+                      >
+                        {getTrainerName(draftToPtId)}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={16} color="#94A3B8" />
+                  </Pressable>
+
+                  <View style={styles.filterActionsRow}>
+                    {hasDraftFilter ? (
+                      <Pressable
+                        style={styles.resetFilterButton}
+                        onPress={handleResetDraft}
+                      >
+                        <Text style={styles.resetFilterText}>Đặt lại</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      style={[
+                        styles.applyFilterButton,
+                        !hasDraftFilter && { flex: 1 },
+                      ]}
+                      onPress={handleApplyFilter}
+                    >
+                      <Text style={styles.applyFilterText}>Áp dụng</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {dateField && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setDateField(null)}>
+          <View style={styles.datePickerOverlay}>
+            <View style={styles.datePickerSheet}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterTitle}>{dateField === 'from' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}</Text>
+                <Pressable onPress={() => setDateField(null)} hitSlop={10} accessibilityLabel="Đóng bộ chọn ngày">
+                  <Feather name="x" size={20} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.calendarHeader}>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-left" size={18} color={colors.text} />
+                </Pressable>
+                <Text style={styles.calendarMonthLabel}>{`Tháng ${pickerMonth.getMonth() + 1}/${pickerMonth.getFullYear()}`}</Text>
+                <Pressable style={styles.calendarNavButton} onPress={() => setPickerMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} hitSlop={6}>
+                  <Feather name="chevron-right" size={18} color={colors.text} />
+                </Pressable>
+              </View>
+              <View style={styles.weekdayRow}>{['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day) => <Text key={day} style={styles.weekdayText}>{day}</Text>)}</View>
+              <View style={styles.calendarGrid}>
+                {Array.from({ length: new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 0).getDate() + new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay() }).map((_, index) => {
+                  const firstDay = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay();
+                  if (index < firstDay) return <View key={`empty-${index}`} style={styles.calendarDay} />;
+                  const day = index - firstDay + 1;
+                  const date = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), day);
+                  const iso = toIsoDate(date);
+                  const selected = (dateField === 'from' ? draftFromDate : draftToDate) === iso;
+                  return (
+                    <Pressable
+                      key={iso}
+                      style={[styles.calendarDay, selected && styles.calendarDaySelected]}
+                      onPress={() => {
+                        if (dateField === 'from') setDraftFromDate(iso);
+                        else setDraftToDate(iso);
+                        setDateField(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Chọn ngày ${day}`}
+                    >
+                      <Text style={[styles.calendarDayText, selected && styles.calendarDayTextSelected]}>{day}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       {/* 5. TRANSFER LIST */}
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -404,32 +780,35 @@ export function AdminTransfersManagement() {
               <Text style={styles.retryBtnText}>Thử lại</Text>
             </Pressable>
           </View>
-        ) : items.length === 0 ? (
+        ) : displayedItems.length === 0 ? (
           <View style={styles.statusBox}>
             <Ionicons name="swap-horizontal-outline" size={40} color="#94A3B8" />
             <Text style={styles.statusBoxText}>
-              Chưa có lịch sử chuyển giao nào phù hợp.
+              {hasActiveFilter || appliedKeyword
+                ? 'Chưa có lịch sử chuyển giao nào phù hợp bộ lọc.'
+                : 'Chưa có lịch sử chuyển giao nào.'}
             </Text>
-            <Pressable
-              onPress={() => {
-                setKeyword('');
-                setApplied('');
-                setStatus('ALL');
-                setPage(1);
-              }}
-              style={styles.clearFilterBtn}
-            >
-              <Text style={styles.clearFilterText}>Xóa bộ lọc tìm kiếm</Text>
-            </Pressable>
+            {hasActiveFilter || appliedKeyword ? (
+              <Pressable
+                style={styles.clearFilterBtn}
+                onPress={() => {
+                  handleClearAppliedFilter();
+                  setKeyword('');
+                  setAppliedKeyword('');
+                }}
+              >
+                <Text style={styles.clearFilterText}>Xóa tất cả bộ lọc</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
-          items.map((item) => {
+          displayedItems.map((item) => {
             const tId = recordId(item);
-            const badge = getStatusBadge(String(item.status || ''));
             const customer = getPartyInfo(item.customerId);
             const fromPt = getPartyInfo(item.fromPtId);
             const toPt = getPartyInfo(item.toPtId);
             const timeStr = formatDate(item.createdAt);
+            const badge = getStatusBadge(String(item.status || ''));
 
             return (
               <Pressable
@@ -442,13 +821,12 @@ export function AdminTransfersManagement() {
                 accessibilityRole="button"
                 accessibilityLabel={`Chi tiết chuyển giao học viên ${customer.name}`}
               >
-                {/* Top Meta: Time + Status Badge */}
+                {/* Top Meta */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.timeTag}>
                     <Feather name="calendar" size={12} color="#64748B" />
                     <Text style={styles.timeText}>{timeStr}</Text>
                   </View>
-
                   <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
                     <Feather name={badge.icon} size={11} color={badge.color} style={{ marginRight: 4 }} />
                     <Text style={[styles.statusBadgeText, { color: badge.color }]}>
@@ -569,22 +947,6 @@ export function AdminTransfersManagement() {
                     </View>
                   </View>
                 </View>
-
-                {/* Reason Block */}
-                {item.reason ? (
-                  <View style={styles.reasonBox}>
-                    <Feather name="file-text" size={13} color="#64748B" style={{ marginTop: 2 }} />
-                    <Text style={styles.reasonText} numberOfLines={2}>
-                      Lý do: {String(item.reason)}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {/* Tap to view detail hint */}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardFooterText}>Chạm để xem chi tiết chuyển giao</Text>
-                  <Feather name="chevron-right" size={14} color="#94A3B8" />
-                </View>
               </Pressable>
             );
           })
@@ -647,9 +1009,6 @@ export function AdminTransfersManagement() {
               <View style={styles.sheetHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetTitle}>Chi tiết chuyển giao</Text>
-                  <Text style={styles.sheetSub}>
-                    Mã hồ sơ: {recordId(selectedTransfer)}
-                  </Text>
                 </View>
 
                 <Pressable
@@ -662,32 +1021,6 @@ export function AdminTransfersManagement() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={styles.sheetBody}>
-                {/* Status Bar */}
-                <View style={styles.sheetStatusBox}>
-                  <Text style={styles.sheetStatusLabel}>Trạng thái chuyển giao:</Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusBadge(String(selectedTransfer.status)).bg },
-                    ]}
-                  >
-                    <Feather
-                      name={getStatusBadge(String(selectedTransfer.status)).icon}
-                      size={12}
-                      color={getStatusBadge(String(selectedTransfer.status)).color}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        { color: getStatusBadge(String(selectedTransfer.status)).color },
-                      ]}
-                    >
-                      {getStatusBadge(String(selectedTransfer.status)).label}
-                    </Text>
-                  </View>
-                </View>
-
                 {/* Section: Học viên */}
                 <View style={styles.infoSection}>
                   <Text style={styles.infoSectionTitle}>Học viên</Text>
@@ -721,7 +1054,7 @@ export function AdminTransfersManagement() {
                         const pt = getPartyInfo(selectedTransfer.fromPtId);
                         return (
                           <View style={styles.comparePartyCard}>
-                            <Text style={styles.comparePartyName}>{pt.name}</Text>
+                            <Text style={styles.comparePartyName} numberOfLines={2} ellipsizeMode="tail">{pt.name}</Text>
                             {pt.user ? <Text style={styles.comparePartyUser}>@{pt.user}</Text> : null}
                             {pt.phone ? <Text style={styles.comparePartyPhone}>{pt.phone}</Text> : null}
                           </View>
@@ -741,7 +1074,7 @@ export function AdminTransfersManagement() {
                         const pt = getPartyInfo(selectedTransfer.toPtId);
                         return (
                           <View style={[styles.comparePartyCard, { borderColor: '#BAE6FD', backgroundColor: '#F0F9FF' }]}>
-                            <Text style={[styles.comparePartyName, { color: colors.primary }]}>{pt.name}</Text>
+                            <Text style={[styles.comparePartyName, { color: colors.primary }]} numberOfLines={2} ellipsizeMode="tail">{pt.name}</Text>
                             {pt.user ? <Text style={styles.comparePartyUser}>@{pt.user}</Text> : null}
                             {pt.phone ? <Text style={styles.comparePartyPhone}>{pt.phone}</Text> : null}
                           </View>
@@ -800,164 +1133,265 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  statsCard: {
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  searchBox: { flex: 1, minWidth: 0, height: 46, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12 },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 13, color: colors.text, padding: 0 },
+  filterButton: { height: 46, minWidth: 70, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BAE6FD', backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  filterButtonActive: { borderColor: colors.primary, backgroundColor: '#E0F2FE' },
+  filterActiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginLeft: -2 },
+  filterButtonText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  activeFilterRow: { minHeight: 28, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 },
+  activeFilterBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  activeFilterText: { color: colors.textMuted, fontSize: 12, flex: 1 },
+  statusChipsRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  statusChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' },
+  statusChipActive: { borderColor: colors.primary, backgroundColor: '#F0F9FF' },
+  statusChipText: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+  statusChipTextActive: { color: colors.primary, fontWeight: '700' },
+  filterOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.5)' },
+  filterSheet: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 24,
+    maxHeight: '85%',
   },
-  statsRow: {
+  filterMainView: {
+    gap: 10,
+  },
+  pickerView: {
+    gap: 10,
+    maxHeight: 480,
+  },
+  filterHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  statItem: {
-    flex: 1,
     alignItems: 'center',
-    gap: 4,
+    marginBottom: 4,
   },
-  statIconBox: {
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sheetCloseBtnMini: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    textAlign: 'center',
+  sheetBackBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statLabel: {
-    fontSize: 9.5,
-    color: '#64748B',
+  filterLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
-    textTransform: 'uppercase',
+    color: '#475569',
+    marginTop: 4,
   },
-  statDivider: {
-    width: 1,
-    height: 34,
-    backgroundColor: '#E2E8F0',
-  },
-  actionToolbar: {
+  dateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    gap: 10,
-  },
-  batchTransferBtn: {
-    flex: 1,
-    height: 44,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  batchTransferText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  refreshBtn: {
-    height: 44,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  refreshBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
     gap: 8,
   },
-  searchBox: {
+  dateInput: {
     flex: 1,
     height: 42,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.text,
-    marginLeft: 6,
-  },
-  searchTriggerBtn: {
-    height: 42,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    gap: 6,
   },
-  searchTriggerText: {
-    fontSize: 13,
-    fontWeight: '600',
+  dateValue: {
+    flex: 1,
+    fontSize: 12,
     color: colors.text,
+    fontWeight: '600',
   },
-  filterPillsRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 8,
+  datePlaceholder: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textMuted,
   },
-  filterPill: {
-    height: 36,
-    paddingHorizontal: 14,
+  ptSelectorBtn: {
+    height: 44,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ptSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+    gap: 8,
+  },
+  ptSelectorIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#F0F9FF',
+  ptSelectorIconBoxActive: {
+    backgroundColor: '#E0F2FE',
   },
-  filterPillText: {
-    fontSize: 12,
-    fontWeight: '600',
+  ptSelectorText: {
+    fontSize: 12.5,
+    fontWeight: '500',
     color: '#64748B',
+    flex: 1,
   },
-  filterPillTextActive: {
+  ptSelectorTextActive: {
     color: colors.primary,
     fontWeight: '700',
   },
+  filterActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  resetFilterButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetFilterText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  applyFilterButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyFilterText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  ptSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 38,
+    gap: 6,
+    marginBottom: 4,
+  },
+  ptSearchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  ptList: {
+    maxHeight: 280,
+  },
+  ptItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+  },
+  ptItemActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  ptAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptAvatarAll: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptAvatarText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  ptInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ptName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  ptNameActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  ptSubText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  ptEmptyBox: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  ptEmptyText: {
+    fontSize: 12.5,
+    color: colors.textMuted,
+  },
+  datePickerOverlay: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(15,23,42,0.5)' },
+  datePickerSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, gap: 14 },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  calendarNavButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  calendarMonthLabel: { fontSize: 15, fontWeight: '700', color: colors.text },
+  weekdayRow: { flexDirection: 'row' },
+  weekdayText: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', color: colors.textMuted },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDay: { width: '14.2857%', height: 44, alignItems: 'center', justifyContent: 'center' },
+  calendarDaySelected: { borderRadius: 22, backgroundColor: colors.primary },
+  calendarDayText: { fontSize: 14, color: colors.text },
+  calendarDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 32,

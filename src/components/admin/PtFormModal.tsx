@@ -135,7 +135,7 @@ function PtFormModalInner({
 
             <View style={styles.headerTitleWrap}>
               <Text style={styles.sheetTitle}>
-                {editing ? 'Chỉnh sửa HLV' : 'Thêm Huấn luyện viên mới'}
+                {editing ? 'Chỉnh sửa HLV' : 'Thêm huấn luyện viên mới'}
               </Text>
               <Text style={styles.sheetSub}>
                 {editing
@@ -175,7 +175,7 @@ function PtFormModalInner({
               {/* Tên đăng nhập */}
               <View style={styles.fieldWrap}>
                 <Text style={styles.fieldLabel}>
-                  Tên đăng nhập (Username) <Text style={styles.reqStar}>*</Text>
+                  Tên đăng nhập<Text style={styles.reqStar}>*</Text>
                 </Text>
                 <TextInput
                   editable={!editing && !busy}
@@ -193,17 +193,12 @@ function PtFormModalInner({
                     editing && styles.inputDisabled,
                   ]}
                 />
-                {editing && (
-                  <Text style={styles.helperText}>
-                    Tên đăng nhập là định danh cố định không thể thay đổi
-                  </Text>
-                )}
               </View>
 
               {/* Mật khẩu */}
               <View style={styles.fieldWrap}>
                 <Text style={styles.fieldLabel}>
-                  {editing ? 'Đổi mật khẩu mới (để trống nếu giữ nguyên)' : 'Mật khẩu khởi tạo'}
+                  {editing ? 'Đổi mật khẩu mới' : 'Mật khẩu khởi tạo'}
                   {!editing && <Text style={styles.reqStar}> *</Text>}
                 </Text>
                 <View style={styles.passwordInputWrap}>
@@ -214,11 +209,11 @@ function PtFormModalInner({
                       setDirty(true);
                       setPassword(v);
                     }}
-                    placeholder={editing ? 'Nhập 6 số để đổi mới...' : 'Mật khẩu 6 chữ số (vd: 123456)'}
+                    placeholder={editing ? 'Nhập mật khẩu mới' : 'Mật khẩu tối thiểu 8 ký tự'}
                     placeholderTextColor={colors.textMuted}
                     secureTextEntry={!showPassword}
-                    keyboardType="number-pad"
-                    maxLength={6}
+                    keyboardType="default"
+                    autoCapitalize="none" autoCorrect={false}
                     style={styles.passwordInput}
                   />
                   <Pressable
@@ -233,9 +228,7 @@ function PtFormModalInner({
                     />
                   </Pressable>
                 </View>
-                <Text style={styles.helperText}>
-                  Quy chuẩn bảo mật hệ thống: Mật khẩu gồm đúng 6 chữ số
-                </Text>
+
               </View>
 
               {/* Trạng thái tài khoản */}

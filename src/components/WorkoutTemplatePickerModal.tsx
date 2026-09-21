@@ -126,7 +126,7 @@ export function WorkoutTemplatePickerModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleWrap}>
-              <Text style={styles.headerTitle}>CHỌN GIÁO ÁN MẪU</Text>
+              <Text style={styles.headerTitle}>Chọn giáo án mẫu</Text>
               <Text
                 style={styles.headerSubtitle}
                 numberOfLines={1}

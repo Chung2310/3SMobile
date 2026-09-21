@@ -10,6 +10,7 @@ function loadTs(filename) {
   const mod = new Module(target, module);
   mod.filename = target;
   mod.paths = module.paths;
+  mod.require = (id) => id.startsWith('.') ? loadTs(path.relative(path.resolve(__dirname, '..'), path.resolve(path.dirname(target), id + '.ts'))) : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(target, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, target);
   return mod.exports;
 }
@@ -35,9 +36,9 @@ test('pagination preserves role, Unicode search and status', () => {
   assert.equal(url.searchParams.get('page'),'3'); assert.equal(url.searchParams.get('status'),'LOCKED');
   assert.equal(resources.accounts.superOnly,true);
 });
-test('editing accounts excludes role, username and blank password; creation enforces six digits', () => {
-  const input = {username:'trainer',password:'123456',fullName:'Trainer',phone:'0901234567',status:'ACTIVE'};
-  const created = formPayload(resources.pts.fields,input,false); assert.equal(created.password,'123456');
+test('editing accounts excludes role, username and blank password; creation accepts flexible passwords', () => {
+  const input = {username:'trainer',password:'Trainer@2026',fullName:'Trainer',phone:'0901234567',status:'ACTIVE'};
+  const created = formPayload(resources.pts.fields,input,false); assert.equal(created.password,'Trainer@2026');
   const edited = formPayload(resources.pts.fields,{...input,password:''},true);
   assert.equal('username' in edited,false); assert.equal('password' in edited,false); assert.equal('role' in edited,false);
   assert.throws(() => formPayload(resources.pts.fields,{...input,password:'abcdef'},false));
@@ -54,4 +55,39 @@ test('reject invalid quantities and credit package price; retain zero and false'
   const credit = {name:'Credit',amountVnd:'10000',active:'false',bonusCredits:'0'};
   assert.equal(formPayload(resources.creditPackages.fields,credit,false).active,false);
   assert.throws(() => formPayload(resources.creditPackages.fields,{...credit,amountVnd:'10500'},false));
+});
+
+test('passwords support Unicode and symbols without trimming or bcrypt truncation', () => {
+  const { isValidPassword } = loadTs('src/services/passwordValidation.ts');
+  for (const value of ['abcdefgh', '12345678', 'Password@2026', 'Mật khẩu mới 2026!', ' password ']) assert.equal(isValidPassword(value),true);
+  for (const value of ['123456','       ','a'.repeat(73),'😀'.repeat(19)]) assert.equal(isValidPassword(value),false);
+  assert.equal(isValidPassword('😀'.repeat(18)),true);
+  const input={username:'trainer',password:' password ',fullName:'Trainer',phone:'0901234567',status:'ACTIVE'};
+  assert.equal(formPayload(resources.pts.fields,input,false).password,' password ');
+});
+const { resolveTransferTrainers } = loadTs('src/services/transferTrainers.ts');
+test('transfer trainer IDs resolve across pages, including locked trainers', async () => {
+  const rows = [{ fromPtId: 'old', toPtId: { _id: 'new' }, customerId: 'customer' }];
+  const calls = [];
+  const result = await resolveTransferTrainers(rows, async page => {
+    calls.push(page);
+    return { data: page === 1 ? [{ id: 'new', fullName: 'HLV mới' }] : [{ _id: 'old', fullName: 'HLV cũ', status: 'LOCKED' }], meta: { totalPages: 2 } };
+  });
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(result[0].fromPtId.fullName, 'HLV cũ');
+  assert.equal(result[0].toPtId.fullName, 'HLV mới');
+  assert.equal(result[0].customerId, 'customer');
+  assert.equal(rows[0].fromPtId, 'old');
+});
+test('populated trainer names are reused without directory requests', async () => {
+  const rows = [{ fromPtId: { _id: 'pt', fullName: 'Nguyễn Văn An' }, toPtId: 'pt' }];
+  const result = await resolveTransferTrainers(rows, async () => { throw Error('unexpected request'); });
+  assert.equal(result[0].toPtId.fullName, 'Nguyễn Văn An');
+});
+test('missing or unavailable trainer records never render raw IDs', async () => {
+  for (const fetch of [async () => ({ data: [], meta: { totalPages: 1 } }), async () => { throw Error('offline'); }]) {
+    const result = await resolveTransferTrainers([{ fromPtId: '6a9aaf3c00000000000000000', toPtId: null }], fetch);
+    assert.equal(result[0].fromPtId.fullName, 'Chưa có thông tin HLV');
+    assert.equal(result[0].toPtId, null);
+  }
 });

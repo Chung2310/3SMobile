@@ -16,23 +16,39 @@ interface ScreenProps {
   refreshing?: boolean;
   onRefresh?: () => Promise<void>;
   scroll?: boolean;
+  noPadding?: boolean;
   onBack?: (() => void) | null;
 }
 
-export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, onBack }: ScreenProps) {
+export function Screen({ title, subtitle, children, refreshing = false, onRefresh, scroll = true, noPadding = false, onBack }: ScreenProps) {
   const insets = useSafeAreaInsets();
-  const handleBack = onBack === null ? undefined : (onBack !== undefined ? onBack : () => router.navigate('/(app)/(tabs)'));
+  const handleBack =
+    onBack === null
+      ? undefined
+      : onBack !== undefined
+      ? onBack
+      : () => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.navigate('/(app)/(tabs)');
+          }
+        };
 
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 40 }]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        noPadding && { padding: 0, paddingHorizontal: 0, paddingTop: 0 },
+        { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+      ]}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={colors.primary} /> : undefined}
       showsVerticalScrollIndicator={false}
     >
       {children}
     </ScrollView>
   ) : (
-    <View style={styles.staticContent}>{children}</View>
+    <View style={[styles.staticContent, noPadding && { padding: 0 }]}>{children}</View>
   );
 
   return (

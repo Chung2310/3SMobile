@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -16,12 +16,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/services/api/client';
 import { colors } from '@/theme';
 import { messageOf } from '@/utils/error';
-import { display, type AdminRecord } from '@/services/adminResources';
+import { type AdminRecord } from '@/services/adminResources';
+import {
+  resolveAdminUsers,
+  getUserParty,
+  formatUserDisplay,
+  getUserInitials,
+  formatUserSubtext,
+  type AdminUserParty,
+} from '@/services/adminUsers';
 
 export interface CreditLedgerRecord extends AdminRecord {
   _id?: string;
   id?: string;
-  userId?: string | AdminRecord;
+  userId?: string | AdminUserParty;
+  actorUserId?: string | AdminUserParty;
   type?: string;
   availableDelta?: number;
   availableAfter?: number;
@@ -31,11 +40,13 @@ export interface CreditLedgerRecord extends AdminRecord {
 }
 
 const typeMap: Record<string, { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  GRANT: { label: 'Nạp / Cấp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
+  GRANT: { label: 'Nạp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
+  TOPUP: { label: 'Nạp credit', color: '#16A34A', bg: '#DCFCE7', icon: 'add-circle' },
   CONSUME: { label: 'Sử dụng tác vụ AI', color: '#EF4444', bg: '#FEE2E2', icon: 'flash' },
+  SETTLE: { label: 'Sử dụng tác vụ AI', color: '#EF4444', bg: '#FEE2E2', icon: 'flash' },
   ADJUSTMENT: { label: 'Admin điều chỉnh', color: '#0284C7', bg: '#E0F2FE', icon: 'options' },
   REFUND: { label: 'Hoàn trả credit', color: '#16A34A', bg: '#DCFCE7', icon: 'refresh-circle' },
-  SETTLE: { label: 'Quyết toán AI', color: '#B45309', bg: '#FEF3C7', icon: 'checkmark-circle' },
+  RELEASE: { label: 'Hoàn trả credit', color: '#16A34A', bg: '#DCFCE7', icon: 'refresh-circle' },
   RESERVE: { label: 'Tạm giữ chỗ', color: '#64748B', bg: '#F1F5F9', icon: 'lock-closed' },
   CANCEL: { label: 'Hủy giữ chỗ', color: '#64748B', bg: '#F1F5F9', icon: 'close-circle' },
   EXPIRATION: { label: 'Hết hạn', color: '#EF4444', bg: '#FEE2E2', icon: 'time' },
@@ -57,6 +68,11 @@ function LedgerDetailSheet({
     bg: isPositive ? '#DCFCE7' : '#FEE2E2',
     icon: 'receipt',
   };
+  const user = getUserParty(record.userId);
+  const actor = record.actorUserId ? getUserParty(record.actorUserId) : null;
+  const displayName = formatUserDisplay(record.userId);
+  const initials = getUserInitials(user.fullName || user.username);
+  const userSub = formatUserSubtext(record.userId);
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -104,6 +120,28 @@ function LedgerDetailSheet({
               ) : null}
             </View>
 
+            {/* User Profile Card */}
+            <View style={styles.detailUserCard}>
+              <View style={styles.detailAvatarBox}>
+                <Text style={styles.detailAvatarText}>{initials}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailUserName} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                {userSub ? (
+                  <Text style={styles.detailUserSub} numberOfLines={1}>
+                    {userSub}
+                  </Text>
+                ) : null}
+                {user.email ? (
+                  <Text style={styles.detailUserEmail} numberOfLines={1}>
+                    {user.email}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
             {/* Info Grid */}
             <View style={styles.detailSection}>
               <View style={styles.detailRow}>
@@ -114,17 +152,19 @@ function LedgerDetailSheet({
                 </View>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Tài khoản người dùng:</Text>
-                <Text style={styles.detailRowValue}>{display(record.userId)}</Text>
-              </View>
-
               <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
                 <Text style={styles.detailRowLabel}>Lý do / Diễn giải:</Text>
                 <Text style={[styles.detailRowValue, { flex: 1, textAlign: 'right', marginLeft: 12 }]}>
                   {record.reason || 'Không có mô tả'}
                 </Text>
               </View>
+
+              {actor && (actor.fullName || actor.username) ? (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailRowLabel}>Người điều chỉnh:</Text>
+                  <Text style={styles.detailRowValue}>{formatUserDisplay(actor)}</Text>
+                </View>
+              ) : null}
 
               {record.referenceId ? (
                 <View style={styles.detailRow}>
@@ -179,13 +219,18 @@ export function AdminCreditLedger() {
         limit: '15',
       });
       if (appliedSearch.trim()) params.set('keyword', appliedSearch.trim());
-      if (typeFilter) params.set('status', typeFilter);
+      if (typeFilter) {
+        params.set('type', typeFilter);
+        params.set('status', typeFilter);
+      }
 
       const res = await api.getPage<CreditLedgerRecord>(
         `/api/admin/credit-ledger?${params.toString()}`
       );
-      setRecords(res.data || []);
-      setTotal(res.meta?.total ?? res.data.length);
+      const raw = res.data || [];
+      const resolved = await resolveAdminUsers(raw, ['userId', 'actorUserId']);
+      setRecords(resolved);
+      setTotal(res.meta?.total ?? raw.length);
       setPages(Math.max(1, res.meta?.totalPages || 1));
     } catch (e) {
       setError(messageOf(e));
@@ -224,6 +269,39 @@ export function AdminCreditLedger() {
 
   const grantCount = records.filter((r) => (r.availableDelta || 0) > 0).length;
   const consumeCount = records.filter((r) => (r.availableDelta || 0) < 0).length;
+
+  const displayedRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (typeFilter) {
+        const t = r.type || '';
+        const match =
+          t === typeFilter ||
+          (typeFilter === 'TOPUP' && (t === 'GRANT' || t === 'TOPUP')) ||
+          (typeFilter === 'SETTLE' && (t === 'CONSUME' || t === 'SETTLE')) ||
+          (typeFilter === 'RELEASE' && (t === 'REFUND' || t === 'RELEASE'));
+        if (!match) return false;
+      }
+      if (appliedSearch.trim()) {
+        const q = appliedSearch.trim().toLowerCase();
+        const u = getUserParty(r.userId);
+        const name = (u.fullName || '').toLowerCase();
+        const user = (u.username || '').toLowerCase();
+        const phone = (u.phone || '').toLowerCase();
+        const reason = (r.reason || '').toLowerCase();
+        const refId = (r.referenceId || '').toLowerCase();
+        if (
+          !name.includes(q) &&
+          !user.includes(q) &&
+          !phone.includes(q) &&
+          !reason.includes(q) &&
+          !refId.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [records, typeFilter, appliedSearch]);
 
   return (
     <View style={styles.container}>
@@ -308,10 +386,10 @@ export function AdminCreditLedger() {
       <View style={styles.filterPillsRow}>
         {[
           { value: '', label: 'Tất cả' },
-          { value: 'GRANT', label: 'Nạp credit' },
-          { value: 'CONSUME', label: 'Dùng AI' },
+          { value: 'TOPUP', label: 'Nạp credit' },
+          { value: 'SETTLE', label: 'Dùng AI' },
           { value: 'ADJUSTMENT', label: 'Điều chỉnh' },
-          { value: 'REFUND', label: 'Hoàn trả' },
+          { value: 'RELEASE', label: 'Hoàn trả' },
         ].map((pill) => (
           <Pressable
             key={pill.value}
@@ -361,13 +439,17 @@ export function AdminCreditLedger() {
               <Text style={styles.retryBtnText}>Thử lại</Text>
             </Pressable>
           </View>
-        ) : records.length === 0 ? (
+        ) : displayedRecords.length === 0 ? (
           <View style={styles.statusBox}>
             <Ionicons name="book-outline" size={40} color="#94A3B8" />
-            <Text style={styles.statusBoxText}>Chưa có bút toán giao dịch nào.</Text>
+            <Text style={styles.statusBoxText}>
+              {appliedSearch || typeFilter
+                ? 'Không tìm thấy bút toán phù hợp.'
+                : 'Chưa có bút toán giao dịch nào.'}
+            </Text>
           </View>
         ) : (
-          records.map((record, index) => {
+          displayedRecords.map((record, index) => {
             const delta = record.availableDelta || 0;
             const isPositive = delta > 0;
             const tm = typeMap[record.type || ''] || {
@@ -376,6 +458,10 @@ export function AdminCreditLedger() {
               bg: isPositive ? '#DCFCE7' : '#FEE2E2',
               icon: 'receipt',
             };
+            const userParty = getUserParty(record.userId);
+            const displayName = formatUserDisplay(record.userId);
+            const userSub = formatUserSubtext(record.userId);
+            const initials = getUserInitials(userParty.fullName || userParty.username);
 
             return (
               <Pressable
@@ -405,12 +491,17 @@ export function AdminCreditLedger() {
                     </Text>
                   </View>
 
+                  {/* User Avatar */}
+                  <View style={styles.userAvatarBox}>
+                    <Text style={styles.userAvatarText}>{initials}</Text>
+                  </View>
+
                   <View style={styles.headerInfo}>
                     <Text style={styles.userName} numberOfLines={1}>
-                      {display(record.userId)}
+                      {displayName}
                     </Text>
                     <Text style={styles.reasonText} numberOfLines={1}>
-                      {record.reason || tm.label}
+                      {userSub ? `${userSub} · ` : ''}{record.reason || tm.label}
                     </Text>
                   </View>
 
@@ -670,6 +761,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  userAvatarBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  userAvatarText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   headerInfo: {
     flex: 1,
     marginLeft: 10,
@@ -823,6 +928,45 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
     marginTop: 2,
+  },
+  detailUserCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    gap: 12,
+  },
+  detailAvatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  detailUserName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  detailUserSub: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  detailUserEmail: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    marginTop: 1,
   },
   detailSection: {
     backgroundColor: '#F8FAFC',

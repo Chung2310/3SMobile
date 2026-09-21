@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,6 +13,9 @@ import {
   View,
 } from 'react-native';
 import {
+  Camera,
+  Image as ImageIcon,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react-native';
@@ -20,17 +24,16 @@ import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
 import type {
   CalculatedNutrition,
-  DailyPlanItem,
-  DayMenuPlan,
   MealBlock,
   MealFoodEntry,
-  MealType,
   NutritionPlanData,
   WeekMenuPlan,
 } from '@/types/nutrition';
+import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
+import { api } from '@/services/api/client';
+import { resolveImageUrl } from '@/services/imageUtils';
 import {
-  DAYS_OF_WEEK_VI,
   buildWeeksSchedule,
   computeEndDate,
   createDefaultDayMeals,
@@ -42,6 +45,8 @@ import {
 } from '@/utils/nutritionScheduleHelper';
 import { FoodLibrarySheet } from './FoodLibrarySheet';
 import { NutritionMacroBar } from './NutritionMacroBar';
+import { DishImageActionSheet } from './DishImageActionSheet';
+import { fetchCustomerDetail } from '@/services/customerService';
 
 interface MealPlannerModalProps {
   visible: boolean;
@@ -68,6 +73,8 @@ export function MealPlannerModal({
   const [fatG, setFatG] = useState('55');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
   const [notes, setNotes] = useState('');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [customAllergy, setCustomAllergy] = useState('');
 
   // Schedule Duration & Date Range (up to 31 days)
   const [startDate, setStartDate] = useState(getTodayYmd());
@@ -80,20 +87,104 @@ export function MealPlannerModal({
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [generatedPlanId, setGeneratedPlanId] = useState<string>();
   const { alertConfig, showSuccess, showError, showWarning } = useAppAlert();
 
   // Sub-modal for selecting foods
   const [activeMealIndex, setActiveMealIndex] = useState<number | null>(null);
 
+  // Target for Dish Image Action Sheet
+  const [activeDishImageTarget, setActiveDishImageTarget] = useState<{
+    mealIdx: number;
+    itemId?: string;
+    dishName: string;
+    imageUrl?: string;
+  } | null>(null);
+
+  // Active Customer Resolution
+  const planCustomerDerived = useMemo<CustomerProfile | null>(() => {
+    if (customer && (customer._id || (customer as any).id)) {
+      return customer;
+    }
+    if (editingPlan?.customerId) {
+      if (typeof editingPlan.customerId === 'object' && editingPlan.customerId !== null) {
+        const cObj = editingPlan.customerId as any;
+        return {
+          _id: cObj._id || cObj.id || '',
+          fullName: cObj.fullName || 'Học viên',
+          phone: cObj.phone || '',
+          avatar: cObj.avatar,
+          status: 'ACTIVE',
+        } as CustomerProfile;
+      }
+      return {
+        _id: String(editingPlan.customerId),
+        fullName: 'Học viên',
+        phone: '',
+        status: 'ACTIVE',
+      } as CustomerProfile;
+    }
+    return null;
+  }, [customer, editingPlan]);
+
+  const [fetchedCustomer, setFetchedCustomer] = useState<CustomerProfile | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const rawId = typeof editingPlan?.customerId === 'string' ? editingPlan.customerId : null;
+    if (rawId && (!customer || !(customer._id || (customer as any).id))) {
+      let active = true;
+      fetchCustomerDetail(rawId)
+        .then((res) => {
+          if (active && res) {
+            setFetchedCustomer(res);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }
+  }, [visible, editingPlan?.customerId, customer]);
+
+  const effectiveCustomerId = useMemo(() => {
+    return (
+      customer?._id ||
+      (customer as any)?.id ||
+      fetchedCustomer?._id ||
+      (fetchedCustomer as any)?.id ||
+      planCustomerDerived?._id ||
+      (planCustomerDerived as any)?.id ||
+      ''
+    );
+  }, [customer, fetchedCustomer, planCustomerDerived]);
+
+  const effectiveCustomerName = useMemo(() => {
+    if (customer?.fullName) return customer.fullName;
+    if (fetchedCustomer?.fullName && fetchedCustomer.fullName !== 'Học viên') {
+      return fetchedCustomer.fullName;
+    }
+    if (planCustomerDerived?.fullName && planCustomerDerived.fullName !== 'Học viên') {
+      return planCustomerDerived.fullName;
+    }
+    return customer?.fullName || fetchedCustomer?.fullName || planCustomerDerived?.fullName || '';
+  }, [customer, fetchedCustomer, planCustomerDerived]);
+
+  // Loading state per item when calling AI generator: `${mealIdx}-${itemId}`
+  const [generatingItemKey, setGeneratingItemKey] = useState<string | null>(null);
+
   // Active items helpers
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
   const activeDay = activeWeek?.days?.[selectedDayIdx] || activeWeek?.days?.[0];
-  const activeMeals: MealBlock[] = activeDay?.meals || [];
+  const activeMeals: MealBlock[] = useMemo(() => activeDay?.meals || [], [activeDay]);
 
   // Initialize or reset form state
   useEffect(() => {
     if (visible) {
+      // Hydrate the persistent native modal from the selected record on opening.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedWeekIdx(0);
+      setGeneratedPlanId(undefined);
       setSelectedDayIdx(0);
 
       if (editingPlan) {
@@ -104,6 +195,10 @@ export function MealPlannerModal({
         setFatG(String(editingPlan.macros?.fat || 55));
         setStatus(editingPlan.status || 'DRAFT');
         setNotes(editingPlan.notes || '');
+
+        const existingNotes = editingPlan.notes || '';
+        const foundAllergies = ALLERGY_CHIPS.filter((chip) => existingNotes.includes(chip));
+        setSelectedAllergies(foundAllergies);
 
         const initialWeeks = normalizePlanToWeeks(editingPlan);
         const sDate = editingPlan.startDate ? formatYmdDate(new Date(editingPlan.startDate)) : getTodayYmd();
@@ -131,9 +226,11 @@ export function MealPlannerModal({
         const computedEnd = computeEndDate(today, defDays);
 
         setTitle(
-          customer
-            ? `Thực đơn ${customer.fullName} (${initialCal} kcal)`
-            : `Kế hoạch dinh dưỡng ${initialCal} kcal`
+          effectiveCustomerName
+            ? `Thực đơn ${effectiveCustomerName} (${initialCal} kcal)`
+            : customer
+              ? `Thực đơn ${customer.fullName} (${initialCal} kcal)`
+              : `Kế hoạch dinh dưỡng ${initialCal} kcal`
         );
         setTargetCalories(String(initialCal));
         setProteinG(String(initP));
@@ -145,9 +242,17 @@ export function MealPlannerModal({
         setDurationDays(defDays);
         setEndDate(computedEnd);
         setWeeks(buildWeeksSchedule(today, defDays));
+        setSelectedAllergies([]);
+        setCustomAllergy('');
       }
     }
-  }, [visible, editingPlan, customer, initialCalculated]);
+  }, [visible, editingPlan, customer, initialCalculated, effectiveCustomerName]);
+
+  const toggleAllergy = (chip: string) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+    );
+  };
 
   // Duration Presets (7, 14, 21, 28, 30 days)
   const handleDurationPreset = (days: number) => {
@@ -242,21 +347,97 @@ export function MealPlannerModal({
     });
   };
 
+  // Cập nhật thông tin món ăn (vd: imageUrl)
+  const handleUpdateFoodItem = (mealIdx: number, itemId: string, updates: Partial<MealFoodEntry>) => {
+    setWeeks((prev) => {
+      const clone = [...prev];
+      if (!clone[selectedWeekIdx]) return prev;
+      const curWeek = { ...clone[selectedWeekIdx] };
+      const curDays = [...curWeek.days];
+      if (!curDays[selectedDayIdx]) return prev;
+      const curDay = { ...curDays[selectedDayIdx] };
+      const curMeals = Array.isArray(curDay.meals) ? [...curDay.meals] : [];
+      if (!curMeals[mealIdx]) return prev;
+      const target = { ...curMeals[mealIdx] };
+      const existingItems = Array.isArray(target.items) ? target.items : [];
+      target.items = existingItems.map((i) => (i.id === itemId ? { ...i, ...updates } : i));
+      curMeals[mealIdx] = target;
+      curDay.meals = curMeals;
+      curDays[selectedDayIdx] = curDay;
+      curWeek.days = curDays;
+      clone[selectedWeekIdx] = curWeek;
+      return clone;
+    });
+  };
+
+  // Cập nhật thông tin bữa ăn (vd: imageUrl)
+  const handleUpdateMeal = (mealIdx: number, updates: Partial<MealBlock>) => {
+    setWeeks((prev) => {
+      const clone = [...prev];
+      if (!clone[selectedWeekIdx]) return prev;
+      const curWeek = { ...clone[selectedWeekIdx] };
+      const curDays = [...curWeek.days];
+      if (!curDays[selectedDayIdx]) return prev;
+      const curDay = { ...curDays[selectedDayIdx] };
+      const curMeals = Array.isArray(curDay.meals) ? [...curDay.meals] : [];
+      if (!curMeals[mealIdx]) return prev;
+      curMeals[mealIdx] = { ...curMeals[mealIdx], ...updates };
+      curDay.meals = curMeals;
+      curDays[selectedDayIdx] = curDay;
+      curWeek.days = curDays;
+      clone[selectedWeekIdx] = curWeek;
+      return clone;
+    });
+  };
+
+  // Tạo nhanh ảnh AI cho món ăn (chuẩn hóa tên món và gọi API như Web)
+  const handleQuickGenerateAiItem = async (mealIdx: number, item: MealFoodEntry) => {
+    const cleanName = item.name.replace(/\([^)]*\)/g, '').trim() || item.name.trim();
+    const itemKey = `${mealIdx}-${item.id}`;
+    setGeneratingItemKey(itemKey);
+    try {
+      const res = await api.post<any>('/api/images/meal-image', {
+        mealName: cleanName,
+        items: [cleanName],
+        aspectRatio: '4:3',
+        forceRegenerate: Boolean(item.imageUrl),
+      });
+      const url = res?.imageUrl || res?.data?.imageUrl;
+      if (url && typeof url === 'string') {
+        handleUpdateFoodItem(mealIdx, item.id, { imageUrl: url });
+        showSuccess(`Đã tạo ảnh món "${cleanName}" thành công!`, 'Thành công');
+      }
+    } catch (err: any) {
+      showError(err?.message || 'Không thể tạo ảnh bằng AI.', 'Lỗi tạo ảnh');
+    } finally {
+      setGeneratingItemKey(null);
+    }
+  };
+
 
 
   // AI auto-generate
   const handleAiAutoFill = async () => {
-    const cId = customer?._id || (customer as any)?.id;
+    const cId = effectiveCustomerId;
     if (!cId) {
       showWarning('Vui lòng chọn học viên để AI phân tích thể trạng.', 'Chưa chọn học viên');
       return;
     }
     try {
       setGeneratingAi(true);
+      const allRestrictions = [...selectedAllergies];
+      if (customAllergy.trim()) {
+        allRestrictions.push(customAllergy.trim());
+      }
+      const allergyClause =
+        allRestrictions.length > 0
+          ? `, kiêng kỵ & dị ứng: ${allRestrictions.join(', ')}`
+          : '';
       const draft = await nutritionService.generateAiNutritionDraft(
         cId,
-        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal`
+        `Thiết kế thực đơn ${durationDays} ngày cơm Việt cho học viên, calo mục tiêu ${targetCalories} kcal${allergyClause}`, undefined, durationDays
       );
+      setGeneratedPlanId(draft._id || draft.id);
       if (draft.menu && Array.isArray(draft.menu) && draft.menu.length > 0 && draft.menu[0]?.days) {
         setWeeks(normalizePlanToWeeks(draft));
       } else if (draft.dailyPlans && draft.dailyPlans.length > 0) {
@@ -295,7 +476,7 @@ export function MealPlannerModal({
       showWarning('Vui lòng nhập tên thực đơn.', 'Thiếu thông tin');
       return;
     }
-    const cId = customer?._id || (customer as any)?.id;
+    const cId = effectiveCustomerId;
     if (!cId) {
       showWarning('Vui lòng chọn học viên trước khi lưu thực đơn.', 'Chưa chọn học viên');
       return;
@@ -326,6 +507,7 @@ export function MealPlannerModal({
               carbs: i.carbs,
               fat: i.fat,
               prepTip: i.prepTip || i.notes,
+              imageUrl: i.imageUrl,
             })),
             imageUrl: m.imageUrl,
           })),
@@ -341,6 +523,16 @@ export function MealPlannerModal({
         }))
       );
 
+      const allRestrictions = [...selectedAllergies];
+      if (customAllergy.trim()) {
+        allRestrictions.push(customAllergy.trim());
+      }
+      const allergyNote =
+        allRestrictions.length > 0
+          ? `Kiêng kỵ & dị ứng: ${allRestrictions.join(', ')}`
+          : '';
+      const combinedNotes = [notes.trim(), allergyNote].filter(Boolean).join('\n');
+
       const payload: Partial<NutritionPlanData> = {
         customerId: cId,
         title: title.trim(),
@@ -354,14 +546,15 @@ export function MealPlannerModal({
           fat: fNum,
         },
         status,
-        notes: notes.trim(),
+        notes: combinedNotes,
         menu: menuPayload,
         dailyPlans: dailyPlansPayload,
       };
 
       let saved: NutritionPlanData;
-      if (editingPlan?._id) {
-        saved = await nutritionService.updatePlan(editingPlan._id, payload);
+      const savedId = generatedPlanId || editingPlan?._id || editingPlan?.id;
+      if (savedId) {
+        saved = await nutritionService.updatePlan(savedId, payload);
       } else {
         saved = await nutritionService.createPlan(payload);
       }
@@ -391,10 +584,12 @@ export function MealPlannerModal({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>
-                {editingPlan ? 'Chỉnh sửa Thực Đơn' : 'Lập Thực Đơn Mới'}
+                {editingPlan ? 'Chỉnh sửa thực đơn' : 'Lập thực đơn mới'}
               </Text>
               <Text style={styles.subtitle}>
-                {customer ? `Học viên: ${customer.fullName}` : 'Thiết kế mâm cơm 4 bữa'}
+                {effectiveCustomerName
+                  ? `Học viên: ${effectiveCustomerName}`
+                  : 'Thiết kế mâm cơm 4 bữa'}
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
@@ -448,6 +643,54 @@ export function MealPlannerModal({
                     </Text>
                   </Pressable>
                 ))}
+              </View>
+            </View>
+
+            {/* KIÊNG KỴ & DỊ ỨNG */}
+            <View style={styles.allergyCard}>
+              <View style={styles.allergyCardHeader}>
+                <Text style={styles.allergySectionTitle}>KIÊNG KỴ & DỊ ỨNG</Text>
+                {selectedAllergies.length > 0 && (
+                  <Pressable onPress={() => setSelectedAllergies([])} hitSlop={6}>
+                    <Text style={styles.allergyClearText}>Bỏ chọn tất cả</Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.allergyChipsWrap}>
+                {ALLERGY_CHIPS.map((chip) => {
+                  const active = selectedAllergies.includes(chip);
+                  return (
+                    <Pressable
+                      key={chip}
+                      style={[
+                        styles.allergyChip,
+                        active && styles.allergyChipActive,
+                      ]}
+                      onPress={() => toggleAllergy(chip)}
+                    >
+                      <Text
+                        style={[
+                          styles.allergyChipText,
+                          active && styles.allergyChipTextActive,
+                        ]}
+                      >
+                        {active ? '✓ ' : '+ '}
+                        {chip}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Input nhập thêm phần kiêng khác */}
+              <View style={styles.customAllergyWrap}>
+                <TextInput
+                  value={customAllergy}
+                  onChangeText={setCustomAllergy}
+                  placeholder="Nhập thêm đồ kiêng khác (VD: kiêng đậu phộng, đồ ngọt, dầu mỡ...)"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.customAllergyInput}
+                />
               </View>
             </View>
 
@@ -665,6 +908,37 @@ export function MealPlannerModal({
             <View style={styles.mealsList}>
               {activeMeals.map((meal, mealIdx) => (
                 <View key={meal.id || `meal-${mealIdx}`} style={styles.mealCard}>
+                  {/* Meal Cover Banner (nếu đã có ảnh) */}
+                  {meal.imageUrl ? (
+                    <View style={styles.mealCoverBanner}>
+                      <Image
+                        source={{ uri: resolveImageUrl(meal.imageUrl) || meal.imageUrl }}
+                        style={styles.mealCoverImg}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.mealCoverActions}>
+                        <Pressable
+                          style={styles.mealCoverActionBtn}
+                          onPress={() =>
+                            setActiveDishImageTarget({
+                              mealIdx,
+                              dishName: meal.title || `Bữa ${mealIdx + 1}`,
+                              imageUrl: meal.imageUrl,
+                            })
+                          }
+                        >
+                          <Camera size={13} color="#FFFFFF" />
+                        </Pressable>
+                        <Pressable
+                          style={[styles.mealCoverActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.85)' }]}
+                          onPress={() => handleUpdateMeal(mealIdx, { imageUrl: undefined })}
+                        >
+                          <Trash2 size={13} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null}
+
                   {/* Meal Header */}
                   <View style={styles.mealHeader}>
                     <View>
@@ -672,36 +946,106 @@ export function MealPlannerModal({
                       <Text style={styles.mealTimeHint}>{meal.timeHint}</Text>
                     </View>
 
-                    <View style={styles.mealTotalPill}>
-                      <Text style={styles.mealTotalCalText}>
-                        {meal.totalCalories} kcal
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {!meal.imageUrl && (
+                        <Pressable
+                          style={styles.mealCoverEmptyBtn}
+                          onPress={() =>
+                            setActiveDishImageTarget({
+                              mealIdx,
+                              dishName: meal.title || `Bữa ${mealIdx + 1}`,
+                              imageUrl: undefined,
+                            })
+                          }
+                        >
+                          <ImageIcon size={11} color="#16A34A" />
+                          <Text style={styles.mealCoverEmptyBtnText}>Ảnh bữa</Text>
+                        </Pressable>
+                      )}
+
+                      <View style={styles.mealTotalPill}>
+                        <Text style={styles.mealTotalCalText}>
+                          {meal.totalCalories} kcal
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
                   {/* Food Items List */}
                   {meal.items.length > 0 ? (
                     <View style={styles.foodItemsList}>
-                      {meal.items.map((item) => (
-                        <View key={item.id} style={styles.foodItemRow}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.foodItemName} numberOfLines={1}>
-                              {item.name}
-                            </Text>
-                            <Text style={styles.foodItemSub}>
-                              {item.grams}g • P:{item.protein}g • C:{item.carbs}g • F:{item.fat}g
-                            </Text>
+                      {meal.items.map((item) => {
+                        const itemKey = `${mealIdx}-${item.id}`;
+                        const isGenerating = generatingItemKey === itemKey;
+                        return (
+                          <View key={item.id} style={styles.foodItemRow}>
+                            {/* Thumbnail Image Container */}
+                            <Pressable
+                              style={styles.foodThumbBtn}
+                              disabled={isGenerating}
+                              onPress={() =>
+                                setActiveDishImageTarget({
+                                  mealIdx,
+                                  itemId: item.id,
+                                  dishName: item.name,
+                                  imageUrl: item.imageUrl,
+                                })
+                              }
+                            >
+                              {isGenerating ? (
+                                <View style={styles.foodThumbLoading}>
+                                  <ActivityIndicator size="small" color={colors.primary} />
+                                </View>
+                              ) : item.imageUrl ? (
+                                <View style={styles.foodThumbWrap}>
+                                  <Image
+                                    source={{ uri: resolveImageUrl(item.imageUrl) || item.imageUrl }}
+                                    style={styles.foodThumbImg}
+                                    resizeMode="cover"
+                                  />
+                                </View>
+                              ) : (
+                                <View style={styles.foodThumbPlaceholder}>
+                                  <Camera size={13} color="#0284C7" />
+                                  <Text style={styles.foodThumbPlaceholderText}>+ Ảnh</Text>
+                                </View>
+                              )}
+                            </Pressable>
+
+                            {/* Food Details */}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.foodItemName} numberOfLines={1}>
+                                {item.name}
+                              </Text>
+                              <Text style={styles.foodItemSub}>
+                                {item.grams}g • P:{item.protein}g • C:{item.carbs}g • F:{item.fat}g
+                              </Text>
+                            </View>
+
+                            {/* Quick AI button if item has no image yet */}
+                            {!item.imageUrl && (
+                              <Pressable
+                                hitSlop={6}
+                                style={styles.quickAiBtn}
+                                disabled={isGenerating}
+                                onPress={() => handleQuickGenerateAiItem(mealIdx, item)}
+                              >
+                                <Sparkles size={11} color="#16A34A" />
+                                <Text style={styles.quickAiBtnText}>AI</Text>
+                              </Pressable>
+                            )}
+
+                            <Text style={styles.foodItemCal}>{item.calories} kcal</Text>
+                            <Pressable
+                              hitSlop={8}
+                              onPress={() => handleRemoveFood(mealIdx, item.id)}
+                              style={styles.foodDeleteBtn}
+                            >
+                              <Trash2 size={15} color="#EF4444" />
+                            </Pressable>
                           </View>
-                          <Text style={styles.foodItemCal}>{item.calories} kcal</Text>
-                          <Pressable
-                            hitSlop={8}
-                            onPress={() => handleRemoveFood(mealIdx, item.id)}
-                            style={styles.foodDeleteBtn}
-                          >
-                            <Trash2 size={15} color="#EF4444" />
-                          </Pressable>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
                   ) : (
                     <Text style={styles.mealEmptyText}>
@@ -804,6 +1148,30 @@ export function MealPlannerModal({
         onClose={() => setActiveMealIndex(null)}
         onSelectFood={handleSelectFood}
       />
+
+      {/* Sub-modal: Dish / Meal Image Action Sheet */}
+      {activeDishImageTarget && (
+        <DishImageActionSheet
+          visible={true}
+          dishName={activeDishImageTarget.dishName}
+          currentImageUrl={activeDishImageTarget.imageUrl}
+          onClose={() => setActiveDishImageTarget(null)}
+          onSelectImage={(newUrl) => {
+            if (activeDishImageTarget.itemId) {
+              handleUpdateFoodItem(activeDishImageTarget.mealIdx, activeDishImageTarget.itemId, { imageUrl: newUrl });
+            } else {
+              handleUpdateMeal(activeDishImageTarget.mealIdx, { imageUrl: newUrl });
+            }
+          }}
+          onRemoveImage={() => {
+            if (activeDishImageTarget.itemId) {
+              handleUpdateFoodItem(activeDishImageTarget.mealIdx, activeDishImageTarget.itemId, { imageUrl: undefined });
+            } else {
+              handleUpdateMeal(activeDishImageTarget.mealIdx, { imageUrl: undefined });
+            }
+          }}
+        />
+      )}
 
       <AppAlertModal {...alertConfig} />
     </Modal>
@@ -1263,6 +1631,99 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     gap: 8,
   },
+  foodThumbBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  foodThumbWrap: {
+    width: '100%',
+    height: '100%',
+  },
+  foodThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  foodThumbLoading: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F9FF',
+  },
+  foodThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  foodThumbPlaceholderText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  quickAiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  quickAiBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  mealCoverBanner: {
+    width: '100%',
+    height: 110,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+  },
+  mealCoverImg: {
+    width: '100%',
+    height: '100%',
+  },
+  mealCoverActions: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  mealCoverActionBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    padding: 5,
+  },
+  mealCoverEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  mealCoverEmptyBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
   foodItemName: {
     fontSize: 12.5,
     fontWeight: '600',
@@ -1384,5 +1845,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  allergyCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  allergyCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  allergyClearText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  allergySectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#003B70',
+    letterSpacing: 0.5,
+  },
+  allergyChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  allergyChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6.5,
+  },
+  allergyChipActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1.5,
+  },
+  allergyChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  allergyChipTextActive: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  customAllergyWrap: {
+    marginTop: 4,
+  },
+  customAllergyInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 12,
+    color: colors.text,
   },
 });

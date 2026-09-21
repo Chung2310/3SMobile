@@ -27,7 +27,7 @@ export default function AiWorkoutScreen() {
 
 function AiWorkoutScreenContent() {
   const { session } = useAuth();
-  if (session?.user.role !== 'PT') return <Screen title="GIÁO ÁN AI"><Notice text="Tài khoản này không có quyền tạo giáo án." /></Screen>;
+  if (session?.user.role !== 'PT') return <Screen title="Giáo án AI"><Notice text="Tài khoản này không có quyền tạo giáo án." /></Screen>;
   return <Wizard key={session.user.id} />;
 }
 
@@ -40,15 +40,23 @@ function Wizard() {
   function showApiFailure(cause: unknown) {
     const detail = messageOf(cause);
     const timeout = (cause instanceof ApiError && cause.status === 504) || /504|gateway.?timeout/i.test(detail);
-    const prescription = /prescription/i.test(detail);
+    const prescription = /prescription|thông số bài tập/i.test(detail);
     setError(detail);
+
+    let friendlyTitle = 'Không thể tạo giáo án AI';
+    let friendlyMessage = detail;
+
+    if (timeout) {
+      friendlyTitle = 'Máy chủ phản hồi quá lâu (504)';
+      friendlyMessage = 'Yêu cầu đã quá thời gian chờ. Tác vụ AI có thể vẫn đang xử lý trong nền. Bạn vui lòng đóng thông báo rồi bấm "Thử lại" để kiểm tra hoặc tiếp tục yêu cầu. Thông tin bạn đã nhập vẫn được giữ nguyên.';
+    } else if (prescription) {
+      friendlyTitle = 'Chưa thể hoàn tất thông số bài tập';
+      friendlyMessage = 'Hệ thống AI chưa thiết lập được mức tạ hoặc thông số bài tập phù hợp. Bạn hãy đóng thông báo này rồi bấm "Thử lại" để AI gợi ý lại phương án nhé.';
+    }
+
     setApiFailure({
-      title: timeout ? 'Máy chủ phản hồi quá lâu (504)' : prescription ? 'Thông số bài tập không hợp lệ' : 'Không thể xử lý giáo án AI',
-      message: timeout
-        ? 'Yêu cầu đã quá thời gian chờ. Tác vụ AI có thể vẫn đang chạy. Đóng thông báo rồi bấm thử lại để kiểm tra hoặc tiếp tục yêu cầu. Thông tin bạn đã nhập vẫn được giữ nguyên.'
-        : prescription
-          ? 'Dữ liệu thông số bài tập (prescription) trả về không hợp lệ. Bạn có thể đóng thông báo để kiểm tra cấu hình hoặc thử lại. Chi tiết: ' + detail
-          : detail,
+      title: friendlyTitle,
+      message: friendlyMessage,
     });
   }
   const [customers, setCustomers] = useState<JsonRecord[]>([]);
@@ -169,7 +177,7 @@ function Wizard() {
     }
   }} />;
 
-  return <Screen title="TẠO GIÁO ÁN AI" onBack={close}>
+  return <Screen title="Tạo giáo án AI" onBack={close}>
     <Sheet title="Tạo giáo án bằng AI" locked={busy} onClose={close} footer={<View style={{ gap: 12 }}>
       <Button icon="zap" label={step === 0 ? 'Phân tích bằng AI' : step < 3 ? 'Tiếp tục' : error ? 'Thử lại / Kiểm tra tác vụ' : 'Tạo giáo án'} busy={busy} disabled={step === 0 && (loadingCustomers || !customers.length)} onPress={next} />
       {step > 0 && <Button secondary label="Quay lại" disabled={busy} onPress={() => { generationKey.current = ''; jobId.current = ''; setError(''); setStep(step - 1); }} />}

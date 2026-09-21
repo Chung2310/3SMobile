@@ -86,6 +86,7 @@ export function FoodLibrarySheet({
       carbs: calc.carbs,
       fat: calc.fat,
       notes: selectedFood.prepTip,
+      imageUrl: selectedFood.imageUrl,
     };
 
     if (onSelectFood) {
@@ -113,7 +114,7 @@ export function FoodLibrarySheet({
             {/* Header */}
             <View style={styles.header}>
               <View>
-                <Text style={styles.title}>{title || 'Kho Món Ăn Dinh Dưỡng'}</Text>
+                <Text style={styles.title}>{title || 'Kho món ăn dinh dưỡng'}</Text>
                 <Text style={styles.subtitle}>
                   {onSelectFood ? (
                     <>

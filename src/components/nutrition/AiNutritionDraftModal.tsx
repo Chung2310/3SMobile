@@ -12,10 +12,11 @@ import {
   View,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import type { CustomerProfile } from '@/types/domain';
-import type { DayMenuPlan, MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
+import type { MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
+import { ALLERGY_CHIPS } from '@/types/nutrition';
 import { nutritionService } from '@/services/nutritionService';
 import {
   formatDisplayDateVi,
@@ -69,6 +70,8 @@ export function AiNutritionDraftModal({
 }: AiNutritionDraftModalProps) {
   const [request, setRequest] = useState(AI_PRESET_PROMPTS[0].prompt);
   const [durationDays, setDurationDays] = useState(30);
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [customAllergy, setCustomAllergy] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState<NutritionPlanData | null>(null);
@@ -90,14 +93,24 @@ export function AiNutritionDraftModal({
   // Reset state on open
   useEffect(() => {
     if (visible) {
+      // Reset this persistent native modal when it is opened for a new editing session.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGeneratedDraft(null);
       setLoading(false);
       setSaving(false);
       setAdviceExpanded(false);
       setSelectedWeekIdx(0);
       setSelectedDayIdx(0);
+      setSelectedAllergies([]);
+      setCustomAllergy('');
     }
   }, [visible]);
+
+  const toggleAllergy = (chip: string) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+    );
+  };
 
   // Handle AI generation
   const handleGenerate = async () => {
@@ -109,8 +122,16 @@ export function AiNutritionDraftModal({
 
     try {
       setLoading(true);
-      const promptWithDuration = `Thực đơn ${durationDays} ngày (kéo dài ${Math.ceil(durationDays / 7)} tuần), chia theo tuần và từng ngày: ${request}`;
-      const draft = await nutritionService.generateAiNutritionDraft(customerId, promptWithDuration);
+      const allRestrictions = [...selectedAllergies];
+      if (customAllergy.trim()) {
+        allRestrictions.push(customAllergy.trim());
+      }
+      const allergyClause =
+        allRestrictions.length > 0
+          ? `\n- Kiêng kỵ & Dị ứng bắt buộc tránh: ${allRestrictions.join(', ')}.`
+          : '';
+      const promptWithDuration = `Thực đơn ${durationDays} ngày (kéo dài ${Math.ceil(durationDays / 7)} tuần), chia theo tuần và từng ngày: ${request}${allergyClause}`;
+      const draft = await nutritionService.generateAiNutritionDraft(customerId, promptWithDuration, undefined, durationDays);
       draft.durationDays = draft.durationDays || durationDays;
       setGeneratedDraft(draft);
       setSelectedWeekIdx(0);
@@ -170,7 +191,7 @@ export function AiNutritionDraftModal({
         }))
       );
 
-      const saved = await nutritionService.createPlan({
+      const payload: Partial<NutritionPlanData> = {
         customerId,
         title: generatedDraft.title,
         startDate: generatedDraft.startDate || new Date().toISOString(),
@@ -182,7 +203,9 @@ export function AiNutritionDraftModal({
         notes: generatedDraft.notes,
         menu: menuPayload,
         dailyPlans: dailyPlansPayload,
-      });
+      };
+      const id = generatedDraft._id || generatedDraft.id;
+      const saved = id ? await nutritionService.updatePlan(id, payload) : await nutritionService.createPlan(payload);
       showSuccess('Đã lưu thực đơn do AI tạo vào danh sách thực đơn!', 'Thành công', () => {
         onPlanCreated(saved);
         onClose();
@@ -227,7 +250,7 @@ export function AiNutritionDraftModal({
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <View>
-                <Text style={styles.headerTitle}>Trợ Lý AI Lên Thực Đơn</Text>
+                <Text style={styles.headerTitle}>Trợ lý AI lên thực đơn</Text>
                 <Text style={styles.headerSub}>
                   {customer ? `${customer.fullName} • Cá nhân hóa cơm Việt` : 'Dành cho học viên'}
                 </Text>
@@ -267,6 +290,55 @@ export function AiNutritionDraftModal({
                   placeholder="Nhập yêu cầu riêng cho học viên..."
                   placeholderTextColor={colors.textMuted}
                 />
+
+                {/* KIÊNG KỴ & DỊ ỨNG */}
+                <View style={styles.allergyCard}>
+                  <View style={styles.allergyCardHeader}>
+                    <Text style={styles.allergySectionTitle}>KIÊNG KỴ & DỊ ỨNG</Text>
+                    {selectedAllergies.length > 0 && (
+                      <Pressable onPress={() => setSelectedAllergies([])} hitSlop={6}>
+                        <Text style={styles.allergyClearText}>Bỏ chọn tất cả</Text>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  <View style={styles.allergyChipsWrap}>
+                    {ALLERGY_CHIPS.map((chip) => {
+                      const active = selectedAllergies.includes(chip);
+                      return (
+                        <Pressable
+                          key={chip}
+                          style={[
+                            styles.allergyChip,
+                            active && styles.allergyChipActive,
+                          ]}
+                          onPress={() => toggleAllergy(chip)}
+                        >
+                          <Text
+                            style={[
+                              styles.allergyChipText,
+                              active && styles.allergyChipTextActive,
+                            ]}
+                          >
+                            {active ? '✓ ' : '+ '}
+                            {chip}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Input nhập thêm phần kiêng khác */}
+                  <View style={styles.customAllergyWrap}>
+                    <TextInput
+                      value={customAllergy}
+                      onChangeText={setCustomAllergy}
+                      placeholder="Nhập thêm đồ kiêng khác (VD: kiêng đậu phộng, đồ ngọt, dầu mỡ...)"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.customAllergyInput}
+                    />
+                  </View>
+                </View>
 
                 {/* Preset Chips */}
                 <Text style={styles.presetLabel}>Gợi ý nhanh theo mục tiêu:</Text>
@@ -670,6 +742,71 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlignVertical: 'top',
     minHeight: 90,
+  },
+  allergyCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  allergyCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  allergyClearText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  allergySectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#003B70',
+    letterSpacing: 0.5,
+  },
+  allergyChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  allergyChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6.5,
+  },
+  allergyChipActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1.5,
+  },
+  allergyChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  allergyChipTextActive: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  customAllergyWrap: {
+    marginTop: 4,
+  },
+  customAllergyInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 12,
+    color: colors.text,
   },
   presetLabel: {
     fontSize: 11.5,

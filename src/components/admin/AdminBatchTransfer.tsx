@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api/client';
 import { batchTransferPayload } from '@/services/adminOperations';
@@ -25,12 +26,15 @@ const PRESET_REASONS = [
 ];
 
 export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
+  const insets = useSafeAreaInsets();
   const [customers, setCustomers] = useState<AdminRecord[]>([]);
   const [pts, setPts] = useState<AdminRecord[]>([]);
   const [reason, setReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reasonOpen, setReasonOpen] = useState(false);
   const [result, setResult] = useState<{ transferredCount: number; toPtName: string }>();
   const lock = useRef(false);
 
@@ -38,7 +42,7 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
     setError('');
     setResult(undefined);
     try {
-      batchTransferPayload(customers, pts[0] ? recordId(pts[0]) : '', reason);
+      batchTransferPayload(customers, pts[0] ? recordId(pts[0]) : '', reason.trim());
       setConfirm(true);
     } catch (cause) {
       setError(messageOf(cause));
@@ -53,13 +57,14 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
     try {
       const response = await api.post<{ transferredCount: number; toPtName: string }>(
         '/api/transfers/admin-force-batch',
-        batchTransferPayload(customers, recordId(pts[0]), reason)
+        batchTransferPayload(customers, recordId(pts[0]), reason.trim())
       );
       setResult(response);
       setConfirm(false);
       setCustomers([]);
       setPts([]);
       setReason('');
+      setCustomReason('');
       onDone?.();
     } catch (cause) {
       setError(messageOf(cause));
@@ -70,213 +75,363 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
   };
 
   const removeCustomer = (idToRemove: string) => {
-    setCustomers((prev) => prev.filter((c) => recordId(c) !== idToRemove));
+    setCustomers((prev) => prev.filter((item) => recordId(item) !== idToRemove));
   };
 
   const selectedPt = pts[0];
+  const canSubmit = customers.length > 0 && !!selectedPt && reason.trim().length > 0;
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
-      {/* 1. HERO HEADER */}
-      <View style={styles.heroCard}>
-        <View style={styles.heroIconBox}>
-          <Feather name="repeat" size={24} color={colors.primary} />
-        </View>
-        <View style={styles.heroInfo}>
-          <Text style={styles.heroTitle}>Chuyển giao hàng loạt</Text>
-          <Text style={styles.heroSub}>
-            Điều chuyển đồng thời nhiều học viên sang một HLV mới chỉ trong một lần xác nhận.
-          </Text>
-        </View>
-      </View>
+    <View style={styles.screen}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* SUCCESS RESULT BANNER */}
+        {result ? (
+          <View style={styles.resultBanner}>
+            <View style={styles.resultIconBox}>
+              <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.resultTitle}>Chuyển giao thành công</Text>
+              <Text style={styles.resultDesc}>
+                Đã chuyển giao toàn bộ quyền quản lý của{' '}
+                <Text style={{ fontWeight: '700' }}>{result.transferredCount} học viên</Text> sang HLV{' '}
+                <Text style={{ fontWeight: '700' }}>{result.toPtName}</Text>.
+              </Text>
+            </View>
+            <Pressable onPress={() => setResult(undefined)} hitSlop={10}>
+              <Feather name="x" size={18} color="#166534" />
+            </Pressable>
+          </View>
+        ) : null}
 
-      {/* SUCCESS RESULT BANNER */}
-      {result ? (
-        <View style={styles.resultBanner}>
-          <View style={styles.resultIconBox}>
-            <Ionicons name="checkmark-circle" size={26} color="#16A34A" />
+        {/* ERROR NOTICE */}
+        {error && !confirm ? (
+          <View style={styles.errorNotice}>
+            <Ionicons name="alert-circle" size={18} color="#EF4444" />
+            <Text style={styles.errorNoticeText}>{error}</Text>
+            <Pressable onPress={() => setError('')} hitSlop={10}>
+              <Feather name="x" size={16} color="#EF4444" />
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* GUIDE CARD */}
+        <View style={styles.guideCard}>
+          <View style={styles.guideIconBox}>
+            <Feather name="repeat" size={20} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.resultTitle}>Chuyển giao thành công!</Text>
-            <Text style={styles.resultDesc}>
-              Đã chuyển giao toàn bộ quyền quản lý của{' '}
-              <Text style={{ fontWeight: '800' }}>{result.transferredCount} học viên</Text> sang HLV{' '}
-              <Text style={{ fontWeight: '800' }}>{result.toPtName}</Text>.
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
-      {/* ERROR NOTICE */}
-      {error && !confirm ? (
-        <View style={styles.errorNotice}>
-          <Ionicons name="alert-circle" size={18} color="#EF4444" />
-          <Text style={styles.errorNoticeText}>{error}</Text>
-        </View>
-      ) : null}
-
-      {/* STEP 1: CHỌN HỌC VIÊN */}
-      <View style={styles.stepCard}>
-        <View style={styles.stepHeader}>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepBadgeText}>1</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.stepTitle}>Danh sách học viên cần chuyển</Text>
-            <Text style={styles.stepSub}>
-              {customers.length > 0
-                ? `Đã chọn ${customers.length} học viên`
-                : 'Chưa có học viên nào được chọn'}
-            </Text>
+            <Text style={styles.guideTitle}>Chuyển giao hàng loạt</Text>
           </View>
         </View>
 
-        <RecordPicker
-          label="Mở danh sách học viên"
-          source="/api/customers"
-          selected={customers}
-          onChange={setCustomers}
-          disabled={busy}
-        />
+        {/* CARD 1: HỌC VIÊN CẦN CHUYỂN */}
+        <View style={styles.sectionCard}>
+          <RecordPicker
+            label="Học viên cần chuyển giao"
+            source="/api/customers"
+            selected={customers}
+            onChange={setCustomers}
+            disabled={busy}
+            renderTrigger={(openPicker, selected) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Chọn học viên cần chuyển giao"
+                style={styles.formRow}
+                onPress={openPicker}
+                disabled={busy}
+              >
+                <View style={styles.rowLeft}>
+                  <View style={[styles.rowIconBox, { backgroundColor: '#E0F2FE' }]}>
+                    <Feather name="users" size={18} color="#0284C7" />
+                  </View>
+                  <View style={styles.rowLabelWrap}>
+                    <Text style={styles.rowLabel}>Học viên cần chuyển</Text>
+                    <Text style={styles.rowSubLabel}>
+                      {selected.length > 0
+                        ? `Đã chọn ${selected.length} học viên`
+                        : 'Chạm để chọn danh sách học viên'}
+                    </Text>
+                  </View>
+                </View>
 
-        {/* Selected Customers Preview Chips */}
-        {customers.length > 0 ? (
-          <View style={styles.chipsContainer}>
-            <Text style={styles.chipsLabel}>Học viên đã chọn:</Text>
-            <View style={styles.chipsGrid}>
-              {customers.map((c) => {
-                const cId = recordId(c);
-                return (
-                  <View key={cId} style={styles.customerChip}>
+                <View style={styles.rowRight}>
+                  <View style={[styles.valueBadge, selected.length > 0 && styles.valueBadgeActive]}>
+                    <Text
+                      style={[styles.valueBadgeText, selected.length > 0 && styles.valueBadgeTextActive]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {selected.length > 0 ? `${selected.length} học viên` : 'Chọn…'}
+                    </Text>
+                    <Feather
+                      name="chevron-right"
+                      size={16}
+                      color={selected.length > 0 ? colors.primary : '#94A3B8'}
+                    />
+                  </View>
+                </View>
+              </Pressable>
+            )}
+          />
+
+          {/* PREVIEW CHIPS OF SELECTED CUSTOMERS */}
+          {customers.length > 0 ? (
+            <View style={styles.selectedSection}>
+              <View style={styles.selectedHeader}>
+                <Text style={styles.selectedTitle}>Học viên đã chọn ({customers.length}):</Text>
+                <Pressable onPress={() => setCustomers([])} hitSlop={8}>
+                  <Text style={styles.clearAllText}>Bỏ chọn tất cả</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.chipsWrap}>
+                {customers.slice(0, 8).map((c) => (
+                  <View key={recordId(c)} style={styles.customerChip}>
                     <View style={styles.chipAvatar}>
                       <Text style={styles.chipAvatarText}>
-                        {display(c).trim().charAt(0).toUpperCase()}
+                        {(display(c) || 'H').charAt(0).toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={styles.chipName} numberOfLines={1}>
+                    <Text style={styles.chipName} numberOfLines={1} ellipsizeMode="tail">
                       {display(c)}
                     </Text>
                     <Pressable
-                      onPress={() => removeCustomer(cId)}
                       hitSlop={8}
-                      style={styles.chipRemoveBtn}
+                      onPress={() => removeCustomer(recordId(c))}
+                      style={styles.chipCloseBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Bỏ chọn ${display(c)}`}
                     >
                       <Feather name="x" size={13} color="#64748B" />
                     </Pressable>
                   </View>
-                );
-              })}
+                ))}
+                {customers.length > 8 ? (
+                  <View style={styles.moreChip}>
+                    <Text style={styles.moreChipText}>+{customers.length - 8} học viên khác</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
-          </View>
-        ) : null}
-      </View>
-
-      {/* STEP 2: CHỌN HLV TIẾP NHẬN */}
-      <View style={styles.stepCard}>
-        <View style={styles.stepHeader}>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepBadgeText}>2</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.stepTitle}>HLV tiếp nhận mới</Text>
-            <Text style={styles.stepSub}>
-              {selectedPt ? `HLV: ${display(selectedPt)}` : 'Chọn HLV sẽ tiếp quản các học viên này'}
-            </Text>
-          </View>
+          ) : null}
         </View>
 
-        <RecordPicker
-          label="Mở danh sách HLV"
-          source="/api/users?role=PT&status=ACTIVE"
-          selected={pts}
-          onChange={setPts}
-          multiple={false}
-          disabled={busy}
-        />
-
-        {selectedPt ? (
-          <View style={styles.ptTargetCard}>
-            <View style={styles.ptTargetAvatar}>
-              <Text style={styles.ptTargetAvatarText}>
-                {display(selectedPt).trim().charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.ptTargetName}>{display(selectedPt)}</Text>
-              <Text style={styles.ptTargetUser}>
-                @{String(selectedPt.username || '')} · SĐT: {String(selectedPt.phone || 'Chưa cập nhật')}
-              </Text>
-            </View>
-            <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-          </View>
-        ) : null}
-      </View>
-
-      {/* STEP 3: LÝ DO CHUYỂN GIAO */}
-      <View style={styles.stepCard}>
-        <View style={styles.stepHeader}>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepBadgeText}>3</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.stepTitle}>Lý do chuyển giao</Text>
-            <Text style={styles.stepSub}>Ghi chú lý do lưu vào lịch sử hệ thống</Text>
-          </View>
-        </View>
-
-        {/* Preset quick reasons */}
-        <View style={styles.presetRow}>
-          {PRESET_REASONS.map((preset) => (
-            <Pressable
-              key={preset}
-              onPress={() => setReason(preset)}
-              style={({ pressed }) => [
-                styles.presetChip,
-                reason === preset && styles.presetChipActive,
-                pressed && { opacity: 0.75 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.presetChipText,
-                  reason === preset && styles.presetChipTextActive,
-                ]}
+        {/* CARD 2: HLV TIẾP NHẬN */}
+        <View style={styles.sectionCard}>
+          <RecordPicker
+            label="HLV tiếp nhận"
+            source="/api/users?role=PT&status=ACTIVE"
+            selected={pts}
+            onChange={setPts}
+            multiple={false}
+            disabled={busy}
+            renderTrigger={(openPicker, selected) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Chọn HLV tiếp nhận"
+                style={styles.formRow}
+                onPress={openPicker}
+                disabled={busy}
               >
-                {preset}
-              </Text>
-            </Pressable>
-          ))}
+                <View style={styles.rowLeft}>
+                  <View style={[styles.rowIconBox, { backgroundColor: '#F0FDF4' }]}>
+                    <Feather name="user-check" size={18} color="#16A34A" />
+                  </View>
+                  <View style={styles.rowLabelWrap}>
+                    <Text style={styles.rowLabel}>HLV tiếp nhận</Text>
+                    <Text style={styles.rowSubLabel} numberOfLines={1} ellipsizeMode="tail">
+                      {selected[0] ? display(selected[0]) : 'Chọn HLV phụ trách mới'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.rowRight}>
+                  <View style={[styles.valueBadge, selected[0] && styles.valueBadgeActive]}>
+                    <Text
+                      style={[styles.valueBadgeText, selected[0] && styles.valueBadgeTextActive]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {selected[0] ? display(selected[0]) : 'Chọn…'}
+                    </Text>
+                    <Feather
+                      name="chevron-right"
+                      size={16}
+                      color={selected[0] ? colors.primary : '#94A3B8'}
+                    />
+                  </View>
+                </View>
+              </Pressable>
+            )}
+          />
+
+          {/* PREVIEW SELECTED PT */}
+          {selectedPt ? (
+            <View style={styles.ptSelectedCard}>
+              <View style={styles.ptAvatar}>
+                <Text style={styles.ptAvatarText}>
+                  {(display(selectedPt) || 'P').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ptSelectedName} numberOfLines={1} ellipsizeMode="tail">
+                  {display(selectedPt)}
+                </Text>
+                {selectedPt.phone ? (
+                  <Text style={styles.ptSelectedMeta}>{String(selectedPt.phone)}</Text>
+                ) : null}
+              </View>
+              <Pressable onPress={() => setPts([])} hitSlop={8}>
+                <Feather name="x" size={16} color="#64748B" />
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
-        <TextInput
-          accessibilityLabel="Lý do chuyển giao"
-          style={styles.reasonInput}
-          placeholder="Nhập chi tiết lý do chuyển giao hoặc chọn từ gợi ý phía trên…"
-          placeholderTextColor="#94A3B8"
-          multiline
-          value={reason}
-          onChangeText={setReason}
-          editable={!busy}
-        />
+        {/* CARD 3: LÝ DO CHUYỂN GIAO */}
+        <View style={styles.sectionCard}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Chọn lý do chuyển giao"
+            style={styles.formRow}
+            onPress={() => setReasonOpen(true)}
+            disabled={busy}
+          >
+            <View style={styles.rowLeft}>
+              <View style={[styles.rowIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Feather name="file-text" size={18} color="#D97706" />
+              </View>
+              <View style={styles.rowLabelWrap}>
+                <Text style={styles.rowLabel}>Lý do chuyển giao</Text>
+                <Text style={styles.rowSubLabel} numberOfLines={1} ellipsizeMode="tail">
+                  {reason || 'Chọn hoặc nhập lý do điều chuyển'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.rowRight}>
+              <View style={[styles.valueBadge, reason ? styles.valueBadgeActive : null]}>
+                <Text
+                  style={[styles.valueBadgeText, reason ? styles.valueBadgeTextActive : null]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {reason ? 'Đã chọn' : 'Chọn lý do'}
+                </Text>
+                <Feather
+                  name="chevron-right"
+                  size={16}
+                  color={reason ? colors.primary : '#94A3B8'}
+                />
+              </View>
+            </View>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* STICKY FOOTER ANCHORED AT BOTTOM */}
+      <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Xác nhận chuyển giao"
+          onPress={review}
+          disabled={busy || !canSubmit}
+          style={({ pressed }) => [
+            styles.submitReviewBtn,
+            pressed && styles.submitReviewBtnPressed,
+            (!canSubmit || busy) && styles.submitReviewBtnDisabled,
+          ]}
+        >
+          <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.submitReviewText}>Xác nhận chuyển giao</Text>
+        </Pressable>
       </View>
 
-      {/* SUBMIT BUTTON */}
-      <Pressable
-        onPress={review}
-        disabled={busy}
-        style={({ pressed }) => [
-          styles.submitReviewBtn,
-          pressed && { opacity: 0.85 },
-          busy && { opacity: 0.6 },
-        ]}
-      >
-        <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-        <Text style={styles.submitReviewText}>
-          Xem lại & Xác nhận chuyển giao ({customers.length} học viên)
-        </Text>
-      </Pressable>
+      {/* REASON BOTTOM SHEET */}
+      {reasonOpen && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible={reasonOpen}
+          onRequestClose={() => setReasonOpen(false)}
+        >
+          <View style={styles.sheetOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setReasonOpen(false)} />
+            <View style={[styles.reasonSheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+              <View style={styles.sheetHandle} />
 
-      {/* CONFIRMATION MODAL */}
+              <View style={styles.reasonSheetHeader}>
+                <Text style={styles.sheetTitle}>Chọn lý do chuyển giao</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Đóng"
+                  onPress={() => setReasonOpen(false)}
+                  hitSlop={10}
+                  style={styles.sheetCloseBtn}
+                >
+                  <Feather name="x" size={20} color={colors.text} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 340 }}>
+                {PRESET_REASONS.map((preset) => {
+                  const isSelected = reason === preset;
+                  return (
+                    <Pressable
+                      key={preset}
+                      style={[styles.reasonOption, isSelected && styles.reasonOptionActive]}
+                      onPress={() => {
+                        setReason(preset);
+                        setCustomReason('');
+                        setReasonOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[styles.reasonOptionText, isSelected && styles.reasonOptionTextActive]}
+                      >
+                        {preset}
+                      </Text>
+                      {isSelected ? (
+                        <Feather name="check" size={18} color={colors.primary} />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+
+                <View style={styles.customReasonBox}>
+                  <Text style={styles.customReasonLabel}>Hoặc nhập lý do khác:</Text>
+                  <TextInput
+                    style={styles.customReasonInput}
+                    placeholder="Nhập chi tiết lý do chuyển giao..."
+                    placeholderTextColor="#94A3B8"
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    multiline
+                  />
+                  {customReason.trim().length > 0 ? (
+                    <Pressable
+                      style={styles.applyCustomBtn}
+                      onPress={() => {
+                        setReason(customReason.trim());
+                        setReasonOpen(false);
+                      }}
+                    >
+                      <Text style={styles.applyCustomText}>Sử dụng lý do này</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* CONFIRMATION DIALOG MODAL */}
       {confirm && (
         <Modal
           visible={confirm}
@@ -286,10 +441,10 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
             if (!lock.current) setConfirm(false);
           }}
         >
-          <View style={styles.modalOverlay}>
+          <View style={styles.dialogOverlay}>
             <View style={styles.confirmCard}>
               <View style={styles.confirmIconBox}>
-                <Feather name="repeat" size={26} color={colors.primary} />
+                <Feather name="repeat" size={24} color={colors.primary} />
               </View>
 
               <Text style={styles.confirmTitle}>Xác nhận chuyển giao</Text>
@@ -300,7 +455,7 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
               <View style={styles.confirmInfoBox}>
                 <View style={styles.confirmRow}>
                   <Text style={styles.confirmLabel}>HLV tiếp nhận:</Text>
-                  <Text style={[styles.confirmVal, { color: colors.primary, fontWeight: '800' }]}>
+                  <Text style={[styles.confirmVal, { color: colors.primary, fontWeight: '700' }]}>
                     {display(selectedPt)}
                   </Text>
                 </View>
@@ -316,7 +471,9 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
                 </View>
               </View>
 
-              <Text style={styles.confirmCustomerListTitle}>Danh sách học viên ({customers.length}):</Text>
+              <Text style={styles.confirmCustomerListTitle}>
+                Danh sách học viên ({customers.length}):
+              </Text>
               <ScrollView style={styles.confirmScrollList} showsVerticalScrollIndicator={false}>
                 {customers.map((c, idx) => (
                   <View key={recordId(c)} style={styles.confirmCustomerItem}>
@@ -330,7 +487,7 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
               </ScrollView>
 
               <View style={styles.confirmWarningBox}>
-                <Feather name="info" size={14} color="#0369A1" />
+                <Feather name="info" size={14} color="#0284C7" />
                 <Text style={styles.confirmWarningText}>
                   Sau khi xác nhận, toàn bộ học viên sẽ được chuyển giao ngay lập tức cho HLV mới.
                 </Text>
@@ -368,74 +525,42 @@ export function AdminBatchTransfer({ onDone }: { onDone?: () => void }) {
           </View>
         </Modal>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  heroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  heroIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroInfo: {
+  screen: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  heroTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  heroSub: {
-    fontSize: 12.5,
-    color: colors.textMuted,
-    marginTop: 2,
-    lineHeight: 17,
+  scrollContent: {
+    padding: 16,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 16,
   },
   resultBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0FDF4',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#86EFAC',
     borderRadius: 16,
     padding: 14,
     gap: 12,
   },
   resultIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resultTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14.5,
+    fontWeight: '700',
     color: '#16A34A',
   },
   resultDesc: {
@@ -450,61 +575,150 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
-    gap: 8,
+    gap: 10,
   },
   errorNoticeText: {
     flex: 1,
     fontSize: 13,
     color: '#EF4444',
   },
-  stepCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 12,
-  },
-  stepHeader: {
+  guideCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  stepBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
+  guideIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepBadgeText: {
+  guideTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  stepTitle: {
-    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
-  stepSub: {
+
+  /* SECTION CARDS (INDIVIDUAL CARDS FOR EACH STEP) */
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  formRow: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+  rowIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabelWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowLabel: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  rowSubLabel: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: '#64748B',
     marginTop: 1,
   },
-  chipsContainer: {
-    marginTop: 4,
-    gap: 6,
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
   },
-  chipsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  valueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 4,
+    maxWidth: 160,
+  },
+  valueBadgeActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  valueBadgeText: {
+    fontSize: 12.5,
+    fontWeight: '500',
     color: '#64748B',
   },
-  chipsGrid: {
+  valueBadgeTextActive: {
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  /* SELECTED CUSTOMERS SECTION */
+  selectedSection: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    padding: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  selectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  clearAllText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  chipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
@@ -512,11 +726,11 @@ const styles = StyleSheet.create({
   customerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     paddingHorizontal: 8,
     gap: 6,
   },
@@ -537,80 +751,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.text,
-    maxWidth: 140,
+    maxWidth: 130,
   },
-  chipRemoveBtn: {
+  chipCloseBtn: {
     padding: 2,
   },
-  ptTargetCard: {
+  moreChip: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  moreChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+
+  /* SELECTED PT CARD */
+  ptSelectedCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: '#BBF7D0',
     borderRadius: 12,
     padding: 10,
+    marginBottom: 12,
     gap: 10,
   },
-  ptTargetAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#BAE6FD',
+  ptAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ptTargetAvatarText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.primary,
+  ptAvatarText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#16A34A',
   },
-  ptTargetName: {
-    fontSize: 14,
+  ptSelectedName: {
+    fontSize: 13.5,
     fontWeight: '700',
     color: colors.text,
   },
-  ptTargetUser: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  presetChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-  },
-  presetChipActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#BAE6FD',
-  },
-  presetChipText: {
+  ptSelectedMeta: {
     fontSize: 11.5,
     color: '#64748B',
-    fontWeight: '500',
+    marginTop: 1,
   },
-  presetChipTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  reasonInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 88,
-    textAlignVertical: 'top',
-    fontSize: 13.5,
-    color: colors.text,
+
+  /* STICKY FOOTER */
+  stickyFooter: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 4,
   },
   submitReviewBtn: {
     height: 50,
@@ -619,21 +825,120 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+  },
+  submitReviewBtnPressed: {
+    backgroundColor: '#0369A1',
+    transform: [{ scale: 0.99 }],
+  },
+  submitReviewBtnDisabled: {
+    opacity: 0.5,
   },
   submitReviewText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  // Modal
-  modalOverlay: {
+
+  /* BOTTOM SHEET */
+  sheetOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  reasonSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    gap: 12,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  reasonSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sheetCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reasonOption: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    borderRadius: 10,
+  },
+  reasonOptionActive: {
+    backgroundColor: '#F0F9FF',
+  },
+  reasonOptionText: {
+    flex: 1,
+    fontSize: 13.5,
+    color: colors.text,
+  },
+  reasonOptionTextActive: {
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  customReasonBox: {
+    marginTop: 12,
+    gap: 8,
+  },
+  customReasonLabel: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  customReasonInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 64,
+    fontSize: 13,
+    color: colors.text,
+    textAlignVertical: 'top',
+  },
+  applyCustomBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyCustomText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* CONFIRM DIALOG MODAL */
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -642,18 +947,18 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: '85%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
-    shadowRadius: 16,
+    shadowRadius: 20,
     elevation: 8,
   },
   confirmIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
@@ -661,7 +966,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   confirmTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: colors.text,
     textAlign: 'center',
@@ -698,7 +1003,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   confirmCustomerListTitle: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '700',
     color: '#475569',
     marginTop: 12,
@@ -708,19 +1013,21 @@ const styles = StyleSheet.create({
   confirmScrollList: {
     maxHeight: 140,
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   confirmCustomerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 5,
     gap: 6,
   },
   confirmCustomerIndex: {
     fontSize: 12,
     color: '#94A3B8',
-    width: 20,
+    width: 22,
   },
   confirmCustomerName: {
     fontSize: 13,
@@ -738,7 +1045,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 10,
     marginTop: 12,
     gap: 8,

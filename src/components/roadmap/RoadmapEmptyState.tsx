@@ -5,10 +5,11 @@ import { colors, radius, spacing } from '@/theme';
 
 interface RoadmapEmptyStateProps {
   onRefresh?: () => void;
+  onCreatePress?: () => void;
   isStaff?: boolean;
 }
 
-export function RoadmapEmptyState({ onRefresh, isStaff }: RoadmapEmptyStateProps) {
+export function RoadmapEmptyState({ onRefresh, onCreatePress, isStaff }: RoadmapEmptyStateProps) {
   return (
     <View style={styles.card}>
       <View style={styles.iconWrap}>
@@ -19,19 +20,38 @@ export function RoadmapEmptyState({ onRefresh, isStaff }: RoadmapEmptyStateProps
 
       <Text style={styles.message}>
         {isStaff
-          ? 'Học viên này chưa có lộ trình nào được xuất bản. Bạn có thể tạo và xuất bản lộ trình cho học viên qua hệ thống Web PT.'
+          ? 'Chưa có lộ trình nào trong danh sách. Bạn có thể tạo mới lộ trình cho học viên bằng Trợ lý AI hoặc Khoa học Thể thao ngay tại đây.'
           : 'Huấn luyện viên đang xây dựng lộ trình chi tiết theo từng giai đoạn và mốc đánh giá cho bạn. Vui lòng kiểm tra lại sau!'}
       </Text>
 
-      {onRefresh && (
-        <Pressable
-          onPress={onRefresh}
-          style={({ pressed }) => [styles.refreshBtn, pressed && { opacity: 0.8 }]}
-        >
-          <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-          <Text style={styles.refreshBtnText}>Kiểm tra lại</Text>
-        </Pressable>
-      )}
+      <View style={styles.actionsRow}>
+        {isStaff && onCreatePress && (
+          <Pressable
+            onPress={onCreatePress}
+            style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Feather name="plus" size={14} color="#FFFFFF" />
+            <Text style={styles.createBtnText}>Tạo lộ trình ngay</Text>
+          </Pressable>
+        )}
+
+        {onRefresh && (
+          <Pressable
+            onPress={onRefresh}
+            style={({ pressed }) => [styles.refreshBtn, pressed && { opacity: 0.8 }]}
+          >
+            <Feather name="refresh-cw" size={14} color={isStaff && onCreatePress ? colors.primary : '#FFFFFF'} />
+            <Text
+              style={[
+                styles.refreshBtnText,
+                isStaff && onCreatePress ? { color: colors.primary } : { color: '#FFFFFF' },
+              ]}
+            >
+              Kiểm tra lại
+            </Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -72,7 +92,14 @@ const styles = StyleSheet.create({
     maxWidth: 280,
     marginBottom: spacing.md,
   },
-  refreshBtn: {
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  createBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -80,10 +107,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: radius.md,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  createBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
   },
   refreshBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.primary,
   },
 });

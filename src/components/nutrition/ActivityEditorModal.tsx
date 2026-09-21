@@ -160,7 +160,7 @@ export function ActivityEditorModal({
               </View>
               <View>
                 <Text style={styles.headerTitle}>
-                  {isEditing ? 'Chỉnh Sửa Hoạt Động' : 'Thêm Hoạt Động Vận Động Mới'}
+                  {isEditing ? 'Chỉnh sửa hoạt động' : 'Thêm hoạt động vận động mới'}
                 </Text>
                 <Text style={styles.headerSubtitle}>
                   Kho tiêu hao năng lượng thể thao chuẩn ACSM METs

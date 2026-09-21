@@ -90,16 +90,47 @@ export function AdminPackagesManagement() {
     return () => clearTimeout(timer);
   }, [load]);
 
+  const [counts, setCounts] = useState<{ total: number; active: number; inactive: number }>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+
+  const loadCounts = useCallback(async () => {
+    try {
+      const [allRes, activeRes, inactiveRes] = await Promise.allSettled([
+        api.getPage<AdminRecord>(listPath(resource, 1, '', '')),
+        api.getPage<AdminRecord>(listPath(resource, 1, '', 'ACTIVE')),
+        api.getPage<AdminRecord>(listPath(resource, 1, '', 'INACTIVE')),
+      ]);
+      const totalCount = allRes.status === 'fulfilled' ? (allRes.value.meta?.total ?? allRes.value.data?.length ?? 0) : 0;
+      const activeCount = activeRes.status === 'fulfilled' ? (activeRes.value.meta?.total ?? activeRes.value.data?.length ?? 0) : 0;
+      const inactiveCount = inactiveRes.status === 'fulfilled' ? (inactiveRes.value.meta?.total ?? inactiveRes.value.data?.length ?? 0) : 0;
+      setCounts({ total: totalCount, active: activeCount, inactive: inactiveCount });
+    } catch {
+      // ignore
+    }
+  }, [resource]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadCounts();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadCounts]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     void load();
-  }, [load]);
+    void loadCounts();
+  }, [load, loadCounts]);
 
   const afterSave = () => {
     setSuccess('Đã lưu thay đổi thành công.');
     setTimeout(() => setSuccess(''), 3500);
     setForm(undefined);
     void load();
+    void loadCounts();
   };
 
   const runAction = async (action: () => Promise<unknown>) => {
@@ -121,64 +152,126 @@ export function AdminPackagesManagement() {
     }
   };
 
+  const handleSelectStatus = (target: 'ALL' | 'ACTIVE' | 'INACTIVE') => {
+    setStatus((prev) => {
+      if (target === 'ALL') return 'ALL';
+      return prev === target ? 'ALL' : target;
+    });
+    setPage(1);
+  };
+
   // Stats
-  const totalPackages = total ?? items.length;
-  const activePackages = items.filter((i) => i.status === 'ACTIVE').length;
-  const inactivePackages = items.filter((i) => i.status === 'INACTIVE').length;
+  const hasLoadedCounts = counts.total > 0 || counts.active > 0 || counts.inactive > 0;
+  const totalPackages = hasLoadedCounts ? counts.total : (total ?? items.length);
+  const activePackages = hasLoadedCounts ? counts.active : items.filter((i) => i.status === 'ACTIVE').length;
+  const inactivePackages = hasLoadedCounts ? counts.inactive : items.filter((i) => i.status === 'INACTIVE').length;
 
   return (
     <View style={styles.container}>
-      {/* 1. STATS BANNER */}
+      {/* 1. STATS BANNER / QUICK STATUS FILTERS */}
       <View style={styles.statsCard}>
         <View style={styles.statsRow}>
           <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ALL');
-              setPage(1);
-            }}
+            style={({ pressed }) => [
+              styles.statItem,
+              status === 'ALL' && styles.statItemAllActive,
+              pressed && styles.statItemPressed,
+            ]}
+            onPress={() => handleSelectStatus('ALL')}
           >
-            <View style={[styles.statIconBox, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="cube" size={16} color={colors.primary} />
+            <View
+              style={[
+                styles.statIconBox,
+                status === 'ALL'
+                  ? { backgroundColor: colors.primary }
+                  : { backgroundColor: '#E0F2FE' },
+              ]}
+            >
+              <Ionicons
+                name="cube"
+                size={16}
+                color={status === 'ALL' ? '#FFFFFF' : colors.primary}
+              />
             </View>
             <Text style={[styles.statValue, { color: colors.primary }]}>{totalPackages}</Text>
-            <Text style={styles.statLabel} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[
+                styles.statLabel,
+                status === 'ALL' && styles.statLabelAllActive,
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Tổng số gói
             </Text>
           </Pressable>
 
-          <View style={styles.statDivider} />
-
           <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('ACTIVE');
-              setPage(1);
-            }}
+            style={({ pressed }) => [
+              styles.statItem,
+              status === 'ACTIVE' && styles.statItemActiveActive,
+              pressed && styles.statItemPressed,
+            ]}
+            onPress={() => handleSelectStatus('ACTIVE')}
           >
-            <View style={[styles.statIconBox, { backgroundColor: '#DCFCE7' }]}>
-              <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+            <View
+              style={[
+                styles.statIconBox,
+                status === 'ACTIVE'
+                  ? { backgroundColor: '#16A34A' }
+                  : { backgroundColor: '#DCFCE7' },
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={status === 'ACTIVE' ? '#FFFFFF' : '#16A34A'}
+              />
             </View>
             <Text style={[styles.statValue, { color: '#16A34A' }]}>{activePackages}</Text>
-            <Text style={styles.statLabel} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[
+                styles.statLabel,
+                status === 'ACTIVE' && styles.statLabelActiveActive,
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Đang áp dụng
             </Text>
           </Pressable>
 
-          <View style={styles.statDivider} />
-
           <Pressable
-            style={styles.statItem}
-            onPress={() => {
-              setStatus('INACTIVE');
-              setPage(1);
-            }}
+            style={({ pressed }) => [
+              styles.statItem,
+              status === 'INACTIVE' && styles.statItemInactiveActive,
+              pressed && styles.statItemPressed,
+            ]}
+            onPress={() => handleSelectStatus('INACTIVE')}
           >
-            <View style={[styles.statIconBox, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="pause-circle" size={16} color="#EF4444" />
+            <View
+              style={[
+                styles.statIconBox,
+                status === 'INACTIVE'
+                  ? { backgroundColor: '#EF4444' }
+                  : { backgroundColor: '#FEE2E2' },
+              ]}
+            >
+              <Ionicons
+                name="pause-circle"
+                size={16}
+                color={status === 'INACTIVE' ? '#FFFFFF' : '#EF4444'}
+              />
             </View>
             <Text style={[styles.statValue, { color: '#EF4444' }]}>{inactivePackages}</Text>
-            <Text style={styles.statLabel} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[
+                styles.statLabel,
+                status === 'INACTIVE' && styles.statLabelInactiveActive,
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Tạm ngừng
             </Text>
           </Pressable>
@@ -241,40 +334,7 @@ export function AdminPackagesManagement() {
         </View>
       </View>
 
-      {/* 4. STATUS FILTER PILLS */}
-      <View style={styles.filterPillsRow}>
-        {(
-          [
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'ACTIVE', label: 'Đang áp dụng' },
-            { key: 'INACTIVE', label: 'Tạm ngừng' },
-          ] as const
-        ).map((tab) => {
-          const isSelected = status === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => {
-                setStatus(tab.key);
-                setPage(1);
-              }}
-              style={[
-                styles.filterPill,
-                isSelected && styles.filterPillActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterPillText,
-                  isSelected && styles.filterPillTextActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+
 
       {/* Success banner */}
       {success ? (
@@ -1063,31 +1123,50 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    padding: 8,
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
   },
   statItem: {
     flex: 1,
+    minHeight: 76,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    backgroundColor: '#F8FAFC',
+  },
+  statItemPressed: {
+    opacity: 0.75,
+  },
+  statItemAllActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: colors.primary,
+  },
+  statItemActiveActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#16A34A',
+  },
+  statItemInactiveActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
   },
   statIconBox: {
     width: 32,
@@ -1104,15 +1183,22 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: colors.textMuted,
+    color: '#64748B',
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 44,
-    backgroundColor: '#F1F5F9',
+  statLabelAllActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  statLabelActiveActive: {
+    color: '#16A34A',
+    fontWeight: '700',
+  },
+  statLabelInactiveActive: {
+    color: '#EF4444',
+    fontWeight: '700',
   },
   toolbarRow: {
     flexDirection: 'row',
@@ -1170,33 +1256,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: colors.text,
     paddingVertical: 0,
-  },
-  filterPillsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 8,
-  },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterPillActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: colors.primary,
-  },
-  filterPillText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterPillTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
   },
   successBanner: {
     flexDirection: 'row',

@@ -178,7 +178,6 @@ export function SessionAttachments({
       <View style={styles.photoHeaderRow}>
         <Text style={styles.sectionTitle}>Ảnh tiến độ ({photos.length}/4)</Text>
       </View>
-      <Notice text="Ảnh sẽ được tải lên máy chủ bảo mật và liên kết trực tiếp vào lịch sử buổi tập của học viên." />
 
       {photos.map((photo, index) => {
         const rawUrl = readText(photo, ['photoUrl']);
@@ -376,7 +375,7 @@ function Signature({
         <View style={styles.fullScreenSignatureHeader}>
           <View style={{ flex: 1 }}>
             <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureTitle}>
-              KÝ XÁC NHẬN BUỔI TẬP
+              Ký xác nhận buổi tập
             </Text>
             <Text numberOfLines={1} ellipsizeMode="tail" style={styles.fullScreenSignatureSubtitle}>
               Học viên ký trực tiếp vào khung bên dưới để xác nhận

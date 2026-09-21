@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Linking,
   Modal,
   Pressable,
@@ -23,9 +24,67 @@ import {
   type AdminRecord,
 } from '@/services/adminResources';
 import { fetchAdminDashboard, type AdminDashboardData } from '@/services/dashboardService';
-import { colors } from '@/theme';
+import { resolveImageUrl } from '@/services/imageUtils';
+import { colors, radius, spacing } from '@/theme';
 import { messageOf } from '@/utils/error';
 import { PtFormModal } from './PtFormModal';
+
+function PtAvatar({
+  avatarUrl,
+  name,
+  isLocked,
+  size = 44,
+}: {
+  avatarUrl?: unknown;
+  name: string;
+  isLocked?: boolean;
+  size?: number;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const rawUrl = typeof avatarUrl === 'string' ? avatarUrl.trim() : '';
+  const resolved = useMemo(() => resolveImageUrl(rawUrl), [rawUrl]);
+  const hasError = Boolean(resolved && failedUrl === resolved);
+
+  const initial = (name || 'PT').trim().slice(0, 1).toUpperCase() || 'P';
+  const borderRadius = Math.round(size / 2);
+  const fontSize = Math.round(size * 0.4);
+
+  if (resolved && !hasError) {
+    return (
+      <Image
+        key={resolved}
+        source={{ uri: resolved }}
+        style={[
+          {
+            width: size,
+            height: size,
+            borderRadius,
+            backgroundColor: '#E2E8F0',
+          },
+          isLocked && { opacity: 0.6 },
+        ]}
+        resizeMode="cover"
+        onError={() => setFailedUrl(resolved)}
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.avatarBox,
+        {
+          width: size,
+          height: size,
+          borderRadius,
+          backgroundColor: isLocked ? '#64748B' : colors.primary,
+        },
+      ]}
+    >
+      <Text style={[styles.avatarInitial, { fontSize }]}>{initial}</Text>
+    </View>
+  );
+}
 
 export function AdminPtsManagement() {
   const resource = resources.pts;
@@ -34,7 +93,7 @@ export function AdminPtsManagement() {
   const [items, setItems] = useState<AdminRecord[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [total, setTotal] = useState<number>();
+  const [counts, setCounts] = useState<(number | undefined)[]>([]);
   const [keyword, setKeyword] = useState('');
   const [applied, setApplied] = useState('');
   const [status, setStatus] = useState<string>('ALL');
@@ -55,6 +114,39 @@ export function AdminPtsManagement() {
 
   const actionLock = useRef(false);
   const version = useRef(0);
+  const countsVersion = useRef(0);
+
+  useEffect(() => {
+    const nextKeyword = keyword.trim();
+    if (nextKeyword === applied) return;
+    const timer = setTimeout(() => {
+      setPage(1);
+      setApplied(nextKeyword);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keyword, applied]);
+
+  const loadCounts = useCallback(async () => {
+    const request = ++countsVersion.current;
+    setCounts([]);
+    const results = await Promise.allSettled(
+      ['', 'ACTIVE', 'LOCKED'].map((filter) =>
+        api.getPage<AdminRecord>(listPath(resource, 1, applied, filter)),
+      ),
+    );
+    if (countsVersion.current !== request) return;
+    setCounts(results.map((result) =>
+      result.status === 'fulfilled' ? result.value.meta?.total : undefined,
+    ));
+  }, [resource, applied]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadCounts(), 0);
+    return () => {
+      clearTimeout(timer);
+      countsVersion.current += 1;
+    };
+  }, [loadCounts]);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -75,7 +167,6 @@ export function AdminPtsManagement() {
       const result = await api.getPage<AdminRecord>(path);
       if (version.current !== request) return;
       setItems(result.data || []);
-      setTotal(result.meta?.total ?? result.data?.length ?? 0);
       setPages(Math.max(1, result.meta?.totalPages || 1));
       if (result.meta && page > Math.max(1, result.meta.totalPages)) {
         setPage(Math.max(1, result.meta.totalPages));
@@ -91,22 +182,29 @@ export function AdminPtsManagement() {
   }, [resource, page, applied, status]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-      void loadDashboard();
-    }, 0);
+    const timer = setTimeout(() => void load(), 0);
+    return () => {
+      clearTimeout(timer);
+      version.current += 1;
+    };
+  }, [load]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadDashboard(), 0);
     return () => clearTimeout(timer);
-  }, [load, loadDashboard]);
+  }, [loadDashboard]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     void load();
     void loadDashboard();
-  }, [load, loadDashboard]);
+    void loadCounts();
+  }, [load, loadDashboard, loadCounts]);
 
   const afterSave = () => {
     setSuccess('Đã lưu thay đổi thành công.');
     setTimeout(() => setSuccess(''), 3500);
+    void loadCounts();
     void load();
     void loadDashboard();
   };
@@ -147,65 +245,50 @@ export function AdminPtsManagement() {
     return map;
   }, [dashboardData]);
 
-  const totalPtCount = total ?? items.length;
-  const activePtCount = items.filter((pt) => pt.status === 'ACTIVE').length;
-  const lockedPtCount = items.filter((pt) => pt.status === 'LOCKED').length;
+  const statusFilters = [
+    { value: 'ALL', label: 'Tất cả', icon: 'people' as const, color: colors.primary },
+    { value: 'ACTIVE', label: 'Hoạt động', icon: 'checkmark-circle' as const, color: colors.success },
+    { value: 'LOCKED', label: 'Đã khóa', icon: 'lock-closed' as const, color: colors.danger },
+  ];
 
   const handleCall = (phone?: string) => {
     if (!phone) return;
     const cleanPhone = phone.replace(/[^0-9+]/g, '');
-    if (cleanPhone) Linking.openURL(`tel:${cleanPhone}`).catch(() => {});
+    if (cleanPhone) Linking.openURL(`tel:${cleanPhone}`).catch(() => { });
   };
 
   return (
     <View style={styles.container}>
       {/* 1. THẺ THỐNG KÊ TỔNG HỢP HLV */}
       <View style={styles.statsCard}>
-        <View style={styles.statCol}>
-          <View style={[styles.statIconWrap, { backgroundColor: '#F0F9FF' }]}>
-            <Ionicons name="people" size={15} color={colors.primary} />
-          </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statVal, { color: colors.primary }]}>{totalPtCount}</Text>
-            <Text style={styles.statLbl}>Tổng số HLV</Text>
-          </View>
-        </View>
-
-        <View style={styles.statDivider} />
-
-        <Pressable
-          onPress={() => setStatus((prev) => (prev === 'ACTIVE' ? 'ALL' : 'ACTIVE'))}
-          style={({ pressed }) => [styles.statCol, pressed && { opacity: 0.7 }]}
-        >
-          <View style={[styles.statIconWrap, { backgroundColor: '#F0FDF4' }]}>
-            <Ionicons name="checkmark-circle" size={15} color="#16A34A" />
-          </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statVal, { color: '#16A34A' }]}>{activePtCount}</Text>
-            <Text style={styles.statLbl}>Đang hoạt động</Text>
-          </View>
-        </Pressable>
-
-        <View style={styles.statDivider} />
-
-        <Pressable
-          onPress={() => setStatus((prev) => (prev === 'LOCKED' ? 'ALL' : 'LOCKED'))}
-          style={({ pressed }) => [styles.statCol, pressed && { opacity: 0.7 }]}
-        >
-          <View style={[styles.statIconWrap, { backgroundColor: lockedPtCount > 0 ? '#FEF2F2' : '#F8FAFC' }]}>
-            <Ionicons
-              name="lock-closed"
-              size={14}
-              color={lockedPtCount > 0 ? '#EF4444' : colors.textMuted}
-            />
-          </View>
-          <View style={styles.statInfo}>
-            <Text style={[styles.statVal, { color: lockedPtCount > 0 ? '#EF4444' : colors.textMuted }]}>
-              {lockedPtCount}
+        {statusFilters.map((filter, index) => (
+          <Pressable
+            key={filter.value}
+            accessibilityRole="button"
+            accessibilityLabel={filter.label + ', ' + (counts[index] ?? 'chưa có số liệu') + ' huấn luyện viên'}
+            accessibilityState={{ selected: status === filter.value }}
+            onPress={() => {
+              setStatus(filter.value);
+              setPage(1);
+            }}
+            style={({ pressed }) => [
+              styles.statCol,
+              status === filter.value && styles.statColSelected,
+              pressed && styles.statColPressed,
+            ]}
+          >
+            <View style={styles.statValueRow}>
+              <Ionicons name={filter.icon} size={16} color={filter.color} />
+              <Text style={styles.statVal} numberOfLines={1} ellipsizeMode="tail">
+                {counts[index] ?? '—'}
+              </Text>
+              {status === filter.value && <Feather name="check" size={12} color={colors.primary} />}
+            </View>
+            <Text style={[styles.statLbl, status === filter.value && styles.statLabelSelected]} numberOfLines={1} ellipsizeMode="tail">
+              {filter.label}
             </Text>
-            <Text style={styles.statLbl}>Đã khóa</Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        ))}
       </View>
 
       {/* 2. THANH TÌM KIẾM & NÚT THÊM HLV */}
@@ -214,13 +297,13 @@ export function AdminPtsManagement() {
           <Feather name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm theo tên HLV, SĐT, tài khoản..."
+            placeholder="Tìm theo tên HLV, SĐT..."
             placeholderTextColor={colors.textMuted}
             value={keyword}
             onChangeText={setKeyword}
             returnKeyType="search"
             onSubmitEditing={() => {
-              setApplied(keyword);
+              setApplied(keyword.trim());
               setPage(1);
             }}
           />
@@ -249,45 +332,6 @@ export function AdminPtsManagement() {
         </Pressable>
       </View>
 
-      {/* 3. BỘ LỌC TRẠNG THÁI DẠNG PILLS */}
-      <View style={styles.filterRow}>
-        <Pressable
-          onPress={() => {
-            setStatus('ALL');
-            setPage(1);
-          }}
-          style={[styles.filterPill, status === 'ALL' && styles.filterPillActive]}
-        >
-          <Text style={[styles.filterText, status === 'ALL' && styles.filterTextActive]}>
-            Tất cả ({totalPtCount})
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            setStatus('ACTIVE');
-            setPage(1);
-          }}
-          style={[styles.filterPill, status === 'ACTIVE' && styles.filterPillActive]}
-        >
-          <Text style={[styles.filterText, status === 'ACTIVE' && styles.filterTextActive]}>
-            Đang hoạt động ({activePtCount})
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            setStatus('LOCKED');
-            setPage(1);
-          }}
-          style={[styles.filterPill, status === 'LOCKED' && styles.filterPillActive]}
-        >
-          <Text style={[styles.filterText, status === 'LOCKED' && styles.filterTextActive]}>
-            Đã khóa ({lockedPtCount})
-          </Text>
-        </Pressable>
-      </View>
-
       {/* Thông báo thành công */}
       {success ? (
         <View style={styles.toastCard}>
@@ -299,6 +343,7 @@ export function AdminPtsManagement() {
       {/* 4. DANH SÁCH THẺ HLV */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={styles.ptListScroll}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
@@ -341,7 +386,7 @@ export function AdminPtsManagement() {
             const workload = workloadMap.get(ptId);
             const isLocked = pt.status === 'LOCKED';
             const fullName = String(pt.fullName || pt.username || 'HLV 3S');
-            const initial = fullName.slice(0, 1).toUpperCase();
+            const ptAvatar = (pt.avatarUrl || (pt as any).avatar || (pt as any).photoUrl) as string | undefined;
 
             return (
               <Pressable
@@ -356,9 +401,12 @@ export function AdminPtsManagement() {
                 {/* Header Card */}
                 <View style={styles.cardHeader}>
                   <View style={styles.avatarWrap}>
-                    <View style={[styles.avatarBox, isLocked && { backgroundColor: '#64748B' }]}>
-                      <Text style={styles.avatarInitial}>{initial}</Text>
-                    </View>
+                    <PtAvatar
+                      avatarUrl={ptAvatar}
+                      name={fullName}
+                      isLocked={isLocked}
+                      size={44}
+                    />
                     <View
                       style={[
                         styles.onlineDot,
@@ -369,7 +417,7 @@ export function AdminPtsManagement() {
 
                   <View style={styles.cardHeaderInfo}>
                     <View style={styles.nameRow}>
-                      <Text style={styles.ptName} numberOfLines={1}>
+                      <Text style={styles.ptName} numberOfLines={1} ellipsizeMode="tail">
                         {fullName}
                       </Text>
                       <View
@@ -393,7 +441,25 @@ export function AdminPtsManagement() {
                       </View>
                     </View>
 
-                    <Text style={styles.ptUsername}>@{String(pt.username || '')}</Text>
+                    {pt.phone ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={'Gọi ' + String(pt.phone)}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          handleCall(String(pt.phone));
+                        }}
+                        hitSlop={{ top: 12, bottom: 12 }}
+                        style={({ pressed }) => [styles.phoneRow, pressed && { opacity: 0.7 }]}
+                      >
+                        <Feather name="phone" size={12} color={colors.textMuted} />
+                        <Text style={styles.ptPhone} numberOfLines={1} ellipsizeMode="tail">
+                          {String(pt.phone)}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text style={styles.ptPhone} numberOfLines={1} ellipsizeMode="tail">Chưa có SĐT</Text>
+                    )}
                     {pt.specialization ? (
                       <Text style={styles.specializationText} numberOfLines={1}>
                         {String(pt.specialization)}
@@ -402,7 +468,20 @@ export function AdminPtsManagement() {
                     ) : null}
                   </View>
 
-                  <Feather name="chevron-right" size={18} color={colors.textMuted} />
+
+                  {editable(pt) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={'Chỉnh sửa HLV ' + fullName}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        setForm(pt);
+                      }}
+                      style={({ pressed }) => [styles.editIconBtn, pressed && styles.editIconBtnPressed]}
+                    >
+                      <Feather name="edit-2" size={18} color={colors.primary} />
+                    </Pressable>
+                  )}
                 </View>
 
                 {/* Workload Metric Pills */}
@@ -424,64 +503,6 @@ export function AdminPtsManagement() {
                   </View>
                 </View>
 
-                {/* Contact & Actions Quick Row */}
-                <View style={styles.cardActionsRow}>
-                  <View style={styles.contactLeft}>
-                    {pt.phone ? (
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleCall(String(pt.phone));
-                        }}
-                        style={({ pressed }) => [
-                          styles.contactBtn,
-                          pressed && { opacity: 0.7 },
-                        ]}
-                        hitSlop={6}
-                      >
-                        <Feather name="phone" size={13} color={colors.primary} />
-                        <Text style={styles.contactText}>{String(pt.phone)}</Text>
-                      </Pressable>
-                    ) : (
-                      <Text style={styles.noContactText}>Chưa có số điện thoại</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.actionsRight}>
-                    {editable(pt) && (
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setForm(pt);
-                        }}
-                        style={({ pressed }) => [
-                          styles.actionSmallBtn,
-                          pressed && styles.actionSmallBtnPressed,
-                        ]}
-                        hitSlop={8}
-                        accessibilityLabel="Chỉnh sửa HLV"
-                      >
-                        <Feather name="edit-2" size={14} color={colors.primary} />
-                        <Text style={styles.actionSmallBtnText}>Sửa</Text>
-                      </Pressable>
-                    )}
-
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        setSelectedPt(pt);
-                      }}
-                      style={({ pressed }) => [
-                        styles.actionSmallBtn,
-                        styles.detailBtn,
-                        pressed && styles.actionSmallBtnPressed,
-                      ]}
-                      hitSlop={8}
-                    >
-                      <Text style={styles.detailBtnText}>Chi tiết</Text>
-                    </Pressable>
-                  </View>
-                </View>
               </Pressable>
             );
           })
@@ -561,11 +582,12 @@ export function AdminPtsManagement() {
               <View style={styles.sheetHandle} />
 
               <View style={styles.sheetHeader}>
-                <View style={styles.avatarLarge}>
-                  <Text style={styles.avatarLargeText}>
-                    {String(selectedPt.fullName || selectedPt.username || 'PT').slice(0, 1).toUpperCase()}
-                  </Text>
-                </View>
+                <PtAvatar
+                  avatarUrl={(selectedPt.avatarUrl || (selectedPt as any).avatar || (selectedPt as any).photoUrl) as string | undefined}
+                  name={String(selectedPt.fullName || selectedPt.username || 'PT')}
+                  isLocked={selectedPt.status === 'LOCKED'}
+                  size={48}
+                />
 
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sheetTitle}>{display(selectedPt)}</Text>
@@ -705,7 +727,7 @@ export function AdminPtsManagement() {
                 <Ionicons name="trash-outline" size={28} color="#EF4444" />
               </View>
 
-              <Text style={styles.confirmTitle}>Xóa Huấn luyện viên?</Text>
+              <Text style={styles.confirmTitle}>Xóa huấn luyện viên?</Text>
               <Text style={styles.confirmMessage}>
                 {`Bạn có chắc chắn muốn xóa tài khoản của HLV "${display(deletingPt)}"?\nThao tác này không thể hoàn tác. Các học viên phụ trách cần được điều chuyển trước khi xóa.`}
               </Text>
@@ -754,58 +776,43 @@ export function AdminPtsManagement() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     gap: 12,
+    backgroundColor: '#F8FAFC',
   },
-  /* Stats Card */
+  ptListScroll: {
+    flex: 1,
+  },
+  /* Statistics also serve as status filters. */
   statsCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
+    borderColor: colors.border,
   },
   statCol: {
     flex: 1,
-    flexDirection: 'row',
+    minWidth: 0,
+    minHeight: 56,
+    padding: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 2,
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  statIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statInfo: {
-    justifyContent: 'center',
-  },
-  statVal: {
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  statLbl: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-    lineHeight: 12,
-  },
-  statDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E2E8F0',
-  },
+  statColSelected: { backgroundColor: colors.surfaceIce, borderColor: colors.primary },
+  statColPressed: { opacity: 0.8 },
+  statValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  statVal: { fontSize: 16, lineHeight: 20, fontWeight: '700', color: colors.text, flexShrink: 1 },
+  statLbl: { fontSize: 12, lineHeight: 16, fontWeight: '500', color: colors.textMuted },
+  statLabelSelected: { color: colors.primaryDark, fontWeight: '700' },
 
   /* Search Row */
   searchRow: {
@@ -847,33 +854,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-
-  /* Filters */
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterPillActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#BAE6FD',
-  },
-  filterText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
   },
 
   /* Toast */
@@ -975,10 +955,19 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
   },
-  ptUsername: {
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    minHeight: 20,
+    gap: 4,
+  },
+  ptPhone: {
     fontSize: 12,
-    color: '#64748B',
-    marginTop: 1,
+    lineHeight: 20,
+    color: colors.textMuted,
+    flexShrink: 1,
   },
   specializationText: {
     fontSize: 11.5,
@@ -1012,64 +1001,16 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  /* Card Actions Row */
-  cardActionsRow: {
-    flexDirection: 'row',
+  editIconBtn: {
+    width: 44,
+    height: 44,
+    alignSelf: 'flex-start',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  contactLeft: {
-    flex: 1,
-  },
-  contactBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  contactText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  noContactText: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  actionsRight: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  actionSmallBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
+    backgroundColor: colors.surfaceIce,
   },
-  actionSmallBtnPressed: {
-    opacity: 0.7,
-  },
-  actionSmallBtnText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  detailBtn: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#E2E8F0',
-  },
-  detailBtnText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#475569',
-  },
+  editIconBtnPressed: { opacity: 0.7 },
 
   /* Pagination */
   paginationRow: {
