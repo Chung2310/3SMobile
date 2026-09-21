@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { AdminDashboardView } from '@/components/admin/AdminDashboardView';
@@ -45,10 +45,26 @@ export default function AdminHomeScreen() {
     }
   }, []);
 
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+
+  const fetchUnreadNotifications = useCallback(async () => {
+    try {
+      const payload = await api.get<any>('/api/notifications?page=1&limit=20');
+      const list = Array.isArray(payload)
+        ? payload
+        : payload?.items || payload?.notifications || payload?.data || [];
+      const unread = list.filter((n: any) => !n.readAt).length;
+      setUnreadNotificationsCount(unread);
+    } catch {
+      // Bỏ qua lỗi ngầm
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       void fetchCreditBalance();
-    }, [fetchCreditBalance])
+      void fetchUnreadNotifications();
+    }, [fetchCreditBalance, fetchUnreadNotifications])
   );
 
   return (
@@ -88,6 +104,25 @@ export default function AdminHomeScreen() {
             </Text>
           </Pressable>
 
+          {/* Nút thông báo */}
+          <Pressable
+            onPress={() => router.push('/(app)/notifications')}
+            style={({ pressed }) => [
+              styles.headerIconBtn,
+              pressed && styles.headerIconBtnPressed,
+            ]}
+            hitSlop={8}
+            accessibilityLabel="Thông báo"
+          >
+            <Feather name="bell" size={17} color="#334155" />
+            {unreadNotificationsCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
 
           {/* Avatar Profile */}
           <Pressable
@@ -191,6 +226,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerIconBtnPressed: {
+    backgroundColor: '#F1F5F9',
+    transform: [{ scale: 0.94 }],
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
   },
 
   avatarWrap: {

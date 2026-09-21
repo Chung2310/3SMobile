@@ -146,6 +146,7 @@ export default function HomeScreen() {
   };
 
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const fetchCreditBalance = useCallback(async () => {
     try {
@@ -159,16 +160,30 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const fetchUnreadNotifications = useCallback(async () => {
+    try {
+      const payload = await api.get<any>('/api/notifications?page=1&limit=20');
+      const list = Array.isArray(payload)
+        ? payload
+        : payload?.items || payload?.notifications || payload?.data || [];
+      const unread = list.filter((n: any) => !n.readAt).length;
+      setUnreadNotificationsCount(unread);
+    } catch {
+      // Silently ignore if fails
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       const data = await fetchPtDashboard();
       setDashboard(data);
       void fetchCreditBalance();
+      void fetchUnreadNotifications();
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchCreditBalance]);
+  }, [fetchCreditBalance, fetchUnreadNotifications]);
 
   useFocusEffect(
     useCallback(() => {
@@ -180,10 +195,11 @@ export default function HomeScreen() {
         }
       });
       void fetchCreditBalance();
+      void fetchUnreadNotifications();
       return () => {
         active = false;
       };
-    }, [fetchCreditBalance])
+    }, [fetchCreditBalance, fetchUnreadNotifications])
   );
 
   const onRefresh = useCallback(() => {
@@ -241,7 +257,6 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
-
             <Pressable
               onPress={() => router.push('/(app)/wallet')}
               style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
@@ -252,6 +267,23 @@ export default function HomeScreen() {
               <Text style={styles.headerCreditValue}>
                 {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
               </Text>
+            </Pressable>
+
+            {/* Nút thông báo */}
+            <Pressable
+              onPress={() => router.push('/(app)/notifications')}
+              style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
+              hitSlop={8}
+              accessibilityLabel="Thông báo"
+            >
+              <Feather name="bell" size={17} color="#334155" />
+              {unreadNotificationsCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
 
             <Pressable
@@ -296,7 +328,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-
           {/* Nút Số dư Credit với icon ngôi sao AI (Bấm để mở Ví Credit) */}
           <Pressable
             onPress={() => router.push('/(app)/wallet')}
@@ -308,6 +339,23 @@ export default function HomeScreen() {
             <Text style={styles.headerCreditValue}>
               {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
             </Text>
+          </Pressable>
+
+          {/* Nút thông báo */}
+          <Pressable
+            onPress={() => router.push('/(app)/notifications')}
+            style={({ pressed }) => [styles.headerIconBtn, pressed && styles.headerIconBtnPressed]}
+            hitSlop={8}
+            accessibilityLabel="Thông báo"
+          >
+            <Feather name="bell" size={17} color="#334155" />
+            {unreadNotificationsCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
 
           {/* Ảnh đại diện PT (Bấm để xem hồ sơ) */}
@@ -787,6 +835,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerIconBtnPressed: {
+    backgroundColor: '#F1F5F9',
+    transform: [{ scale: 0.94 }],
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
   },
 
   headerCreditBadge: {
