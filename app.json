@@ -11,13 +11,6 @@
       "expo-router",
       "expo-secure-store",
       [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#0284C7"
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên.",

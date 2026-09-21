@@ -46,38 +46,39 @@ if (Notifications) {
 }
 
 async function registerForPushNotifications(): Promise<string | null> {
-  if (isAndroidExpoGo || !Notifications) {
-    console.log('[Push] Push notifications không được hỗ trợ trong Expo Go trên Android (SDK 53+). Vui lòng dùng development build.');
-    return null;
-  }
-
-  // Trên iOS giả lập không hỗ trợ push notification từ xa
-  if (Platform.OS === 'ios' && !Device.isDevice) {
-    console.log('[Push] Giả lập iOS không hỗ trợ push notification');
-    return null;
-  }
-
-  // Kiểm tra quyền hiện tại
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  // Nếu chưa có quyền, xin quyền
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    console.log('[Push] Người dùng từ chối quyền thông báo');
-    return null;
-  }
-
   try {
-    // Lấy projectId từ Constants (Expo Go hoặc EAS Build)
+    if (isAndroidExpoGo || !Notifications) {
+      return null;
+    }
+
+    // Trên iOS giả lập không hỗ trợ push notification từ xa
+    if (Platform.OS === 'ios' && !Device.isDevice) {
+      console.log('[Push] Giả lập iOS không hỗ trợ push notification');
+      return null;
+    }
+
+    // Nếu chưa cấu hình EAS projectId hoặc Firebase thì an toàn bỏ qua để không kích hoạt Firebase crash
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
     if (!projectId) {
-      console.warn('[Push] Lưu ý: Chưa cấu hình "extra.eas.projectId" trong app.json.');
+      console.log('[Push] Bỏ qua đăng ký push token vì chưa cấu hình EAS projectId / Firebase.');
+      return null;
     }
+
+    // Kiểm tra quyền hiện tại
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    // Nếu chưa có quyền, xin quyền
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('[Push] Người dùng từ chối quyền thông báo');
+      return null;
+    }
+
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: projectId || undefined,
     });
@@ -94,7 +95,7 @@ async function registerForPushNotifications(): Promise<string | null> {
 
     return tokenData.data;
   } catch (error) {
-    console.error('[Push] Lỗi khi lấy push token:', error);
+    console.warn('[Push] Không thể lấy push token:', error);
     return null;
   }
 }
@@ -112,19 +113,23 @@ export function usePushNotifications() {
       return;
     }
 
-    // 1. Đăng ký push token
-    registerForPushNotifications().then(async (token) => {
-      if (!token) return;
-      console.log('[Push] Token:', token);
+    // 1. Đăng ký push token an toàn
+    registerForPushNotifications()
+      .then(async (token) => {
+        if (!token) return;
+        console.log('[Push] Token:', token);
 
-      // Gửi token lên server
-      try {
-        await api.post('/api/auth/push-token', { pushToken: token });
-        console.log('[Push] Đã gửi token lên server');
-      } catch (error) {
-        console.error('[Push] Lỗi khi gửi token lên server:', error);
-      }
-    });
+        // Gửi token lên server
+        try {
+          await api.post('/api/auth/push-token', { pushToken: token });
+          console.log('[Push] Đã gửi token lên server');
+        } catch (error) {
+          console.error('[Push] Lỗi khi gửi token lên server:', error);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Push] Lỗi khi xử lý push token:', err);
+      });
 
     // 2. Lắng nghe notification nhận được khi app đang mở
     try {
