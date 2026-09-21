@@ -1,6 +1,7 @@
 import { ContextIcon } from '@/components/LibraryIcon';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
+import { ActivityIndicator, Animated, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme';
@@ -50,39 +51,16 @@ export function Busy() {
 }
 export function Sheet({ title, children, onClose, locked = false, footer }: { title: string; children: ReactNode; onClose: () => void; locked?: boolean; footer?: ReactNode }) {
   const insets = useSafeAreaInsets();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const windowHeight = Dimensions.get('window').height;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const availableHeight = windowHeight - insets.top - 24 - keyboardHeight;
-  const maxSheetHeight = Math.max(availableHeight, 260);
-
   return <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={() => !locked && onClose()}>
-    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', paddingBottom: keyboardHeight }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 24) : 24 }}>
       <Pressable accessibilityLabel="Đóng" onPress={() => { Keyboard.dismiss(); if (!locked) onClose(); }} style={StyleSheet.absoluteFill} />
-      <View accessibilityViewIsModal style={{ maxHeight: maxSheetHeight, backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: keyboardHeight > 0 ? 12 : Math.max(insets.bottom, 14) }}>
+      <View accessibilityViewIsModal style={{ maxHeight: '100%', backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: Math.max(insets.bottom, 20) }}>
         <View style={{ width: 32, height: 4, backgroundColor: colors.border, borderRadius: 4, alignSelf: 'center', marginBottom: 8 }} />
         <View style={[ws.row, { flexWrap: 'nowrap', marginBottom: 10 }]}><Text numberOfLines={2} ellipsizeMode="tail" style={{ flex: 1, fontFamily: 'Inter_700Bold', fontSize: 15, lineHeight: 20, color: colors.text }}>{title}</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng" disabled={locked} onPress={() => { Keyboard.dismiss(); onClose(); }} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}><ContextIcon name="x" size={18} color={colors.text} /></Pressable></View>
         <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={true} style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 10 }}>{children}</ScrollView>
         {footer && <View style={{ gap: 8, paddingTop: 10, borderTopWidth: 1, borderColor: colors.border }}>{footer}</View>}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   </Modal>;
 }
 export function Picker({ label, value, options, onChange }: { label: string; value: string; options: Record<string, string>; onChange: (value: string) => void }) {

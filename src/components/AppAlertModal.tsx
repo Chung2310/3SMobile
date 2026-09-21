@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather } from '@expo/vector-icons';
 
 export type AlertModalType = 'success' | 'warning' | 'error' | 'info';

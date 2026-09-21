@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { LibraryIcon } from '@/components/LibraryIcon';
 import type { JsonRecord } from '@/types/domain';
 import { readText } from '@/services/journey';

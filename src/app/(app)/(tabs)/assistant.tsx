@@ -4,7 +4,6 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,8 +110,7 @@ export default function AssistantScreen() {
   // History state
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // Keyboard state for exact elevation
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // Android resizes the window; keyboard events only drive chat visibility.
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // 1. Keyboard event listeners
@@ -119,8 +118,7 @@ export default function AssistantScreen() {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
+    const showSub = Keyboard.addListener(showEvent, () => {
       setIsKeyboardVisible(true);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -128,7 +126,6 @@ export default function AssistantScreen() {
     });
 
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
       setIsKeyboardVisible(false);
     });
 
@@ -382,12 +379,6 @@ export default function AssistantScreen() {
   const tabBarHeight =
     50 + (Platform.OS === 'android' ? Math.max(insets.bottom, 6) : Math.max(insets.bottom, 10));
 
-  // Android lifts inputContainer directly above keyboard (accounting for navigation bar offset)
-  const androidLift =
-    Platform.OS === 'android' && keyboardHeight > 0
-      ? Math.max(0, keyboardHeight - tabBarHeight + 52)
-      : 0;
-
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
       {/* 1. Header */}
@@ -607,7 +598,6 @@ export default function AssistantScreen() {
             styles.inputContainer,
             {
               paddingBottom: 8,
-              marginBottom: androidLift,
             },
           ]}
         >

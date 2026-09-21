@@ -3,12 +3,12 @@ import {
   ActivityIndicator,
   Image,
   Linking,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { api } from '@/services/api/client';
