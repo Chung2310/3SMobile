@@ -265,16 +265,16 @@ export function InBodyDetailSheet({
               {togglingStatus ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <>
-                  <Ionicons
-                    name={isPublished ? 'eye-off-outline' : 'eye-outline'}
-                    size={15}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.actionBtnText}>
-                    {isPublished ? 'Thu hồi nháp' : 'Công bố'}
-                  </Text>
-                </>
+                <Ionicons
+                  name={isPublished ? 'eye-off-outline' : 'eye-outline'}
+                  size={15}
+                  color="#FFFFFF"
+                />
+              )}
+              {!togglingStatus && (
+                <Text numberOfLines={1} style={styles.actionBtnText}>
+                  {isPublished ? 'Thu hồi nháp' : 'Công bố'}
+                </Text>
               )}
             </Pressable>
 
@@ -292,6 +292,7 @@ export function InBodyDetailSheet({
                 color={copiedConsultation ? '#15803D' : '#0284C7'}
               />
               <Text
+                numberOfLines={1}
                 style={[
                   styles.actionBtnText,
                   { color: copiedConsultation ? '#15803D' : '#0284C7' },
@@ -306,7 +307,7 @@ export function InBodyDetailSheet({
               onPress={handleShareQuickMessage}
             >
               <Ionicons name="share-social-outline" size={15} color={colors.primaryNavy} />
-              <Text style={[styles.actionBtnText, { color: colors.primaryNavy }]}>Chia sẻ</Text>
+              <Text numberOfLines={1} style={[styles.actionBtnText, { color: colors.primaryNavy }]}>Chia sẻ</Text>
             </Pressable>
 
             <Pressable
@@ -317,7 +318,7 @@ export function InBodyDetailSheet({
               }}
             >
               <Ionicons name="create-outline" size={15} color={colors.text} />
-              <Text style={[styles.actionBtnText, { color: colors.text }]}>Sửa</Text>
+              <Text numberOfLines={1} style={[styles.actionBtnText, { color: colors.text }]}>Sửa</Text>
             </Pressable>
 
             {onDelete && (
@@ -329,7 +330,7 @@ export function InBodyDetailSheet({
                 }}
               >
                 <Ionicons name="trash-outline" size={15} color={colors.danger} />
-                <Text style={[styles.actionBtnText, { color: colors.danger }]}>Xóa</Text>
+                <Text numberOfLines={1} style={[styles.actionBtnText, { color: colors.danger }]}>Xóa</Text>
               </Pressable>
             )}
           </ScrollView>
@@ -538,6 +539,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radius.md,
+    flexShrink: 0,
   },
   actionBtnPublish: {
     backgroundColor: '#0284C7',
@@ -572,6 +574,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     includeFontPadding: false,
     color: '#FFFFFF',
+    flexShrink: 0,
   },
   contentScroll: {
     flexShrink: 1,
