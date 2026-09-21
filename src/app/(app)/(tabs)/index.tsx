@@ -84,10 +84,10 @@ const QUICK_FEATURES: QuickFeature[] = [
     route: '/(app)/(tabs)/assistant',
   },
   {
-    id: 'wallet',
-    title: 'Ví Credit',
-    iconName: 'wallet-outline',
-    route: '/(app)/wallet',
+    id: 'schedule',
+    title: 'Lịch dạy',
+    iconName: 'calendar-outline',
+    route: '/(app)/(tabs)/schedule',
   },
 ];
 
@@ -257,17 +257,15 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
-            <Pressable
-              onPress={() => router.push('/(app)/wallet')}
-              style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
-              hitSlop={8}
+            <View
+              style={styles.headerCreditBadge}
               accessibilityLabel="Số dư Credit AI"
             >
               <Ionicons name="sparkles" size={14} color="#0284C7" />
               <Text style={styles.headerCreditValue}>
                 {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
               </Text>
-            </Pressable>
+            </View>
 
             {/* Nút thông báo */}
             <Pressable
@@ -328,18 +326,16 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          {/* Nút Số dư Credit với icon ngôi sao AI (Bấm để mở Ví Credit) */}
-          <Pressable
-            onPress={() => router.push('/(app)/wallet')}
-            style={({ pressed }) => [styles.headerCreditBadge, pressed && styles.headerCreditBadgePressed]}
-            hitSlop={8}
+          {/* Số dư Credit với icon ngôi sao AI */}
+          <View
+            style={styles.headerCreditBadge}
             accessibilityLabel="Số dư Credit AI"
           >
             <Ionicons name="sparkles" size={14} color="#0284C7" />
             <Text style={styles.headerCreditValue}>
               {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
             </Text>
-          </Pressable>
+          </View>
 
           {/* Nút thông báo */}
           <Pressable

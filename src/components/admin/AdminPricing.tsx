@@ -110,7 +110,7 @@ function RatesEditorModal({
             <View style={{ flex: 1 }}>
               <Text style={styles.sheetTitle}>Cập nhật tỷ giá quy đổi</Text>
               <Text style={styles.sheetSub}>
-                Áp dụng tức thì cho các đơn nạp tiền và thanh toán tác vụ AI mới
+                Áp dụng tức thì cho việc định giá các tác vụ AI mới
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={8} style={styles.sheetCloseBtn}>
