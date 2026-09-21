@@ -83,12 +83,6 @@ const QUICK_FEATURES: QuickFeature[] = [
     iconName: 'sparkles-outline',
     route: '/(app)/(tabs)/assistant',
   },
-  {
-    id: 'schedule',
-    title: 'Lịch dạy',
-    iconName: 'calendar-outline',
-    route: '/(app)/(tabs)/schedule',
-  },
 ];
 
 export default function HomeScreen() {
