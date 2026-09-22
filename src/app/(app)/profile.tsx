@@ -1,3 +1,4 @@
+import { PrivacyPolicyLink } from '@/components/PrivacyPolicyLink';
 import { isValidPassword, PASSWORD_ERROR, PASSWORD_HINT } from '@/services/passwordValidation';
 import React, { useCallback, useState } from 'react';
 import {
@@ -787,6 +788,7 @@ export default function ProfileScreen() {
             </View>
           </>
         )}
+        <PrivacyPolicyLink />
       </ScrollView>
 
       {/* 7. BOTTOM SHEET SỬA HỒ SƠ & ĐỔI MẬT KHẨU (SLIDE-UP SHEET) */}

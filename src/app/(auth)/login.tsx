@@ -1,3 +1,4 @@
+import { PrivacyPolicyLink } from '@/components/PrivacyPolicyLink';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -197,6 +198,7 @@ export default function LoginScreen() {
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
         <Text style={styles.assistantFooterText}>Trợ lý PT AI của 3S WELLNESS • Dành riêng cho HLV</Text>
+        <PrivacyPolicyLink />
       </View>
 
       {/* 4. MÀN HÌNH GIỚI THIỆU INTRO (NỀN ĐEN + LOGO TRẮNG Ở GIỮA) */}
