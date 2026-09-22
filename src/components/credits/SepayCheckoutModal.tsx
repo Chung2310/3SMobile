@@ -11,6 +11,7 @@ import {
 import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { colors } from '@/theme';
 import { api } from '@/services/api/client';
 
 export interface MobilePaymentOrder {
@@ -26,31 +27,31 @@ export interface MobilePaymentOrder {
   expiresAt: string;
   redirectUrl?: string;
   qrCodeUrl?: string;
+  bankTransfer?: { bankName: string; accountNumber: string; accountHolder: string; content: string };
 }
 
-interface PayosCheckoutModalProps {
+interface SepayCheckoutModalProps {
   visible: boolean;
   order: MobilePaymentOrder | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function PayosCheckoutModal({
+export function SepayCheckoutModal(props: SepayCheckoutModalProps) {
+  if (!props.visible || !props.order) return null;
+  return <Checkout key={props.order.id} {...props} order={props.order} />;
+}
+
+function Checkout({
   visible,
   order,
   onClose,
   onSuccess,
-}: PayosCheckoutModalProps) {
+}: Omit<SepayCheckoutModalProps, 'order'> & { order: MobilePaymentOrder }) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [status, setStatus] = useState<'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED'>('PENDING');
-  const [timeLeft, setTimeLeft] = useState<number>(15 * 60);
+  const [status, setStatus] = useState<'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED'>(order.status);
+  const [timeLeft, setTimeLeft] = useState<number>(() => Math.max(0, Math.floor((Date.parse(order.expiresAt) - Date.now()) / 1000)));
 
-  useEffect(() => {
-    if (!order) return;
-    setStatus(order.status);
-    const expiresMs = new Date(order.expiresAt).getTime() - Date.now();
-    setTimeLeft(Math.max(0, Math.floor(expiresMs / 1000)));
-  }, [order]);
 
   // Countdown timer
   useEffect(() => {
@@ -110,7 +111,7 @@ export function PayosCheckoutModal({
     }
   };
 
-  const memoText = `Nap credit ${order.orderCode.slice(-10)}`;
+  const memoText = order.bankTransfer?.content || order.orderCode;
   const qrRaw = order.qrCodeUrl || '';
   const qrImageUrl = qrRaw.startsWith('http') || qrRaw.startsWith('data:')
     ? qrRaw
@@ -131,10 +132,10 @@ export function PayosCheckoutModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.iconWrap}>
-                <Ionicons name="qr-code" size={18} color="#003B70" />
+                <Ionicons name="qr-code" size={18} color={colors.primary} />
               </View>
               <View>
-                <Text style={styles.title}>Thanh toán</Text>
+                <Text style={styles.title}>Thanh toán SePay</Text>
                 <Text style={styles.subtitle}>Xác nhận tự động 24/7</Text>
               </View>
             </View>
@@ -272,11 +273,11 @@ export function PayosCheckoutModal({
                 <View style={styles.actionsRow}>
                   {order.redirectUrl && (
                     <Pressable
-                      style={({ pressed }) => [styles.payosLinkBtn, pressed && { opacity: 0.85 }]}
+                      style={({ pressed }) => [styles.paymentLinkBtn, pressed && { opacity: 0.85 }]}
                       onPress={() => order.redirectUrl && Linking.openURL(order.redirectUrl)}
                     >
-                      <Feather name="external-link" size={13} color="#003B70" style={{ marginRight: 5 }} />
-                      <Text style={styles.payosLinkText}>Mở trang thanh toán</Text>
+                      <Feather name="external-link" size={13} color={colors.primary} style={{ marginRight: 5 }} />
+                      <Text style={styles.paymentLinkText}>Mở trang thanh toán</Text>
                     </Pressable>
                   )}
 
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#003B70',
+    color: colors.primary,
   },
   subtitle: {
     fontSize: 11,
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
   detailAmountText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#003B70',
+    color: colors.primary,
   },
   memoBadge: {
     backgroundColor: '#FEF3C7',
@@ -487,7 +488,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 14,
   },
-  payosLinkBtn: {
+  paymentLinkBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,10 +499,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
   },
-  payosLinkText: {
+  paymentLinkText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#003B70',
+    color: colors.primary,
   },
   closeModalBtn: {
     paddingHorizontal: 18,
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     marginTop: 20,
-    backgroundColor: '#003B70',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 32,
     paddingVertical: 11,
