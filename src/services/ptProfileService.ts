@@ -196,19 +196,10 @@ export async function uploadPtAvatar(asset: {
 
 /**
  * Yêu cầu xóa vĩnh viễn tài khoản người dùng:
- * Gửi yêu cầu DELETE đến /api/users/profile
+ * Gửi yêu cầu DELETE đến /api/auth/me (alias: /api/me)
  */
 export async function deletePtAccount(): Promise<{ success: boolean; message?: string }> {
-  try {
-    const res = await api.delete<{ success?: boolean; message?: string }>('/api/users/profile');
-    return { success: res?.success ?? true, message: res?.message };
-  } catch (err: any) {
-    const status = err?.status || err?.response?.status;
-    // Khi Backend chưa triển khai endpoint (404/501/405), ghi nhận thành công dự phòng
-    if (status === 404 || status === 501 || status === 405) {
-      return { success: true, message: 'Yêu cầu xóa tài khoản đã được gửi và ghi nhận vào hệ thống.' };
-    }
-    throw err;
-  }
+  const res = await api.delete<{ success?: boolean; message?: string }>('/api/auth/me');
+  return { success: res?.success ?? true, message: res?.message };
 }
 
