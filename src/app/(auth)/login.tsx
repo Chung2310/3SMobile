@@ -6,6 +6,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -57,6 +58,23 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const sheetScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Hiệu ứng màn hình giới thiệu (đen + logo brand) trước khi vào
   useEffect(() => {
@@ -218,21 +236,41 @@ export default function LoginScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => {
-          if (!submitting) setModalVisible(false);
+          if (!submitting) {
+            Keyboard.dismiss();
+            setModalVisible(false);
+          }
         }}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
+          style={[
+            styles.modalOverlay,
+            Platform.OS === 'android' && keyboardHeight > 0 && { paddingBottom: keyboardHeight },
+          ]}
         >
           <Pressable
             style={styles.backdrop}
             onPress={() => {
+              if (keyboardHeight > 0) {
+                Keyboard.dismiss();
+                return;
+              }
               if (!submitting) setModalVisible(false);
             }}
           />
 
-          <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
+          <View
+            style={[
+              styles.bottomSheet,
+              {
+                paddingBottom: keyboardHeight > 0 ? spacing.md : Math.max(insets.bottom, 20) + 16,
+                maxHeight: keyboardHeight > 0
+                  ? SCREEN_HEIGHT - keyboardHeight - Math.max(insets.top, 20) - 16
+                  : SCREEN_HEIGHT * 0.75,
+              },
+            ]}
+          >
             {/* Handle bar */}
             <View style={styles.handleBar} />
 
@@ -247,7 +285,10 @@ export default function LoginScreen() {
                 <Text style={styles.sheetSubtitle}>Dành riêng cho PT & Ban huấn luyện 3S Gym</Text>
               </View>
               <Pressable
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setModalVisible(false);
+                }}
                 disabled={submitting}
                 hitSlop={12}
                 style={styles.closeButton}
@@ -257,6 +298,7 @@ export default function LoginScreen() {
             </View>
 
             <ScrollView
+              ref={sheetScrollRef}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.sheetBody}
@@ -268,6 +310,11 @@ export default function LoginScreen() {
                 <TextInput
                   value={username}
                   onChangeText={setUsername}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      sheetScrollRef.current?.scrollTo({ y: 0, animated: true });
+                    }, 60);
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   placeholder="Nhập tên đăng nhập"
@@ -285,6 +332,11 @@ export default function LoginScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      sheetScrollRef.current?.scrollToEnd({ animated: true });
+                    }, 60);
+                  }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
