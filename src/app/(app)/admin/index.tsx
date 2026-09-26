@@ -88,17 +88,16 @@ export default function AdminHomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          <Pressable
-            onPress={() => router.push('/(app)/wallet')}
-            style={({ pressed }) => [styles.headerCreditBadge, pressed && { opacity: 0.8 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Số dư Credit AI. Bấm để xem ví"
+          {/* Số dư Credit AI */}
+          <View
+            style={styles.headerCreditBadge}
+            accessibilityLabel="Số dư Credit AI"
           >
             <Ionicons name="sparkles" size={13} color={colors.primary} />
             <Text style={styles.headerCreditValue}>
               {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
             </Text>
-          </Pressable>
+          </View>
 
           {/* Nút thông báo */}
           <Pressable

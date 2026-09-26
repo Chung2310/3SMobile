@@ -251,17 +251,15 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
-            <Pressable
-              onPress={() => router.push('/(app)/wallet')}
-              style={({ pressed }) => [styles.headerCreditBadge, pressed && { opacity: 0.8 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Số dư Credit AI. Bấm để xem ví"
+            <View
+              style={styles.headerCreditBadge}
+              accessibilityLabel="Số dư Credit AI"
             >
               <Ionicons name="sparkles" size={14} color="#0284C7" />
               <Text style={styles.headerCreditValue}>
                 {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
               </Text>
-            </Pressable>
+            </View>
 
             {/* Nút thông báo */}
             <Pressable
@@ -323,17 +321,15 @@ export default function HomeScreen() {
 
         <View style={styles.headerRightActions}>
           {/* Số dư Credit với icon ngôi sao AI */}
-          <Pressable
-            onPress={() => router.push('/(app)/wallet')}
-            style={({ pressed }) => [styles.headerCreditBadge, pressed && { opacity: 0.8 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Số dư Credit AI. Bấm để xem ví"
+          <View
+            style={styles.headerCreditBadge}
+            accessibilityLabel="Số dư Credit AI"
           >
             <Ionicons name="sparkles" size={14} color="#0284C7" />
             <Text style={styles.headerCreditValue}>
               {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
             </Text>
-          </Pressable>
+          </View>
 
           {/* Nút thông báo */}
           <Pressable
