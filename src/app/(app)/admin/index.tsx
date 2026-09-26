@@ -41,7 +41,7 @@ export default function AdminHomeScreen() {
         setCreditBalance(payload.availableCredits);
       }
     } catch {
-      // Bỏ qua lỗi ngầm nếu chưa có quyền
+      // Silently ignore if fails
     }
   }, []);
 
@@ -88,7 +88,7 @@ export default function AdminHomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          {/* Số dư Credit AI */}
+          {/* Số dư Credit AI (chỉ hiển thị) */}
           <View
             style={styles.headerCreditBadge}
             accessibilityLabel="Số dư Credit AI"
@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+
   headerCreditBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,9 +214,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 10,
     height: 36,
-  },
-  headerBadgePressed: {
-    opacity: 0.7,
   },
   headerCreditValue: {
     fontSize: 12,

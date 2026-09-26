@@ -25,9 +25,11 @@ import {
   fetchPtProfile,
   updatePtProfile,
   uploadPtAvatar,
+  deletePtAccount,
   type PtProfileInfo,
   type UpdateProfilePayload,
 } from '@/services/ptProfileService';
+import { fetchCustomersList } from '@/services/customerService';
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
@@ -95,6 +97,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Bottom sheet state for editing profile & security
   const [showEditSheet, setShowEditSheet] = useState(false);
@@ -479,6 +482,78 @@ export default function ProfileScreen() {
         setAlertConfig((prev) => ({ ...prev, visible: false }));
       },
     });
+  };
+
+  const handleDeleteAccountPress = async () => {
+    let customerCount = profile?.totalCustomers ?? 0;
+    try {
+      const activeList = await fetchCustomersList({ limit: 5 });
+      if (Array.isArray(activeList) && activeList.length > 0) {
+        customerCount = Math.max(customerCount, activeList.length);
+      }
+    } catch {
+      // Fallback dùng giá trị profile.totalCustomers
+    }
+
+    // 1. Chỉ được xóa khi không có học viên/khách hàng nào
+    if (customerCount > 0) {
+      setAlertConfig({
+        visible: true,
+        type: 'warning',
+        title: 'Không thể xóa tài khoản',
+        message: `Tài khoản của bạn hiện đang phụ trách ${customerCount} học viên. Theo quy định bảo đảm quyền lợi hội viên của 3S Gym, bạn phải bàn giao hoặc chuyển giao toàn bộ học viên trước khi có thể xóa tài khoản.`,
+        confirmLabel: 'Đã hiểu',
+        onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    // 2. Popup cảnh báo xác nhận xóa tài khoản (Nguy hiểm / Không thể hoàn tác)
+    setAlertConfig({
+      visible: true,
+      type: 'error',
+      title: 'Xác nhận xóa tài khoản?',
+      message:
+        'CẢNH BÁO NGUY HIỂM:\n\nHành động này sẽ XÓA VĨNH VIỄN tài khoản HLV của bạn cùng toàn bộ giáo án, lịch sử tập luyện và dữ liệu cá nhân.\n\nDữ liệu sẽ KHÔNG THỂ KHÔI PHỤC sau khi xóa. Bạn có chắc chắn muốn tiếp tục?',
+      confirmLabel: 'Xóa vĩnh viễn',
+      cancelLabel: 'Hủy bỏ',
+      onConfirm: async () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        await executeDeleteAccount();
+      },
+      onCancel: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
+
+  const executeDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const res = await deletePtAccount();
+      setShowEditSheet(false);
+      setAlertConfig({
+        visible: true,
+        type: 'info',
+        title: 'Đã xóa tài khoản',
+        message: res.message || 'Tài khoản của bạn đã được xóa thành công khỏi hệ thống.',
+        confirmLabel: 'Đăng xuất',
+        onConfirm: async () => {
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+          await signOut();
+          router.replace('/(auth)/login');
+        },
+      });
+    } catch (err: any) {
+      setAlertConfig({
+        visible: true,
+        type: 'error',
+        title: 'Lỗi xóa tài khoản',
+        message: err?.message || 'Không thể xóa tài khoản vào lúc này. Vui lòng thử lại sau.',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+      });
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const displayName = profile?.fullName || session?.user?.fullName || session?.user?.username || 'Huấn luyện viên';
@@ -1197,6 +1272,42 @@ export default function ProfileScreen() {
                       </>
                     )}
                   </Pressable>
+
+                  {/* VÙNG NGUY HIỂM: XÓA TÀI KHOẢN (ĐẶT TÁCH BIỆT XA KHỎI ĐĂNG XUẤT) */}
+                  <View style={styles.dangerZoneSection}>
+                    <View style={styles.dangerZoneDivider} />
+                    <View style={styles.dangerZoneCard}>
+                      <View style={styles.dangerZoneHeader}>
+                        <View style={styles.dangerIconCircle}>
+                          <Feather name="alert-triangle" size={15} color="#DC2626" />
+                        </View>
+                        <Text style={styles.dangerZoneTitle}>QUẢN LÝ TÀI KHOẢN & DỮ LIỆU</Text>
+                      </View>
+                      <Text style={styles.dangerZoneDesc}>
+                        Yêu cầu xóa vĩnh viễn tài khoản và toàn bộ dữ liệu cá nhân theo chính sách quyền riêng tư. Bạn chỉ có thể thực hiện khi không còn quản lý bất kỳ học viên nào.
+                      </Text>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.deleteAccountBtn,
+                          pressed && styles.deleteAccountBtnPressed,
+                          deletingAccount && { opacity: 0.6 },
+                        ]}
+                        onPress={() => void handleDeleteAccountPress()}
+                        disabled={deletingAccount}
+                        accessibilityRole="button"
+                        accessibilityLabel="Xóa tài khoản vĩnh viễn"
+                      >
+                        {deletingAccount ? (
+                          <ActivityIndicator size="small" color="#DC2626" />
+                        ) : (
+                          <>
+                            <Feather name="trash-2" size={16} color="#DC2626" />
+                            <Text style={styles.deleteAccountBtnText}>Xóa tài khoản vĩnh viễn</Text>
+                          </>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
                 </View>
               )}
             </ScrollView>
@@ -1995,5 +2106,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#64748B',
+  },
+
+  // -------------------------------------------------------------
+  // VÙNG NGUY HIỂM / XÓA TÀI KHOẢN (DANGER ZONE)
+  // -------------------------------------------------------------
+  dangerZoneSection: {
+    marginTop: 28,
+    marginBottom: 16,
+  },
+  dangerZoneDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginBottom: 20,
+  },
+  dangerZoneCard: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 16,
+    padding: 16,
+  },
+  dangerZoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  dangerIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerZoneTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#DC2626',
+    letterSpacing: 0.5,
+  },
+  dangerZoneDesc: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#7F1D1D',
+    marginBottom: 14,
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
+    borderRadius: 12,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  deleteAccountBtnPressed: {
+    backgroundColor: '#FEF2F2',
+    transform: [{ scale: 0.98 }],
+  },
+  deleteAccountBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });
