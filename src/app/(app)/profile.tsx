@@ -16,11 +16,12 @@ import {
 } from 'react-native';
 import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
 import { router, useFocusEffect } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api/client';
 import {
   fetchPtProfile,
   updatePtProfile,
@@ -98,6 +99,7 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
   // Bottom sheet state for editing profile & security
   const [showEditSheet, setShowEditSheet] = useState(false);
@@ -149,9 +151,20 @@ export default function ProfileScreen() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = await fetchPtProfile(session?.user);
-      setProfile(data);
-      applyProfileToForm(data);
+      const [data, creditRes] = await Promise.allSettled([
+        fetchPtProfile(session?.user),
+        api.get<any>('/api/credits/me'),
+      ]);
+      if (data.status === 'fulfilled') {
+        setProfile(data.value);
+        applyProfileToForm(data.value);
+      }
+      if (creditRes.status === 'fulfilled') {
+        const payload = creditRes.value?.data || creditRes.value;
+        if (payload && typeof payload.availableCredits === 'number') {
+          setCreditBalance(payload.availableCredits);
+        }
+      }
     } catch {
       // Ignore
     } finally {
@@ -825,7 +838,31 @@ export default function ProfileScreen() {
             </View>
 
 
-            {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
+            {/* 5. VÍ CREDIT AI (XEM SỐ DƯ & LỊCH SỬ) */}
+            <Pressable
+              style={({ pressed }) => [styles.securityBarBtn, pressed && styles.securityBarBtnPressed, { marginBottom: 12 }]}
+              onPress={() => router.push('/(app)/wallet')}
+              accessibilityRole="button"
+              accessibilityLabel="Ví credit AI"
+            >
+              <View style={styles.securityBarLeft}>
+                <View style={[styles.securityIconCircle, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="sparkles" size={16} color="#0284C7" />
+                </View>
+                <View>
+                  <Text style={styles.securityBarTitle}>Ví credit AI</Text>
+                  <Text style={styles.securityBarSubtitle}>Theo dõi số dư và nhật ký sử dụng AI</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0284C7' }}>
+                  {creditBalance !== null ? `${creditBalance.toLocaleString('vi-VN')} cr` : 'Xem ví'}
+                </Text>
+                <Feather name="chevron-right" size={18} color={colors.textMuted} />
+              </View>
+            </Pressable>
+
+            {/* 6. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
               style={({ pressed }) => [styles.securityBarBtn, pressed && styles.securityBarBtnPressed]}
               onPress={() => {

@@ -42,7 +42,7 @@ export function AdminCreditAdjustment() {
   ];
 
   const quickReasonSuggestions = [
-    'Khuyến mãi nạp đầu',
+    'Cấp credit ban đầu',
     'Bù credit lỗi tác vụ AI',
     'Hoàn trả do sự cố hệ thống',
     'Thưởng nhiệm vụ / thành tích',

@@ -13,8 +13,6 @@ import { AdminAccountsManagement } from '@/components/admin/AdminAccountsManagem
 import { AdminPackagesManagement } from '@/components/admin/AdminPackagesManagement';
 import { AdminKnowledgeManagement } from '@/components/admin/AdminKnowledgeManagement';
 import { AdminPricing } from '@/components/admin/AdminPricing';
-import { AdminCreditPackages } from '@/components/admin/AdminCreditPackages';
-import { AdminPaymentOrders } from '@/components/admin/AdminPaymentOrders';
 import { AdminCreditLedger } from '@/components/admin/AdminCreditLedger';
 import { AdminAiUsage } from '@/components/admin/AdminAiUsage';
 import { AdminCreditShortfalls } from '@/components/admin/AdminCreditShortfalls';
@@ -36,8 +34,6 @@ export default function AdminSection() {
       features: 'Tính năng hệ thống',
       credits: 'Điều chỉnh credit',
       pricing: 'Bảng giá tác vụ AI',
-      creditPackages: 'Gói nạp credit',
-      orders: 'Đơn thanh toán',
       ledger: 'Sổ cái giao dịch',
       usage: 'Nhật ký dùng AI',
       shortfalls: 'Cảnh báo thiếu hụt',
@@ -57,8 +53,6 @@ export default function AdminSection() {
     'batchTransfers',
     'credits',
     'pricing',
-    'creditPackages',
-    'orders',
     'ledger',
     'usage',
     'shortfalls',
@@ -99,10 +93,6 @@ export default function AdminSection() {
         <AdminCreditAdjustment />
       ) : section === 'pricing' ? (
         <AdminPricing />
-      ) : section === 'creditPackages' ? (
-        <AdminCreditPackages />
-      ) : section === 'orders' ? (
-        <AdminPaymentOrders />
       ) : section === 'ledger' ? (
         <AdminCreditLedger />
       ) : section === 'usage' ? (
