@@ -215,7 +215,7 @@ export default function LoginScreen() {
         </Pressable>
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
-        <Text style={styles.assistantFooterText}>Trợ lý PT AI của 3S WELLNESS • Dành riêng cho HLV</Text>
+        <Text style={styles.assistantFooterText}>Trợ lý AI dành cho PT</Text>
         <PrivacyPolicyLink />
       </View>
 
@@ -282,7 +282,6 @@ export default function LoginScreen() {
                   <Text style={styles.sheetPtBadgeText}>PT WORKSPACE</Text>
                 </View>
                 <Text style={styles.sheetTitle}>Đăng nhập HLV</Text>
-                <Text style={styles.sheetSubtitle}>Dành riêng cho PT & Ban huấn luyện 3S Gym</Text>
               </View>
               <Pressable
                 onPress={() => {
@@ -388,13 +387,6 @@ export default function LoginScreen() {
                 )}
               </Pressable>
 
-              {/* Ghi chú dành cho Hội viên / Customer */}
-              <View style={styles.sheetFooterNote}>
-                <Feather name="info" size={14} color={colors.textMuted} style={{ marginRight: 6, marginTop: 2 }} />
-                <Text style={styles.sheetFooterNoteText}>
-                  Ứng dụng di động chỉ hỗ trợ tài khoản Huấn luyện viên (PT). Hội viên vui lòng liên hệ quầy lễ tân hoặc truy cập Web Portal.
-                </Text>
-              </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
