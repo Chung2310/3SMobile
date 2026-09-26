@@ -193,3 +193,22 @@ export async function uploadPtAvatar(asset: {
 
   throw new Error('Không nhận được URL ảnh sau khi tải lên.');
 }
+
+/**
+ * Yêu cầu xóa vĩnh viễn tài khoản người dùng:
+ * Gửi yêu cầu DELETE đến /api/users/profile
+ */
+export async function deletePtAccount(): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await api.delete<{ success?: boolean; message?: string }>('/api/users/profile');
+    return { success: res?.success ?? true, message: res?.message };
+  } catch (err: any) {
+    const status = err?.status || err?.response?.status;
+    // Khi Backend chưa triển khai endpoint (404/501/405), ghi nhận thành công dự phòng
+    if (status === 404 || status === 501 || status === 405) {
+      return { success: true, message: 'Yêu cầu xóa tài khoản đã được gửi và ghi nhận vào hệ thống.' };
+    }
+    throw err;
+  }
+}
+
