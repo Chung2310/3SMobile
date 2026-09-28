@@ -1,12 +1,11 @@
 import { api } from '@/services/api/client';
-import type { CustomerProfile } from '@/types/domain';
 
 export interface AssistantMessage {
   _id?: string;
   role: 'USER' | 'ASSISTANT';
   content: string;
   suggestionId?: string;
-  citations?: Array<{ documentId: string; title: string }>;
+  citations?: { documentId: string; title: string }[];
   reviewStatus?: string;
   createdAt?: string;
 }

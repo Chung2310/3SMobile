@@ -193,3 +193,13 @@ export async function uploadPtAvatar(asset: {
 
   throw new Error('Không nhận được URL ảnh sau khi tải lên.');
 }
+
+/**
+ * Yêu cầu xóa vĩnh viễn tài khoản người dùng:
+ * Gửi yêu cầu DELETE đến /api/auth/me (alias: /api/me)
+ */
+export async function deletePtAccount(): Promise<{ success: boolean; message?: string }> {
+  const res = await api.delete<{ success?: boolean; message?: string }>('/api/auth/me');
+  return { success: res?.success ?? true, message: res?.message };
+}
+

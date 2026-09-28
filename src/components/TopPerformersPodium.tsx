@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 import type { PtCustomerSummary } from '@/types/domain';
 
 const MASCOT_HELLO = require('../../assets/public/3s-hello.png');
@@ -22,9 +22,9 @@ export function TopPerformersPodium({ customers }: TopPerformersPodiumProps) {
   const third = sorted[2];
 
   // Animation values cho 3 cột bục vinh danh
-  const animSecond = useRef(new Animated.Value(0)).current;
-  const animFirst = useRef(new Animated.Value(0)).current;
-  const animThird = useRef(new Animated.Value(0)).current;
+  const [animSecond] = useState(() => new Animated.Value(0));
+  const [animFirst] = useState(() => new Animated.Value(0));
+  const [animThird] = useState(() => new Animated.Value(0));
 
   const runAnimation = useCallback(() => {
     animSecond.stopAnimation();

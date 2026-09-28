@@ -1,15 +1,22 @@
 {
   "expo": {
     "name": "3S Gym",
+    "owner": "igen-technology",
     "slug": "3s-gym",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "3sgym",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-notifications",
       [
         "expo-image-picker",
         {
@@ -20,8 +27,8 @@
       ]
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "vn.3sgym.mobile",
+      "supportsTablet": false,
+      "bundleIdentifier": "com.igen.3s",
       "infoPlist": {
         "NSCameraUsageDescription": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên.",
         "NSPhotoLibraryUsageDescription": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên."
@@ -51,6 +58,9 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "8923cf08-28fd-4a89-a491-f0d877972280"
       }
     }
   }

@@ -42,6 +42,7 @@ yarn-error.*
 
 # local documentation/rules
 rule.md
+app-store-submission-guide.md
 
 # local folders / extras
 3S-Gym-develop/

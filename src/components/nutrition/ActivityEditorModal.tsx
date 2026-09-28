@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
-import { Activity, Dumbbell, Flame, Info, Sparkles, X } from 'lucide-react-native';
-import { colors, radius, spacing } from '@/theme';
+import { Activity, Flame, Sparkles, X } from 'lucide-react-native';
+import { colors } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import {
   ACTIVITY_CATEGORY_COLORS,

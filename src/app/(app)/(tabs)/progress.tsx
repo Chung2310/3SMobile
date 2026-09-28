@@ -7,7 +7,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { InBodyListScreen } from '@/components/inbody/InBodyListScreen';
 
 import { Screen } from '@/components/Screen';
@@ -15,7 +14,6 @@ import { LoadingState, ErrorState } from '@/components/UI';
 import { Button, Sheet } from '@/components/workouts/Controls';
 import { MetricChart, SessionCalendar } from '@/components/progress/ProgressVisuals';
 import { PhotoGallery } from '@/components/progress/ProgressPanels';
-import { ProgressWorkspace } from '../progress-workspace';
 import { useAuth } from '@/context/AuthContext';
 import { useJourney } from '@/context/JourneyContext';
 import {
@@ -48,7 +46,6 @@ const TAB_OPTIONS: { key: ProgressTab; label: string; icon: keyof typeof Feather
 
 export default function ProgressScreen() {
   const { session } = useAuth();
-  const insets = useSafeAreaInsets();
   const role = session?.user.role;
   const staff = role === 'PT' || role === 'ADMIN';
 

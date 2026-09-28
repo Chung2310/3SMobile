@@ -320,7 +320,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          {/* Số dư Credit với icon ngôi sao AI */}
+          {/* Số dư Credit AI (chỉ hiển thị) */}
           <View
             style={styles.headerCreditBadge}
             accessibilityLabel="Số dư Credit AI"
@@ -865,6 +865,7 @@ const styles = StyleSheet.create({
     lineHeight: 11,
   },
 
+
   headerCreditBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -875,10 +876,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 11,
     height: 36,
-  },
-  headerCreditBadgePressed: {
-    backgroundColor: '#E0F2FE',
-    transform: [{ scale: 0.95 }],
   },
   headerCreditValue: {
     fontSize: 13.5,

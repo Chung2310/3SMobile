@@ -16,8 +16,6 @@ import {
   Calculator,
   CheckCheck,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Eye,
   FileText,
@@ -51,7 +49,6 @@ import { fetchCustomersList } from '@/services/customerService';
 import { nutritionService } from '@/services/nutritionService';
 import {
   FOOD_CATEGORY_LABELS,
-  VIETNAMESE_FOOD_DATABASE,
   getAllCombinedFoods,
   deleteCustomFood,
   resetCustomFoods,
@@ -68,14 +65,11 @@ import { AiNutritionDraftModal } from './AiNutritionDraftModal';
 import { FoodItemEditorModal } from './FoodItemEditorModal';
 import { ActivityEditorModal } from './ActivityEditorModal';
 import {
-  ACTIVITY_CATEGORY_COLORS,
-  ACTIVITY_CATEGORY_LABELS,
   DEFAULT_ACTIVITIES,
   deleteCustomActivity,
   getAllCombinedActivities,
   resetCustomActivities,
   subscribeToActivityDatabaseUpdates,
-  type ActivityCategory,
   type ActivityItem,
 } from '@/services/activityDatabase';
 
@@ -106,15 +100,6 @@ const STATUS_FILTERS = [
   { id: 'DRAFT', label: 'Bản nháp' },
 ] as const;
 
-const ACTIVITY_CATEGORIES: { id: string; label: string }[] = [
-  { id: 'ALL', label: 'Tất cả' },
-  { id: 'custom', label: 'Tự thêm' },
-  { id: 'STRENGTH', label: 'Tập tạ / Gym' },
-  { id: 'CARDIO', label: 'Cardio / Chạy / Bơi' },
-  { id: 'MARTIAL_ARTS', label: 'Võ thuật' },
-  { id: 'SPORTS', label: 'Thể thao' },
-  { id: 'RECOVERY', label: 'Phục hồi' },
-];
 
 
 /**
@@ -371,7 +356,7 @@ export function PtNutritionWorkspace() {
   const [inspectedFood, setInspectedFood] = useState<FoodItem | null>(null);
   const [foodEditorVisible, setFoodEditorVisible] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
-  const [foodDbVersion, setFoodDbVersion] = useState(0);
+  const [, setFoodDbVersion] = useState(0);
 
   // Đăng ký lắng nghe các thay đổi trong kho món (thêm / sửa / xóa / reset)
   useEffect(() => {
@@ -862,7 +847,7 @@ export function PtNutritionWorkspace() {
   };
 
   // Food Library Quick Metrics (Tab 3)
-  const allFoodsList = useMemo(() => getAllCombinedFoods(), [foodDbVersion]);
+  const allFoodsList = getAllCombinedFoods();
   const countAll = allFoodsList.length;
   const countCustom = allFoodsList.filter((f) => f.isCustom).length;
   const countProtein = allFoodsList.filter((f) => f.category === 'protein').length;
@@ -872,7 +857,7 @@ export function PtNutritionWorkspace() {
 
   // Filtered Food Library (Tab 3)
   const filteredFoods = useMemo(() => {
-    let result = getAllCombinedFoods();
+    let result = allFoodsList;
     if (selectedFoodCategory === 'custom') {
       result = result.filter((f) => f.isCustom);
     } else if (selectedFoodCategory !== 'all') {
@@ -897,7 +882,7 @@ export function PtNutritionWorkspace() {
     });
 
     return result;
-  }, [foodSearch, selectedFoodCategory, foodSortBy, foodDbVersion]);
+  }, [allFoodsList, foodSearch, selectedFoodCategory, foodSortBy]);
 
   const totalFoodPages = Math.ceil(filteredFoods.length / FOODS_PER_PAGE) || 1;
   const safeFoodPage = Math.min(Math.max(1, foodPage), totalFoodPages);
@@ -1346,7 +1331,7 @@ export function PtNutritionWorkspace() {
             ) : (
               <>
                 <View style={styles.plansListClean}>
-                  {paginatedPlans.map((plan) => {
+                  {paginatedPlans.map((plan, index) => {
                   const isPublished = plan.status === 'PUBLISHED';
                   const menuItems: MealBlock[] = plan.menu || plan.meals || [];
                   const totalMeals = menuItems.length;
@@ -1354,7 +1339,7 @@ export function PtNutritionWorkspace() {
                     (acc: number, m: MealBlock) => acc + (m.items?.length || 0),
                     0
                   );
-                  const planKey = plan._id || plan.id || `plan-${Math.random()}`;
+                  const planKey = plan._id || plan.id || `plan-${index}`;
                   const customerObj =
                     typeof plan.customerId === 'object' && plan.customerId !== null
                       ? plan.customerId
@@ -1379,9 +1364,7 @@ export function PtNutritionWorkspace() {
                               </View>
                             ) : null}
                             <Text style={styles.cleanPlanDate}>
-                              {new Date(
-                                plan.updatedAt || plan.createdAt || Date.now()
-                              ).toLocaleDateString('vi-VN')}
+                              {plan.updatedAt || plan.createdAt ? new Date((plan.updatedAt || plan.createdAt) as string).toLocaleDateString('vi-VN') : '-'}
                             </Text>
                           </View>
                         </View>
@@ -2380,7 +2363,7 @@ export function PtNutritionWorkspace() {
                 <ClipboardList size={30} color={colors.textMuted} />
                 <Text style={styles.cleanEmptyTitle}>Chưa có bản ghi nào</Text>
                 <Text style={styles.cleanEmptySub}>
-                  Bấm "+ Ghi nhật ký mới" hoặc chuyển sang tab "Vận động" để ghi nhận ngay.
+                  Bấm &quot;+ Ghi nhật ký mới&quot; hoặc chuyển sang tab &quot;Vận động&quot; để ghi nhận ngay.
                 </Text>
                 <Pressable
                   style={[styles.addFoodPrimaryBtn, { marginTop: 10 }]}
@@ -2392,9 +2375,9 @@ export function PtNutritionWorkspace() {
               </View>
             ) : (
               <View style={styles.cleanLogsList}>
-                {filteredLogs.map((item) => {
+                {filteredLogs.map((item, index) => {
                   const isFood = item.type === 'FOOD';
-                  const logKey = item._id || item.id || `log-${Math.random()}`;
+                  const logKey = item._id || item.id || `log-${index}`;
                   return (
                     <View key={logKey} style={styles.logCardContainer}>
                       <View style={styles.logCardMainRow}>

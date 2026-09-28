@@ -206,7 +206,7 @@ export function CustomerDetailModal({
   );
 
   // Load journey and direct endpoints
-  const loadData = (targetId: string) => {
+  const loadData = useCallback((targetId: string) => {
     api
       .get<CustomerJourney>(`/api/customers/${encodeURIComponent(targetId)}/journey`)
       .then((data) => {
@@ -253,13 +253,13 @@ export function CustomerDetailModal({
 
     // Fetch workout plans
     reloadWorkoutPlans(targetId);
-  };
+  }, [reloadWorkoutPlans]);
 
   useEffect(() => {
     if (visible && customer?.id) {
       loadData(customer.id);
     }
-  }, [visible, customer?.id]);
+  }, [visible, customer?.id, loadData]);
 
   // Derived user info
   const profile = customer?.rawProfile;

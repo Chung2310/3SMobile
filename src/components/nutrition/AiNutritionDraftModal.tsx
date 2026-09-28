@@ -94,7 +94,7 @@ export function AiNutritionDraftModal({
   useEffect(() => {
     if (visible) {
       // Reset this persistent native modal when it is opened for a new editing session.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setGeneratedDraft(null);
       setLoading(false);
       setSaving(false);

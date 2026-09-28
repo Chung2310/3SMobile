@@ -17,7 +17,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { fetchCustomersList } from '@/services/customerService';
 import {
   createConversation,
@@ -28,6 +28,8 @@ import {
   type AssistantMessage,
 } from '@/services/assistantService';
 import type { CustomerProfile } from '@/types/domain';
+
+const createMessageId = (prefix: string) => prefix + "-" + Date.now()
 
 const WELCOME_MESSAGE: AssistantMessage = {
   _id: 'welcome-initial',
@@ -111,27 +113,19 @@ export default function AssistantScreen() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // Android resizes the window; keyboard events only drive chat visibility.
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // 1. Keyboard event listeners
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, () => {
-      setIsKeyboardVisible(true);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 60);
     });
 
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setIsKeyboardVisible(false);
-    });
-
     return () => {
       showSub.remove();
-      hideSub.remove();
     };
   }, []);
 
@@ -297,7 +291,7 @@ export default function AssistantScreen() {
     setIsGenerating(true);
 
     const optimisticUserMsg: AssistantMessage = {
-      _id: `user-${Date.now()}`,
+      _id: createMessageId("user"),
       role: 'USER',
       content: text,
       createdAt: new Date().toISOString(),
@@ -351,7 +345,7 @@ export default function AssistantScreen() {
       const errText =
         err instanceof Error ? err.message : '3S AI tạm thời không phản hồi. Vui lòng thử lại sau.';
       const fallbackAiMsg: AssistantMessage = {
-        _id: `ai-err-${Date.now()}`,
+        _id: createMessageId("ai-err"),
         role: 'ASSISTANT',
         content: `⚠️ ${errText}`,
         createdAt: new Date().toISOString(),

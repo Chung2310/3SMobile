@@ -1,0 +1,196 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches:
+      - production
+      - product
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS profile to build"
+        type: choice
+        required: true
+        default: production
+        options:
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ios-${{ github.ref }}-${{ inputs.profile || 'production' }}
+  cancel-in-progress: false
+
+env:
+  CI: "1"
+  EXPO_NO_TELEMETRY: "1"
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || secrets.EAS_TOKEN || secrets.EXPO_ACCESS_TOKEN }}
+  BUILD_PROFILE: ${{ inputs.profile || 'production' }}
+  APP_VERSION: ${{ vars.APP_VERSION }}
+  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || secrets.EXPO_PUBLIC_API_URL || 'https://3s.igentechnology.net' }}
+  EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID || secrets.EXPO_PUBLIC_EAS_PROJECT_ID }}
+  IOS_BUNDLE_IDENTIFIER: com.igen.3s
+  APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID }}
+  APP_STORE_CONNECT_APP_ID: ${{ vars.APP_STORE_CONNECT_APP_ID || secrets.APP_STORE_CONNECT_APP_ID }}
+  APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+
+jobs:
+  build-ios:
+    name: iOS ${{ inputs.profile || 'production' }} (EAS signed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Validate build configuration
+        run: node --test scripts/prepare-ios-build.check.cjs
+
+      - name: Prepare EAS build configuration
+        run: node scripts/prepare-ios-build.cjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN || secrets.EAS_TOKEN || secrets.EXPO_ACCESS_TOKEN }}
+
+      - name: Configure App Store Connect API key
+        if: env.BUILD_PROFILE == 'production'
+        env:
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+
+          const required = (name) => {
+            const value = process.env[name]?.trim();
+            if (!value) throw new Error('Missing GitHub secret/variable: ' + name);
+            return value;
+          };
+
+          const keyId = required('APP_STORE_CONNECT_API_KEY_ID');
+          const issuerId = required('APP_STORE_CONNECT_ISSUER_ID');
+          const teamId = required('APPLE_TEAM_ID');
+          const appId = required('APP_STORE_CONNECT_APP_ID');
+
+          if (!/^[A-Z0-9]{10}$/.test(keyId)) throw new Error('Invalid App Store Connect Key ID');
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(issuerId)) {
+            throw new Error('Invalid App Store Connect Issuer ID');
+          }
+          if (!/^[A-Z0-9]{10}$/.test(teamId)) throw new Error('Invalid Apple Team ID');
+          if (!/^\d+$/.test(appId)) throw new Error('Invalid App Store Connect App ID');
+
+          const rawKey = required('APP_STORE_CONNECT_API_KEY_BASE64');
+          const key = rawKey.includes('-----BEGIN PRIVATE KEY-----')
+            ? Buffer.from(rawKey + '\n')
+            : Buffer.from(rawKey.replace(/\s/g, ''), 'base64');
+
+          try {
+            const parsed = crypto.createPrivateKey(key);
+            if (parsed.asymmetricKeyType !== 'ec' ||
+                parsed.asymmetricKeyDetails?.namedCurve !== 'prime256v1') {
+              throw new Error('Expected EC P-256 key');
+            }
+          } catch {
+            throw new Error('Invalid App Store Connect .p8 private key');
+          }
+
+          const dir = path.join(process.env.RUNNER_TEMP, '3s-asc');
+          fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+          const keyPath = path.join(dir, 'AuthKey.p8');
+          fs.writeFileSync(keyPath, key, { mode: 0o600 });
+          fs.appendFileSync(process.env.GITHUB_ENV, 'EXPO_ASC_API_KEY_PATH=' + keyPath + '\n');
+
+          const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.submit.production.ios = {
+            appleTeamId: teamId,
+            ascAppId: appId,
+            ascApiKeyPath: keyPath,
+            ascApiKeyId: keyId,
+            ascApiKeyIssuerId: issuerId,
+          };
+          fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2) + '\n');
+          NODE
+
+      - name: Build signed IPA on EAS
+        run: |
+          set -euo pipefail
+          eas build --platform ios --profile "$BUILD_PROFILE" --freeze-credentials --non-interactive --wait --json > "$RUNNER_TEMP/3s-ios-build.json"
+
+      - name: Download and validate IPA
+        run: |
+          set -euo pipefail
+          BUILD_URL="$(jq -er '.[0] | select(.status == "FINISHED") | .artifacts.buildUrl | select(type == "string" and startswith("https://"))' "$RUNNER_TEMP/3s-ios-build.json")"
+          echo "::add-mask::$BUILD_URL"
+          mkdir -p "$RUNNER_TEMP/3s-ios-artifacts"
+          curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$BUILD_URL" --output "$RUNNER_TEMP/3s-ios-artifacts/3SGym.ipa"
+          unzip -tq "$RUNNER_TEMP/3s-ios-artifacts/3SGym.ipa"
+          unzip -Z1 "$RUNNER_TEMP/3s-ios-artifacts/3SGym.ipa" > "$RUNNER_TEMP/3s-ipa-contents.txt"
+          grep -Eq '^Payload/[^/]+\.app/Info\.plist$' "$RUNNER_TEMP/3s-ipa-contents.txt"
+          grep -Eq '^Payload/[^/]+\.app/main\.jsbundle$' "$RUNNER_TEMP/3s-ipa-contents.txt"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3SGym-ios-${{ inputs.profile || 'production' }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/3s-ios-artifacts/3SGym.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Submit production build to App Store Connect
+        if: env.BUILD_PROFILE == 'production'
+        run: |
+          set -euo pipefail
+          BUILD_ID="$(jq -er '.[0] | select(.status == "FINISHED") | .id' "$RUNNER_TEMP/3s-ios-build.json")"
+          eas submit --platform ios --profile production --id "$BUILD_ID" --non-interactive --wait
+
+      - name: Clean up App Store Connect API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/3s-asc/AuthKey.p8"
+
+      - name: Build summary
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" != "success" ]]; then
+            echo "### 3S Gym iOS build failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "Check the workflow logs for missing EAS, Apple, or App Store Connect configuration." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "### 3S Gym iOS $BUILD_PROFILE build succeeded" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bundle ID: com.igen.3s" >> "$GITHUB_STEP_SUMMARY"
+          echo "- EAS signed IPA: uploaded as a workflow artifact" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$BUILD_PROFILE" == "production" ]]; then
+            echo "- Submitted to App Store Connect/TestFlight" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Preview only; not submitted to App Store Connect" >> "$GITHUB_STEP_SUMMARY"
+          fi

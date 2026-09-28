@@ -55,7 +55,6 @@ export function InBodyDetailSheet({
   onDelete,
   onStatusChanged,
 }: InBodyDetailSheetProps) {
-  const [goals, setGoals] = useState<CustomerGoalData[]>([]);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [copiedConsultation, setCopiedConsultation] = useState(false);
   const { alertConfig, showError } = useAppAlert();

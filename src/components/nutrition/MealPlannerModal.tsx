@@ -182,7 +182,7 @@ export function MealPlannerModal({
   useEffect(() => {
     if (visible) {
       // Hydrate the persistent native modal from the selected record on opening.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setSelectedWeekIdx(0);
       setGeneratedPlanId(undefined);
       setSelectedDayIdx(0);

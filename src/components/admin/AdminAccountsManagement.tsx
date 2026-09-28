@@ -1019,7 +1019,7 @@ function AdminAccountFormModal({
                   <Text style={styles.formLabel}>Email</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="admin@3sgym.vn"
+                    placeholder="admin@3s.igentechnology.net"
                     placeholderTextColor="#94A3B8"
                     value={email}
                     onChangeText={(v) => {

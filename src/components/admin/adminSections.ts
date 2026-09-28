@@ -80,39 +80,4 @@ export const SECTION_CATEGORIES: AdminSectionCategory[] = [
       },
     ],
   },
-  {
-    title: 'TÀI CHÍNH & TÍN DỤNG AI',
-    items: [
-      {
-        key: 'credits',
-        title: 'Điều chỉnh Credit',
-        desc: 'Cộng/trừ credit thủ công cho tài khoản',
-        iconName: 'wallet-outline',
-      },
-      {
-        key: 'pricing',
-        title: 'Bảng giá tác vụ AI',
-        desc: 'Cấu hình chi phí xử lý từng tác vụ',
-        iconName: 'pricetags-outline',
-      },
-      {
-        key: 'ledger',
-        title: 'Sổ cái giao dịch',
-        desc: 'Biến động số dư credit toàn hệ thống',
-        iconName: 'file-tray-full-outline',
-      },
-      {
-        key: 'usage',
-        title: 'Nhật ký dùng AI',
-        desc: 'Thống kê lưu lượng và chi phí AI',
-        iconName: 'stats-chart-outline',
-      },
-      {
-        key: 'shortfalls',
-        title: 'Cảnh báo thiếu hụt',
-        desc: 'Các tác vụ bị thiếu credit giữ chỗ',
-        iconName: 'alert-circle-outline',
-      },
-    ],
-  },
 ];
