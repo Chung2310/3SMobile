@@ -121,7 +121,7 @@ export function DatePickerModal({
     const daysInCurrentMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
 
-    const days: Array<{
+    const days: {
       day: number;
       monthOffset: -1 | 0 | 1;
       date: Date;
@@ -129,7 +129,7 @@ export function DatePickerModal({
       isDisabled: boolean;
       isToday: boolean;
       isSelected: boolean;
-    }> = [];
+    }[] = [];
 
     // Các ngày tháng trước để bù đầu tuần
     for (let i = firstDayIndex - 1; i >= 0; i--) {

@@ -1003,7 +1003,7 @@ export default function ProfileScreen() {
                       style={styles.textInput}
                       value={form.email}
                       onChangeText={(val) => setForm((prev) => ({ ...prev, email: val }))}
-                      placeholder="pt@3sgym.vn"
+                      placeholder="pt@3s.igentechnology.net"
                       placeholderTextColor={colors.textMuted}
                       keyboardType="email-address"
                       autoCapitalize="none"

@@ -108,15 +108,15 @@ export interface AdminDashboardData {
     completedSessions: number;
     remainingSessions: number;
   };
-  ptWorkload: Array<{
+  ptWorkload: {
     ptId: string;
     fullName: string;
     username: string;
     activeCustomers: number;
     totalCustomers: number;
     activePackages: number;
-  }>;
-  recentAlerts: Array<{
+  }[];
+  recentAlerts: {
     _id: string;
     title: string;
     reason: string;
@@ -124,15 +124,15 @@ export interface AdminDashboardData {
     dueAt: string;
     customerName: string;
     ptName: string;
-  }>;
-  recentEvents: Array<{
+  }[];
+  recentEvents: {
     _id: string;
     title: string;
     startsAt: string;
     endsAt: string;
     status: string;
     customerName: string;
-  }>;
+  }[];
   filters?: Record<string, unknown>;
 }
 

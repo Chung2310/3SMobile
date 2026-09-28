@@ -19,7 +19,6 @@ import {
   type WorkoutTemplateItem,
 } from '@/services/customerWorkoutPlanService';
 import { LEVELS } from '@/services/workouts';
-import { colors } from '@/theme/colors';
 
 const MASCOT_COACH = require('../../assets/public/3s-coach.png');
 

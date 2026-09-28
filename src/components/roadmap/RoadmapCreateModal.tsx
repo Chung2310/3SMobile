@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,11 +15,10 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import { CustomerSelectModal } from '@/components/CustomerSelectModal';
-import { api, ApiError } from '@/services/api/client';
+import { api } from '@/services/api/client';
 import {
   generateSmartRoadmap,
   type RoadmapCustomerMeta,
-  type RoadmapEvaluationCheckpoint,
   type RoadmapGoalType,
   type RoadmapPhaseProposal,
   type RoadmapStrategyProposal,
@@ -37,12 +36,12 @@ interface RoadmapCreateModalProps {
   onSuccess: (createdRoadmap: Roadmap) => void;
 }
 
-const GOAL_OPTIONS: Array<{
+const GOAL_OPTIONS: {
   value: RoadmapGoalType;
   label: string;
   desc: string;
   icon: string;
-}> = [
+}[] = [
   {
     value: 'FAT_LOSS',
     label: 'Giảm mỡ & Giữ cơ',
@@ -125,7 +124,7 @@ export function RoadmapCreateModal({
   const [targetUnit, setTargetUnit] = useState<'kg' | '% mỡ' | 'cm eo'>('kg');
   const [durationWeeks, setDurationWeeks] = useState(12);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(3);
-  const [sessionDurationMinutes, setSessionDurationMinutes] = useState(60);
+  const [sessionDurationMinutes] = useState(60);
   const [customNotes, setCustomNotes] = useState('');
 
   // Step 3: Generated Roadmap Draft Data

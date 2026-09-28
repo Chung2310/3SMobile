@@ -1,4 +1,4 @@
-name: Build IPA & APK (Production)
+name: Build Android APK
 
 on:
   push:
@@ -11,96 +11,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-product-${{ github.ref }}
+  group: build-android-${{ github.ref }}
   cancel-in-progress: false
 
 env:
   CI: "1"
   EXPO_NO_TELEMETRY: "1"
   APP_VERSION: ${{ vars.APP_VERSION }}
-  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://staging-3s.igentechnology.net' }}
+  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://3s.igentechnology.net' }}
 
 jobs:
-  build-ios:
-    name: iOS IPA (Unsigned)
-    runs-on: macos-26
-    timeout-minutes: 90
-    env:
-      # Expo SDK 57 requires Xcode 26.4+. Keep nested ExpoModulesJSI builds
-      # on the same toolchain as CocoaPods and the app build.
-      DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Verify Xcode toolchain
-        run: |
-          if [ ! -d "$DEVELOPER_DIR" ]; then
-            echo "::error::Required Xcode 26.4.1 is missing from this runner image."
-            exit 1
-          fi
-          xcodebuild -version
-          xcrun swift --version
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prepare shared release version
-        run: node scripts/prepare-release.cjs
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Generate native iOS project
-        run: npx --no-install expo prebuild --platform ios --no-install
-
-      - name: Install CocoaPods
-        working-directory: ios
-        run: pod install
-
-      - name: Build and package unsigned device IPA
-        run: bash scripts/build-unsigned-ios.sh
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: 3SGym-ios-unsigned-${{ github.run_number }}
-          path: ${{ runner.temp }}/3s-unsigned-artifacts/3SGym-unsigned.ipa
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload iOS build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: 3SGym-ios-build-log-${{ github.run_number }}
-          path: ${{ runner.temp }}/3s-xcodebuild.log
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Step summary
-        run: |
-          echo "- Version: $APP_VERSION / Build: $APP_BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
-          echo "### 📱 3S Gym iOS IPA" >> "$GITHUB_STEP_SUMMARY"
-          echo "Tải file **3SGym-unsigned.ipa** từ mục Artifacts của run này." >> "$GITHUB_STEP_SUMMARY"
-          echo "Cài đặt trực tiếp lên iPhone thông qua Sideloadly, AltStore, Scarlet hoặc TrollStore (không cần tài khoản Apple Developer trả phí)." >> "$GITHUB_STEP_SUMMARY"
-
-  build-apk:
+  build-android:
     name: Android APK
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -112,6 +37,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -162,7 +88,6 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          # Tìm file APK được gradle build ra
           RAW_APK="$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)"
           test -s "$RAW_APK"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
@@ -209,7 +134,7 @@ jobs:
 
       - name: Step summary
         run: |
-          echo "### 🤖 3S Gym Android APK" >> "$GITHUB_STEP_SUMMARY"
-          echo "Tải file **3SGym.apk** từ mục Artifacts của run này để cài đặt trực tiếp trên mọi thiết bị Android." >> "$GITHUB_STEP_SUMMARY"
+          echo "### 3S Gym Android APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download **3SGym.apk** from this run's Artifacts." >> "$GITHUB_STEP_SUMMARY"
           echo "- Version: $APP_VERSION / Build: $APP_BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
           echo "- Production Key: $APP_IS_PRODUCTION_KEY" >> "$GITHUB_STEP_SUMMARY"

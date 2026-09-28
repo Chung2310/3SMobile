@@ -26,12 +26,12 @@ export function CustomerStatusFilterSheet({
   onSelect,
   onClose,
 }: CustomerStatusFilterSheetProps) {
-  const options: Array<{
+  const options: {
     id: CustomerStatusFilter;
     label: string;
     count: number;
     dotColor: string;
-  }> = [
+  }[] = [
     { id: 'ALL', label: 'Tất cả', count: totalCount, dotColor: '#00C2FF' },
     { id: 'ACTIVE', label: 'Đang hoạt động', count: activeCount, dotColor: '#22C55E' },
     { id: 'LEAD', label: 'Tiềm năng', count: leadCount, dotColor: '#F59E0B' },

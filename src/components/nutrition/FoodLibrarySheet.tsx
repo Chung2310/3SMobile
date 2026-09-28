@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -28,7 +28,7 @@ export interface FoodLibrarySheetProps {
   onSelectFood?: (entry: MealFoodEntry) => void;
 }
 
-const CATEGORIES: Array<FoodCategory | 'all' | 'custom'> = [
+const CATEGORIES: (FoodCategory | 'all' | 'custom')[] = [
   'all',
   'custom',
   'protein',
@@ -49,7 +49,7 @@ export function FoodLibrarySheet({
 }: FoodLibrarySheetProps) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | 'all' | 'custom'>('all');
-  const [dbVersion, setDbVersion] = useState(0);
+  const [, setDbVersion] = useState(0);
   const [editorModalVisible, setEditorModalVisible] = useState(false);
 
   // Selected food for portion adjusting
@@ -62,9 +62,7 @@ export function FoodLibrarySheet({
     });
   }, []);
 
-  const foods = useMemo(() => {
-    return searchFoods(search, selectedCategory);
-  }, [search, selectedCategory, dbVersion]);
+  const foods = searchFoods(search, selectedCategory);
 
   const handlePickItem = (food: FoodItem) => {
     setSelectedFood(food);

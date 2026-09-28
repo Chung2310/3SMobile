@@ -70,7 +70,6 @@ export default function WalletScreen() {
   // Dữ liệu số dư ví từ BE (không dùng mockdata)
   const [wallet, setWallet] = useState<CreditWallet | null>(null);
   const [loadingWallet, setLoadingWallet] = useState<boolean>(true);
-  const [walletError, setWalletError] = useState<string | null>(null);
 
   // Lịch sử giao dịch từ BE (không dùng mockdata)
   const [ledgerItems, setLedgerItems] = useState<CreditLedgerItem[] | null>(null);
@@ -96,7 +95,6 @@ export default function WalletScreen() {
   // Gọi API lấy thông tin số dư ví từ backend
   const fetchWalletData = useCallback(async () => {
     try {
-      setWalletError(null);
       const res = await api.get<any>('/api/credits/me');
       const payload = res?.data || res;
       if (payload && typeof payload.availableCredits === 'number') {
@@ -109,7 +107,7 @@ export default function WalletScreen() {
         setWallet({ availableCredits: 0, reservedCredits: 0 });
       }
     } catch (err: any) {
-      setWalletError(err?.message || 'Không thể tải thông tin ví credit.');
+      console.warn('Wallet request failed.', err);
     } finally {
       setLoadingWallet(false);
     }
@@ -156,7 +154,7 @@ export default function WalletScreen() {
       })
       .catch((err: any) => {
         if (!active) return;
-        setWalletError(err?.message || 'Không thể tải thông tin ví credit.');
+        console.warn('Wallet request failed.', err);
       })
       .finally(() => {
         if (active) setLoadingWallet(false);

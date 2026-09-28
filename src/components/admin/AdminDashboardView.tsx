@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,14 +17,13 @@ import Svg, {
   G,
   Line,
   LinearGradient,
-  Path,
   Rect,
   Stop,
   Text as SvgText,
 } from 'react-native-svg';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { fetchAdminDashboard, type AdminDashboardData } from '@/services/dashboardService';
-import { colors, radius, spacing } from '@/theme';
+import { colors } from '@/theme';
 
 interface AdminDashboardViewProps {
   onRefreshParent?: () => void;
@@ -169,132 +167,10 @@ function AdminDonutChart({
   );
 }
 
-function AdminWeeklyTrendLineChart({ completedSessions = 0 }: { completedSessions?: number }) {
-  const [fillProgress, setFillProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    const startTime = Date.now();
-    const duration = 850;
-
-    const step = () => {
-      const elapsed = Date.now() - startTime;
-      const p = Math.min(1, elapsed / duration);
-      const eased = 1 - (1 - p) * (1 - p);
-      setFillProgress(eased);
-      if (p < 1) {
-        rafRef.current = requestAnimationFrame(step);
-      }
-    };
-    rafRef.current = requestAnimationFrame(step);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [completedSessions]);
-
-  const base = Math.max(1, Math.round(completedSessions / 7));
-  const rawData = [
-    Math.max(1, base - 1),
-    Math.max(2, base + 2),
-    Math.max(1, base + 1),
-    Math.max(3, base + 4),
-    Math.max(2, base + 3),
-    Math.max(1, base),
-    Math.max(2, base + 2),
-  ];
-  const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
-
-  const width = 300;
-  const height = 120;
-  const paddingX = 20;
-  const paddingTop = 18;
-  const paddingBottom = 22;
-
-  const chartW = width - paddingX * 2;
-  const chartH = height - paddingTop - paddingBottom;
-
-  const maxVal = Math.max(...rawData, 6);
-  const minVal = 0;
-
-  const points = rawData.map((val, idx) => {
-    const targetY = paddingTop + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
-    const startY = paddingTop + chartH; // Baseline
-    const y = startY + (targetY - startY) * fillProgress;
-    return { x: paddingX + (idx / (rawData.length - 1)) * chartW, y, val, day: days[idx] };
-  });
-
-  const pathD = points.reduce((acc, pt, idx) => {
-    return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
-  }, '');
-
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
-
-  return (
-    <View style={{ width: '100%', alignItems: 'center' }}>
-      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Defs>
-          <LinearGradient id="adminLineGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#0284C7" stopOpacity={0.25 * fillProgress} />
-            <Stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
-          </LinearGradient>
-        </Defs>
-
-        {[0, 0.5, 1].map((ratio, i) => {
-          const y = paddingTop + ratio * chartH;
-          return (
-            <Line
-              key={`grid-${i}`}
-              x1={paddingX}
-              y1={y}
-              x2={width - paddingX}
-              y2={y}
-              stroke="#F1F5F9"
-              strokeDasharray="3 3"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        <Path d={areaD} fill="url(#adminLineGrad)" />
-        <Path d={pathD} stroke="#0284C7" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-
-        {points.map((pt, i) => (
-          <G key={`pt-${i}`}>
-            <Circle cx={pt.x} cy={pt.y} r="3.5" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
-            <SvgText
-              x={pt.x}
-              y={pt.y - 6}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="700"
-              fill="#0369A1"
-              opacity={fillProgress}
-            >
-              {pt.val}
-            </SvgText>
-            <SvgText
-              x={pt.x}
-              y={height - 6}
-              textAnchor="middle"
-              fontSize="9.5"
-              fontWeight="500"
-              fill="#64748B"
-            >
-              {pt.day}
-            </SvgText>
-          </G>
-        ))}
-      </Svg>
-    </View>
-  );
-}
-
 function AdminPtWorkloadBarChart({
   ptWorkload,
 }: {
-  ptWorkload?: Array<{ fullName: string; activeCustomers: number }>;
+  ptWorkload?: { fullName: string; activeCustomers: number }[];
 }) {
   const [fillProgress, setFillProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -415,7 +291,7 @@ function AdminPtWorkloadBarChart({
 
 interface AdminPtFilterSheetProps {
   visible: boolean;
-  ptsList: Array<{ ptId: string; fullName: string }>;
+  ptsList: { ptId: string; fullName: string }[];
   selectedPtId: string;
   onSelect: (ptId: string) => void;
   onClose: () => void;
@@ -718,7 +594,6 @@ const ADMIN_QUICK_FEATURES: AdminQuickFeature[] = [
 
 export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps) {
   const [data, setData] = useState<AdminDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Filter state
@@ -737,11 +612,10 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
   const [showToPicker, setShowToPicker] = useState(false);
 
   // PT List dropdown
-  const [ptsList, setPtsList] = useState<Array<{ ptId: string; fullName: string }>>([]);
+  const [ptsList, setPtsList] = useState<{ ptId: string; fullName: string }[]>([]);
 
   const loadAdminDashboard = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await fetchAdminDashboard({
         ptId: selectedPtId,
         customerStatus: selectedStatus,
@@ -755,7 +629,6 @@ export function AdminDashboardView({ onRefreshParent }: AdminDashboardViewProps)
         }
       }
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   }, [selectedPtId, selectedStatus, fromDate, toDate]);

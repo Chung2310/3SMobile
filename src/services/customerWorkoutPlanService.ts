@@ -8,8 +8,8 @@ export interface WorkoutTemplateItem {
   level?: string;
   durationDays?: number;
   muscleGroups?: string[];
-  sessions?: Array<{ name: string; exercises?: unknown[] }>;
-  scheduledExercises?: Array<{ name: string; dayNumber?: number; weekNumber?: number }>;
+  sessions?: { name: string; exercises?: unknown[] }[];
+  scheduledExercises?: { name: string; dayNumber?: number; weekNumber?: number }[];
   status?: string;
   createdAt?: string;
   updatedAt?: string;

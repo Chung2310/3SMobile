@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  Droplets,
   FileText,
   Flame,
   Info,
@@ -27,10 +26,9 @@ import {
   Utensils,
   X,
 } from 'lucide-react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius } from '@/theme';
 import type { DayMenuPlan, MealBlock, NutritionPlanData, WeekMenuPlan } from '@/types/nutrition';
 import {
-  DAYS_OF_WEEK_VI,
   findCurrentWeekAndDay,
   formatDisplayDateVi,
   formatShortDay,
@@ -146,8 +144,6 @@ export function PlanDetailViewModal({
 }: PlanDetailViewModalProps) {
   // Always call all hooks unconditionally at the top level
   const [localWeeks, setLocalWeeks] = useState<WeekMenuPlan[]>(() => (plan ? normalizePlanToWeeks(plan) : []));
-  const initialNav = useMemo(() => findCurrentWeekAndDay(localWeeks), [localWeeks]);
-
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);

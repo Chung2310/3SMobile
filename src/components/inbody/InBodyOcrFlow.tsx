@@ -72,7 +72,7 @@ export function InBodyOcrFlow({
   const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<OcrSelectedFile[]>([]);
   const [showDocumentMenu, setShowDocumentMenu] = useState(false);
-  const { alertConfig, showAlert, showSuccess, showError, showWarning, showConfirm } = useAppAlert();
+  const { alertConfig, showSuccess, showError, showWarning, showConfirm } = useAppAlert();
 
   // Quick Add Customer state & local customer sync
   const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>(customers);
@@ -906,7 +906,7 @@ export function InBodyOcrFlow({
                       <Text style={styles.detectedNoticeText}>
                         AI đọc được:{' '}
                         <Text style={{ fontWeight: '700' }}>
-                          "{draft.detectedCustomerName}"
+                          &quot;{draft.detectedCustomerName}&quot;
                         </Text>
                       </Text>
                     </View>

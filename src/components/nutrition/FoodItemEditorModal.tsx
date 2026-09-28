@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -27,7 +27,7 @@ export interface FoodItemEditorModalProps {
   onSaved: (savedFood: FoodItem) => void;
 }
 
-const CATEGORY_OPTIONS: Array<FoodCategory> = [
+const CATEGORY_OPTIONS: FoodCategory[] = [
   'protein',
   'carbs',
   'veggies',
@@ -169,7 +169,7 @@ export function FoodItemEditorModal({
         onSaved(created);
       }
       onClose();
-    } catch (e) {
+    } catch {
       showError('Không thể lưu món ăn vào kho dữ liệu.', 'Lỗi');
     } finally {
       setSaving(false);

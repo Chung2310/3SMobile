@@ -14,6 +14,7 @@ module.exports = defineConfig([
           message: 'Use SafeAreaModal from @/components/SafeAreaModal so Android dialogs respect system bars.',
         }],
       }],
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ]);

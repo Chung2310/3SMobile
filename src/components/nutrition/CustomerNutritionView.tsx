@@ -233,7 +233,7 @@ export function CustomerNutritionView() {
 
   const activeWeek = weeks[selectedWeekIdx] || weeks[0];
   const activeDay = activeWeek?.days?.[selectedDayIdx] || activeWeek?.days?.[0];
-  const mealsList: MealBlock[] = activeDay?.meals || [];
+  const mealsList = useMemo<MealBlock[]>(() => activeDay?.meals || [], [activeDay]);
   const todayYmd = getTodayYmd();
   const totalDays = weeks.reduce((sum, w) => sum + (w.days?.length || 0), 0);
 
@@ -290,7 +290,7 @@ export function CustomerNutritionView() {
             <Text style={styles.noPlanTitle}>Chưa có thực đơn được giao</Text>
             <Text style={styles.noPlanDesc}>
               Huấn luyện viên của bạn đang xây dựng chế độ dinh dưỡng tối ưu theo thể trạng cá nhân.
-              Trong lúc chờ, bạn có thể tự ghi nhật ký ăn uống hằng ngày bằng nút "Ghi nhật ký" bên trên.
+              Trong lúc chờ, bạn có thể tự ghi nhật ký ăn uống hằng ngày bằng nút &quot;Ghi nhật ký&quot; bên trên.
             </Text>
           </View>
         ) : (
@@ -302,7 +302,7 @@ export function CustomerNutritionView() {
                     <Text style={styles.publishedBadgeText}>ĐANG ÁP DỤNG</Text>
                   </View>
                   <Text style={styles.planDate}>
-                    Cập nhật {new Date(activePlan.updatedAt || Date.now()).toLocaleDateString('vi-VN')}
+                    Cập nhật {activePlan.updatedAt ? new Date(activePlan.updatedAt).toLocaleDateString('vi-VN') : '-'}
                   </Text>
                 </View>
                 <Text style={styles.planTitle}>{activePlan.title}</Text>

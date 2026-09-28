@@ -423,7 +423,6 @@ export const STORAGE_KEY_DELETED_FOODS = '3s_gym_deleted_food_ids';
 
 let inMemoryCustomFoods: CustomFoodItem[] = [];
 let inMemoryDeletedIds: string[] = [];
-let isStorageLoaded = false;
 type FoodDbListener = () => void;
 const listeners = new Set<FoodDbListener>();
 
@@ -464,7 +463,6 @@ export async function loadFoodDatabaseFromStorage(): Promise<void> {
       const parsed = JSON.parse(rawDeleted);
       if (Array.isArray(parsed)) inMemoryDeletedIds = parsed;
     }
-    isStorageLoaded = true;
     notifyListeners();
   } catch (err) {
     console.error('Error loading food database from AsyncStorage:', err);

@@ -339,7 +339,7 @@ function PtFormModalInner({
                       setDirty(true);
                       setEmail(v);
                     }}
-                    placeholder="hlv@3sgym.vn"
+                    placeholder="hlv@3s.igentechnology.net"
                     placeholderTextColor={colors.textMuted}
                     keyboardType="email-address"
                     autoCapitalize="none"

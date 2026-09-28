@@ -82,7 +82,7 @@ Kiểm tra: `node --test tests/workouts.test.cjs tests/exercises.test.cjs`. Khi 
 Dùng HTTPS trực tiếp cho staging trong `.env`:
 
 ```env
-EXPO_PUBLIC_API_URL=https://staging-3s.igentechnology.net
+EXPO_PUBLIC_API_URL=https://3s.igentechnology.net
 ```
 
 Không thêm `/api` vào cuối URL vì các request đã có tiền tố này. Staging chuyển HTTP sang HTTPS bằng 301; request đăng nhập POST có thể chuyển thành GET và nhận `ROUTE_NOT_FOUND` dù route đăng nhập tồn tại.
