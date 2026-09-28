@@ -51,7 +51,12 @@ test('Expo config consumes the CI version without changing app identity or other
 test('local config stays unchanged and malformed release versions fail', (t) => {
   restoreVersionEnv(t);
   delete process.env.APP_BUILD_NUMBER;
-  assert.equal(appConfig({ config: base }), base);
+  const expected = JSON.parse(JSON.stringify(base));
+  const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  if (projectId) {
+    expected.extra = { ...expected.extra, eas: { ...expected.extra?.eas, projectId } };
+  }
+  assert.deepEqual(appConfig({ config: base }), expected);
   for (const value of ['', '0', '-1', '1.2', '1e3', '2100000001']) {
     process.env.APP_BUILD_NUMBER = value;
     assert.throws(() => appConfig({ config: base }));
