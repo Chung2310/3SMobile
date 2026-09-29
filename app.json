@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "3sgym",
+    "scheme": "gym3s",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
