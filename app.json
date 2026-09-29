@@ -31,7 +31,8 @@
       "bundleIdentifier": "com.igen.3s",
       "infoPlist": {
         "NSCameraUsageDescription": "Ứng dụng cần truy cập máy ảnh để chụp ảnh tiến độ học viên.",
-        "NSPhotoLibraryUsageDescription": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên."
+        "NSPhotoLibraryUsageDescription": "Ứng dụng cần truy cập thư viện để chọn ảnh học viên.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

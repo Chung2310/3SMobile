@@ -150,7 +150,7 @@ jobs:
       - name: Download and validate IPA
         run: |
           set -euo pipefail
-          BUILD_URL="$(jq -er '.[0] | select(.status == "FINISHED") | .artifacts.buildUrl | select(type == "string" and startswith("https://"))' "$RUNNER_TEMP/3s-ios-build.json")"
+          BUILD_URL="$(jq -er '(if type == "array" then .[0] else . end) | select(.status == "FINISHED") | .artifacts.buildUrl | select(type == "string" and startswith("https://"))' "$RUNNER_TEMP/3s-ios-build.json")"
           echo "::add-mask::$BUILD_URL"
           mkdir -p "$RUNNER_TEMP/3s-ios-artifacts"
           curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' "$BUILD_URL" --output "$RUNNER_TEMP/3s-ios-artifacts/3SGym.ipa"
@@ -171,7 +171,7 @@ jobs:
         if: env.BUILD_PROFILE == 'production'
         run: |
           set -euo pipefail
-          BUILD_ID="$(jq -er '.[0] | select(.status == "FINISHED") | .id' "$RUNNER_TEMP/3s-ios-build.json")"
+          BUILD_ID="$(jq -er '(if type == "array" then .[0] else . end) | select(.status == "FINISHED") | .id' "$RUNNER_TEMP/3s-ios-build.json")"
           eas submit --platform ios --profile production --id "$BUILD_ID" --non-interactive --wait
 
       - name: Clean up App Store Connect API key
