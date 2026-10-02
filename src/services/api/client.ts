@@ -1,5 +1,7 @@
 import { API_BASE_URL } from '@/services/config';
-import { getStoredSession, saveSession } from '@/services/sessionStore';
+import { clearStoredSession, getStoredSession } from '@/services/sessionStore';
+import { canRefresh, refreshRejectedSession } from './refreshSession';
+import { confirmAiSharing } from '@/services/aiConsent';
 
 export interface ApiPage<T> { summary?: Record<string, number>; data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } }
 
@@ -158,11 +160,12 @@ async function uploadWithXhr<T>(
   const normalizedBase = API_BASE_URL.replace(/:(8008|8089)/g, ':3008');
   const targetUrl = `${normalizedBase}${path}`;
 
-  const sendRequest = (token?: string): Promise<T> => {
+  const sendRequest = (token?: string, retried = false, consentVersion?: string): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open(method, targetUrl);
       xhr.setRequestHeader('Accept', 'application/json');
+      if (consentVersion) xhr.setRequestHeader('X-AI-Consent', consentVersion);
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
@@ -175,31 +178,27 @@ async function uploadWithXhr<T>(
         };
       }
       xhr.onload = async () => {
-        // Tự động gia hạn phiên đăng nhập ngầm nếu gặp 401 và có refreshToken
-        if (xhr.status === 401 && storedSession?.refreshToken && !path.includes('/api/auth/')) {
+        if (xhr.status === 428 && !consentVersion) {
           try {
-            const refreshRes = await fetch(`${normalizedBase}/api/auth/refresh`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ refreshToken: storedSession.refreshToken }),
-            });
-            if (refreshRes.ok) {
-              const refreshData = await refreshRes.json();
-              const payload = refreshData?.data || refreshData;
-              if (payload?.token) {
-                const updatedSession = {
-                  ...storedSession,
-                  token: payload.token,
-                  refreshToken: payload.refreshToken || storedSession.refreshToken,
-                };
-                await saveSession(updatedSession);
-                storedSession = updatedSession;
-                // Thử lại tải tệp lên với token mới
-                return sendRequest(payload.token).then(resolve).catch(reject);
-              }
+            const disclosure = JSON.parse(xhr.responseText);
+            if (await confirmAiSharing(disclosure)) {
+              if ((await getStoredSession())?.token !== token) { reject(new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng thực hiện lại.', 409)); return; }
+              return sendRequest(token, retried, disclosure.consentVersion).then(resolve, reject);
             }
+            reject(new ApiError('Đã hủy chia sẻ dữ liệu với AI.', 428)); return;
+          } catch (cause) { reject(cause); return; }
+        }
+        if (xhr.status === 401 && storedSession && canRefresh(path)) {
+          try {
+            if (!retried) {
+              const refreshed = await refreshRejectedSession(storedSession);
+              if (refreshed) {
+                storedSession = refreshed;
+                return sendRequest(refreshed.token, true, consentVersion).then(resolve, reject);
+              }
+            } else if (token) await clearStoredSession(token);
           } catch {
-            // Bỏ qua lỗi refresh và xử lý tiếp lỗi 401 bên dưới
+            // Network/server failure: keep the stored session for a later retry.
           }
         }
 
@@ -278,33 +277,24 @@ async function request<T>(path: string, init: RequestInit = {}, unwrap = true): 
     throw new ApiError(DEFAULT_SERVER_ERROR_MESSAGE, 0);
   }
 
-  // Tự động gia hạn phiên đăng nhập ngầm nếu gặp 401 và có refreshToken
-  if (response.status === 401 && storedSession?.refreshToken && !path.includes('/api/auth/')) {
+  if (response.status === 428) {
+    const disclosure = await response.json();
+    if (!await confirmAiSharing(disclosure)) throw new ApiError('Đã hủy chia sẻ dữ liệu với AI.', 428);
+    if ((await getStoredSession())?.token !== storedSession?.token) throw new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng thực hiện lại.', 409);
+    headers.set('X-AI-Consent', disclosure.consentVersion);
+    response = await fetch(targetUrl, { ...init, headers });
+  }
+
+  if (response.status === 401 && storedSession && canRefresh(path)) {
     try {
-      const refreshRes = await fetch(`${normalizedBase}/api/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ refreshToken: storedSession.refreshToken }),
-      });
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        const payload = refreshData?.data || refreshData;
-        if (payload?.token) {
-          const updatedSession = {
-            ...storedSession,
-            token: payload.token,
-            refreshToken: payload.refreshToken || storedSession.refreshToken,
-          };
-          await saveSession(updatedSession);
-          headers.set('Authorization', `Bearer ${payload.token}`);
-          response = await fetch(targetUrl, {
-            ...init,
-            headers,
-          });
-        }
+      const refreshed = await refreshRejectedSession(storedSession);
+      if (refreshed) {
+        headers.set('Authorization', `Bearer ${refreshed.token}`);
+        response = await fetch(targetUrl, { ...init, headers });
+        if (response.status === 401) await clearStoredSession(refreshed.token);
       }
     } catch {
-      // Bỏ qua lỗi refresh và chuyển tiếp lỗi 401
+      // Network/server failure does not invalidate a recoverable session.
     }
   }
 

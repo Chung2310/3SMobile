@@ -19,7 +19,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -39,6 +39,7 @@ const LOGO_WHITE = require('../../../assets/public/logo-white.png');
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ username?: string }>();
   const { signIn } = useAuth();
 
   // Intro Splash state
@@ -53,13 +54,19 @@ export default function LoginScreen() {
 
   // Modal Login state
   const [modalVisible, setModalVisible] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(() => typeof params.username === 'string' ? params.username : '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const sheetScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (typeof params.username === 'string' && params.username.trim()) {
+      setUsername(params.username);
+    }
+  }, [params.username]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -173,7 +180,7 @@ export default function LoginScreen() {
         <Image source={LOGO_WHITE} style={styles.logo} resizeMode="contain" />
         <View style={styles.coachBadge}>
           <Feather name="shield" size={12} color="#38BDF8" style={{ marginRight: 6 }} />
-          <Text style={styles.coachBadgeText}>CỔNG HUẤN LUYỆN VIÊN (PT)</Text>
+          <Text style={styles.coachBadgeText}>TRUNG TÂM &amp; HUẤN LUYỆN VIÊN</Text>
         </View>
         <Text style={styles.brandSub}>GYM - YOGA - ZUMBA - KICKFIT</Text>
       </View>
@@ -211,8 +218,16 @@ export default function LoginScreen() {
           }}
           style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
         >
-          <Text style={styles.loginButtonText}>Đăng nhập Huấn luyện viên</Text>
+          <Text style={styles.loginButtonText}>Đăng nhập</Text>
         </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/(auth)/register-pt')}
+            style={({ pressed }) => [styles.registerCenterLink, pressed && styles.registerCenterLinkPressed]}
+          >
+            <Text style={styles.registerCenterLinkText}>Đăng ký tài khoản</Text>
+          </Pressable>
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
         <Text style={styles.assistantFooterText}>Trợ lý AI dành cho PT</Text>
@@ -281,7 +296,7 @@ export default function LoginScreen() {
                   <Feather name="award" size={12} color={colors.primary} style={{ marginRight: 4 }} />
                   <Text style={styles.sheetPtBadgeText}>PT WORKSPACE</Text>
                 </View>
-                <Text style={styles.sheetTitle}>Đăng nhập HLV</Text>
+                <Text style={styles.sheetTitle}>Đăng nhập</Text>
               </View>
               <Pressable
                 onPress={() => {
@@ -386,6 +401,15 @@ export default function LoginScreen() {
                   <Text style={styles.submitButtonText}>Đăng nhập</Text>
                 )}
               </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đăng ký tài khoản"
+                disabled={submitting}
+                onPress={() => { Keyboard.dismiss(); setModalVisible(false); router.push('/(auth)/register-pt'); }}
+                style={({ pressed }) => [styles.registerCenterLink, styles.registerSheetLink, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={[styles.registerCenterLinkText, styles.registerSheetLinkText]}>Đăng ký tài khoản</Text>
+              </Pressable>
 
             </ScrollView>
           </View>
@@ -396,6 +420,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  registerSheetLink: { backgroundColor: colors.surface },
+  registerSheetLinkText: { color: colors.primary },
   container: {
     flex: 1,
     backgroundColor: '#000000',
@@ -482,6 +508,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
+  },
+  registerCenterLink: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    borderRadius: 12,
+  },
+  registerCenterLinkPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  registerCenterLinkText: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
   },
   assistantFooterText: {
     fontSize: 13,

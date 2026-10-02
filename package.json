@@ -4,6 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
+    "postinstall": "node scripts/patch-expo-json-atomic.cjs",
     "start": "expo start --port 8089 --clear",
     "android": "expo start --android --port 8089",
     "ios": "expo start --ios --port 8089",

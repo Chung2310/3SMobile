@@ -64,6 +64,7 @@ import { PlanDetailViewModal } from './PlanDetailViewModal';
 import { AiNutritionDraftModal } from './AiNutritionDraftModal';
 import { FoodItemEditorModal } from './FoodItemEditorModal';
 import { ActivityEditorModal } from './ActivityEditorModal';
+import { NutritionCalculationSources } from './NutritionCalculationSources';
 import {
   DEFAULT_ACTIVITIES,
   deleteCustomActivity,
@@ -1199,7 +1200,7 @@ export function PtNutritionWorkspace() {
                   </View>
                 </View>
                 <Text style={styles.macroHeroSubline}>
-                  BMR: {calculatedNutrition.bmr} kcal • TDEE: {calculatedNutrition.tdee} kcal • Nước: ~{calculatedNutrition.waterLiters}L/ngày
+                  BMR: {calculatedNutrition.bmr} kcal • TDEE: {calculatedNutrition.tdee} kcal • Nước ước tính: ~{calculatedNutrition.waterLiters}L/ngày
                 </Text>
               </View>
 
@@ -1208,6 +1209,8 @@ export function PtNutritionWorkspace() {
                 targetCalories={calculatedNutrition.targetCalories}
                 macros={calculatedNutrition.macros}
               />
+
+              <NutritionCalculationSources />
 
               {/* CTA: Áp dụng mục tiêu macro sang Tab Thực Đơn */}
               <Pressable
