@@ -67,7 +67,7 @@ export default function DeleteOwnerScreen() {
       {loading ? <Text style={ui.text}>Đang tải thông tin trung tâm…</Text> : !options ? <Notice message={error} retry={() => void load()} /> : <>
         <View style={ui.card}>
           <Text style={ui.heading} numberOfLines={2} ellipsizeMode="tail">{options.centerName}</Text>
-          <Text style={ui.text}>Thao tác không thể hoàn tác. Tài khoản, phiên đăng nhập và dữ liệu riêng của bạn sẽ bị xóa. Credit của tài khoản bị xóa không chuyển sang người tiếp nhận.</Text>
+          <Text style={ui.text}>Thao tác không thể hoàn tác. Tài khoản, phiên đăng nhập và toàn bộ dữ liệu riêng của bạn sẽ bị xóa.</Text>
           <Text style={ui.text}>Ảnh và file do hệ thống lưu trữ sẽ được dọn nền sau khi xóa dữ liệu. Tài nguyên vẫn đang được trung tâm khác sử dụng sẽ được giữ lại.</Text>
           {options.isOwner && <Select label="Cách xử lý trung tâm" value={mode} onChange={value => { if (!busy) { setMode(value as Mode); setConfirmation(''); } }} options={[
             { value: 'TRANSFER', label: 'Chuyển quyền và xóa tài khoản của tôi' },

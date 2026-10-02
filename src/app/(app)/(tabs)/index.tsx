@@ -139,20 +139,7 @@ export default function HomeScreen() {
     void loadData();
   };
 
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-
-  const fetchCreditBalance = useCallback(async () => {
-    try {
-      const res = await api.get<any>('/api/credits/me');
-      const payload = res?.data || res;
-      if (payload && typeof payload.availableCredits === 'number') {
-        setCreditBalance(payload.availableCredits);
-      }
-    } catch {
-      // Silently ignore if fails
-    }
-  }, []);
 
   const fetchUnreadNotifications = useCallback(async () => {
     try {
@@ -171,13 +158,12 @@ export default function HomeScreen() {
     try {
       const data = await fetchPtDashboard();
       setDashboard(data);
-      void fetchCreditBalance();
       void fetchUnreadNotifications();
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchCreditBalance, fetchUnreadNotifications]);
+  }, [fetchUnreadNotifications]);
 
   useFocusEffect(
     useCallback(() => {
@@ -188,12 +174,11 @@ export default function HomeScreen() {
           setLoading(false);
         }
       });
-      void fetchCreditBalance();
       void fetchUnreadNotifications();
       return () => {
         active = false;
       };
-    }, [fetchCreditBalance, fetchUnreadNotifications])
+    }, [fetchUnreadNotifications])
   );
 
   const onRefresh = useCallback(() => {
@@ -251,16 +236,6 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerRightActions}>
-            <View
-              style={styles.headerCreditBadge}
-              accessibilityLabel="Số dư Credit AI"
-            >
-              <Ionicons name="sparkles" size={14} color="#0284C7" />
-              <Text style={styles.headerCreditValue}>
-                {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
-              </Text>
-            </View>
-
             {/* Nút thông báo */}
             <Pressable
               onPress={() => router.push('/(app)/notifications')}
@@ -320,17 +295,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          {/* Số dư Credit AI (chỉ hiển thị) */}
-          <View
-            style={styles.headerCreditBadge}
-            accessibilityLabel="Số dư Credit AI"
-          >
-            <Ionicons name="sparkles" size={14} color="#0284C7" />
-            <Text style={styles.headerCreditValue}>
-              {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
-            </Text>
-          </View>
-
           {/* Nút thông báo */}
           <Pressable
             onPress={() => router.push('/(app)/notifications')}
@@ -866,22 +830,6 @@ const styles = StyleSheet.create({
   },
 
 
-  headerCreditBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 18,
-    paddingHorizontal: 11,
-    height: 36,
-  },
-  headerCreditValue: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: '#0284C7',
-  },
   avatarWrap: {
     position: 'relative',
   },

@@ -15,7 +15,7 @@ import { Button, Label, Notice, Select, Sheet, ui } from './AdminUI';
 export function AdminResource({ resourceKey }: { resourceKey: string }) {
   const resource = resources[resourceKey];
   const { session } = useAuth();
-  const writable = !resource.readonly && (resourceKey !== 'creditPackages' || session?.user.role === 'SUPER_ADMIN');
+  const writable = !resource.readonly;
   const creatable = writable && (!resource.account || resource.query?.role === 'PT');
   const [items, setItems] = useState<AdminRecord[]>([]);
   const [page, setPage] = useState(1);

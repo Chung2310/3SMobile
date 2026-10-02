@@ -4,7 +4,7 @@ import type { Session } from '@/types/domain';
 
 const pending = new Map<string, Promise<Session | null>>();
 export function canRefresh(path: string) {
-  return !['/api/auth/login', '/api/auth/register-center', '/api/auth/refresh', '/api/auth/logout'].includes(path.split('?')[0]);
+  return !['/api/auth/login', '/api/auth/register-pt', '/api/auth/refresh', '/api/auth/logout'].includes(path.split('?')[0]);
 }
 
 // Share one rotation across JSON requests, profile requests and multipart uploads.

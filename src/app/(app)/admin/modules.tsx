@@ -79,7 +79,7 @@ export default function AdminModulesScreen() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Tìm kiếm chức năng, HLV, gói tập, credit..."
+            placeholder="Tìm kiếm chức năng, HLV, gói tập..."
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
             returnKeyType="search"

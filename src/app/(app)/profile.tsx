@@ -494,7 +494,7 @@ export default function ProfileScreen() {
       type: 'error',
       title: 'Xác nhận xóa tài khoản?',
       message:
-        'Tài khoản, phiên đăng nhập, dữ liệu riêng và credit của bạn sẽ bị xóa vĩnh viễn. Ảnh/file riêng được dọn nền. Hồ sơ học viên và dữ liệu chung sẽ được bàn giao cho chủ trung tâm để tiếp tục phục vụ học viên.\n\nKhông thể hoàn tác. Bạn có muốn tiếp tục?',
+        'Tài khoản, phiên đăng nhập và toàn bộ dữ liệu riêng của bạn sẽ bị xóa vĩnh viễn. Ảnh/file riêng được dọn nền. Hồ sơ học viên và dữ liệu chung sẽ được bàn giao cho chủ trung tâm để tiếp tục phục vụ học viên.\n\nKhông thể hoàn tác. Bạn có muốn tiếp tục?',
       confirmLabel: 'Xóa vĩnh viễn',
       cancelLabel: 'Hủy bỏ',
       onConfirm: async () => {
@@ -805,6 +805,13 @@ export default function ProfileScreen() {
             </View>
 
 
+            <Pressable accessibilityRole="button" onPress={() => router.push('/(app)/gym-invitations')} style={styles.securityBarBtn}>
+              <View style={styles.securityBarLeft}>
+                <View style={styles.securityIconCircle}><Feather name="users" size={16} color="#0284C7" /></View>
+                <Text style={styles.securityBarTitle}>Lời mời gym</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.textMuted} />
+            </Pressable>
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
               style={({ pressed }) => [styles.securityBarBtn, pressed && styles.securityBarBtnPressed]}

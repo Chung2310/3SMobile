@@ -20,7 +20,6 @@ export default function AdminHomeScreen() {
   const { session } = useAuth();
   const [avatarErrorUrl, setAvatarErrorUrl] = useState<string | null>(null);
   const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const userName = session?.user?.fullName || session?.user?.username || 'Admin 3S';
@@ -32,18 +31,6 @@ export default function AdminHomeScreen() {
       router.replace('/(app)/admin/modules');
     }
   }, [tab]);
-
-  const fetchCreditBalance = useCallback(async () => {
-    try {
-      const res = await api.get<any>('/api/credits/me');
-      const payload = res?.data || res;
-      if (payload && typeof payload.availableCredits === 'number') {
-        setCreditBalance(payload.availableCredits);
-      }
-    } catch {
-      // Silently ignore if fails
-    }
-  }, []);
 
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
@@ -62,9 +49,8 @@ export default function AdminHomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void fetchCreditBalance();
       void fetchUnreadNotifications();
-    }, [fetchCreditBalance, fetchUnreadNotifications])
+    }, [fetchUnreadNotifications])
   );
 
   return (
@@ -88,17 +74,12 @@ export default function AdminHomeScreen() {
         </View>
 
         <View style={styles.headerRightActions}>
-          {/* Số dư Credit AI (chỉ hiển thị) */}
-          <View
-            style={styles.headerCreditBadge}
-            accessibilityLabel="Số dư Credit AI"
-          >
-            <Ionicons name="sparkles" size={13} color={colors.primary} />
-            <Text style={styles.headerCreditValue}>
-              {creditBalance !== null ? creditBalance.toLocaleString('vi-VN') : '---'}
-            </Text>
-          </View>
-
+          <Pressable accessibilityRole="button" accessibilityLabel="Mời PT vào gym" onPress={() => router.push('/(app)/gym-invitations')} style={styles.headerIconBtn}>
+            <Feather name="user-plus" size={17} color="#334155" />
+          </Pressable>
+          {isSuperAdmin && <Pressable accessibilityRole="button" accessibilityLabel="Tạo gym và Admin" onPress={() => router.push('/(app)/admin/create-center')} style={styles.headerIconBtn}>
+            <Feather name="plus-square" size={17} color="#334155" />
+          </Pressable>}
           {/* Nút thông báo */}
           <Pressable
             onPress={() => router.push('/(app)/notifications')}
@@ -152,7 +133,6 @@ export default function AdminHomeScreen() {
         <AdminDashboardView
           key={refreshKey}
           onRefreshParent={() => {
-            void fetchCreditBalance();
             setRefreshKey((k) => k + 1);
           }}
         />
@@ -204,22 +184,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  headerCreditBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 18,
-    paddingHorizontal: 10,
-    height: 36,
-  },
-  headerCreditValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
   headerIconBtn: {
     width: 36,
     height: 36,

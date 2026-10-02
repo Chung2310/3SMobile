@@ -221,13 +221,13 @@ export default function LoginScreen() {
           <Text style={styles.loginButtonText}>Đăng nhập Admin / PT</Text>
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/(auth)/register-center')}
-          style={({ pressed }) => [styles.registerCenterLink, pressed && styles.registerCenterLinkPressed]}
-        >
-          <Text style={styles.registerCenterLinkText}>Đăng ký tài khoản chủ gym</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/(auth)/register-pt')}
+            style={({ pressed }) => [styles.registerCenterLink, pressed && styles.registerCenterLinkPressed]}
+          >
+            <Text style={styles.registerCenterLinkText}>Đăng ký tài khoản PT</Text>
+          </Pressable>
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
         <Text style={styles.assistantFooterText}>Trợ lý AI dành cho PT</Text>
@@ -401,17 +401,16 @@ export default function LoginScreen() {
                   <Text style={styles.submitButtonText}>Đăng nhập</Text>
                 )}
               </Pressable>
-
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Chưa có tài khoản? Đăng ký chủ gym"
+                accessibilityLabel="Đăng ký tài khoản PT"
                 disabled={submitting}
-                onPress={() => { Keyboard.dismiss(); setModalVisible(false); router.push('/(auth)/register-center'); }}
+                onPress={() => { Keyboard.dismiss(); setModalVisible(false); router.push('/(auth)/register-pt'); }}
                 style={({ pressed }) => [styles.registerCenterLink, styles.registerSheetLink, pressed && { opacity: 0.7 }]}
               >
-                <Text style={[styles.registerCenterLinkText, styles.registerSheetLinkText]}>Chưa có tài khoản? Đăng ký chủ gym</Text>
+                <Text style={[styles.registerCenterLinkText, styles.registerSheetLinkText]}>Đăng ký tài khoản PT</Text>
               </Pressable>
-              <Text style={styles.registrationHint}>Đăng ký tạo một trung tâm riêng. Nếu bạn là PT, hãy liên hệ chủ gym để được cấp tài khoản.</Text>
+              <Text style={styles.registrationHint}>PT có thể tự đăng ký để dùng độc lập, hoặc nhận tài khoản riêng do admin gym tạo.</Text>
 
             </ScrollView>
           </View>
