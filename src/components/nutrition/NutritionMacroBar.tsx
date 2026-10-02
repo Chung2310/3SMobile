@@ -45,7 +45,7 @@ export function NutritionMacroBar({
             <Text style={styles.cardSub}>
               {consumedCalories != null
                 ? `Đã nạp ${curCal} / ${targetCalories} kcal`
-                : 'Mức năng lượng & đa lượng khuyến nghị'}
+                : 'Mức năng lượng và đa lượng ước tính'}
             </Text>
           )}
         </View>

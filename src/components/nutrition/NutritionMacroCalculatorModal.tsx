@@ -29,6 +29,7 @@ import type { CustomerProfile } from '@/types/domain';
 import type { CalculatedNutrition } from '@/types/nutrition';
 import { computeBmrAndMacros } from '@/services/nutritionService';
 import { NutritionMacroBar } from './NutritionMacroBar';
+import { NutritionCalculationSources } from './NutritionCalculationSources';
 
 interface NutritionMacroCalculatorModalProps {
   visible: boolean;
@@ -299,7 +300,7 @@ export function NutritionMacroCalculatorModal({
                 <Text style={styles.energyVal}>
                   {result.bmr} <Text style={styles.energyUnit}>kcal</Text>
                 </Text>
-                <Text style={styles.energySub}>Calo tối thiểu khi nằm nghỉ</Text>
+                <Text style={styles.energySub}>Năng lượng ước tính khi nghỉ ngơi</Text>
               </View>
 
               <View style={styles.energyBox}>
@@ -307,7 +308,7 @@ export function NutritionMacroCalculatorModal({
                 <Text style={styles.energyVal}>
                   {result.tdee} <Text style={styles.energyUnit}>kcal</Text>
                 </Text>
-                <Text style={styles.energySub}>Bao gồm sinh hoạt & thể thao</Text>
+                <Text style={styles.energySub}>Ước tính gồm sinh hoạt và vận động</Text>
               </View>
             </View>
 
@@ -319,16 +320,18 @@ export function NutritionMacroCalculatorModal({
               showSubtitle={false}
             />
 
-            {/* Water Recommendation */}
+            {/* Water estimate */}
             <View style={styles.waterBox}>
               <Droplets size={16} color="#0284C7" />
               <Text style={styles.waterText}>
-                Lượng nước uống khuyến nghị:{' '}
+                Lượng nước ước tính theo quy ước 3S (40 ml/kg):{' '}
                 <Text style={{ fontWeight: '700', color: '#0369A1' }}>
                   {result.waterLiters} lít / ngày
                 </Text>
               </Text>
             </View>
+
+            <NutritionCalculationSources />
           </ScrollView>
 
           {/* Footer Action Buttons */}
