@@ -218,7 +218,7 @@ export default function LoginScreen() {
           }}
           style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
         >
-          <Text style={styles.loginButtonText}>Đăng nhập Admin / PT</Text>
+          <Text style={styles.loginButtonText}>Đăng nhập</Text>
         </Pressable>
 
           <Pressable
@@ -226,7 +226,7 @@ export default function LoginScreen() {
             onPress={() => router.push('/(auth)/register-pt')}
             style={({ pressed }) => [styles.registerCenterLink, pressed && styles.registerCenterLinkPressed]}
           >
-            <Text style={styles.registerCenterLinkText}>Đăng ký tài khoản PT</Text>
+            <Text style={styles.registerCenterLinkText}>Đăng ký tài khoản</Text>
           </Pressable>
 
         {/* Dòng chữ yêu cầu: Trợ lý PT AI của 3S WELLNESS */}
@@ -296,7 +296,7 @@ export default function LoginScreen() {
                   <Feather name="award" size={12} color={colors.primary} style={{ marginRight: 4 }} />
                   <Text style={styles.sheetPtBadgeText}>PT WORKSPACE</Text>
                 </View>
-                  <Text style={styles.sheetTitle}>Đăng nhập Admin / PT</Text>
+                <Text style={styles.sheetTitle}>Đăng nhập</Text>
               </View>
               <Pressable
                 onPress={() => {
@@ -403,14 +403,13 @@ export default function LoginScreen() {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Đăng ký tài khoản PT"
+                accessibilityLabel="Đăng ký tài khoản"
                 disabled={submitting}
                 onPress={() => { Keyboard.dismiss(); setModalVisible(false); router.push('/(auth)/register-pt'); }}
                 style={({ pressed }) => [styles.registerCenterLink, styles.registerSheetLink, pressed && { opacity: 0.7 }]}
               >
-                <Text style={[styles.registerCenterLinkText, styles.registerSheetLinkText]}>Đăng ký tài khoản PT</Text>
+                <Text style={[styles.registerCenterLinkText, styles.registerSheetLinkText]}>Đăng ký tài khoản</Text>
               </Pressable>
-              <Text style={styles.registrationHint}>PT có thể tự đăng ký để dùng độc lập, hoặc nhận tài khoản riêng do admin gym tạo.</Text>
 
             </ScrollView>
           </View>
@@ -421,7 +420,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  registrationHint: { color: colors.textMuted, fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 8 },
   registerSheetLink: { backgroundColor: colors.surface },
   registerSheetLinkText: { color: colors.primary },
   container: {

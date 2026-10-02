@@ -70,11 +70,11 @@ export default function RegisterPtScreen() {
 
   if (created) {
     return (
-      <Screen title="Tài khoản PT đã sẵn sàng" subtitle="Bạn có thể đăng nhập và bắt đầu sử dụng">
+      <Screen title="Tài khoản đã sẵn sàng">
         <View style={styles.successCard}>
           <View style={styles.successIcon}><Feather name="check" size={28} color={colors.success} /></View>
           <Text style={styles.successTitle}>Chào mừng {created.user.fullName}</Text>
-          <Text style={styles.successDescription}>Tài khoản PT đã được tạo trong không gian cá nhân. Bạn có thể nhận lời mời từ admin để tham gia gym bằng chính tài khoản này.</Text>
+          <Text style={styles.successDescription}>Tài khoản đã được tạo. Bạn có thể đăng nhập để bắt đầu sử dụng.</Text>
           <View style={styles.accountSummary}>
             <Text style={styles.summaryLabel}>Tên đăng nhập</Text>
             <Text selectable style={styles.summaryValue}>{created.user.username}</Text>
@@ -93,15 +93,7 @@ export default function RegisterPtScreen() {
   }
 
   return (
-    <Screen title="Đăng ký tài khoản PT" subtitle="Tạo tài khoản cá nhân để bắt đầu ngay">
-      <View style={styles.introCard}>
-        <View style={styles.introIcon}><Feather name="user" size={21} color={colors.primary} /></View>
-        <View style={styles.introCopy}>
-          <Text style={styles.introTitle}>Dành cho huấn luyện viên</Text>
-          <Text style={styles.introDescription}>Tài khoản PT hoạt động độc lập trong không gian dữ liệu riêng. Bạn không cần mã mời từ gym để đăng ký.</Text>
-        </View>
-      </View>
-
+    <Screen title="Đăng ký tài khoản">
       <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>Thông tin tài khoản</Text>
         <FormField label="Họ và tên" value={form.fullName} onChangeText={(value) => updateField('fullName', value)} placeholder="Tên của bạn" autoCapitalize="words" returnKeyType="next" maxLength={120} />
@@ -115,7 +107,7 @@ export default function RegisterPtScreen() {
         {error ? <View style={styles.errorBox} accessibilityLiveRegion="polite"><Feather name="alert-circle" size={18} color={colors.danger} /><Text style={styles.errorText}>{error}</Text></View> : null}
 
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting, busy: submitting }} disabled={submitting} onPress={() => void handleSubmit()} style={({ pressed }) => [styles.primaryButton, pressed && !submitting && styles.primaryButtonPressed, submitting && styles.buttonDisabled]}>
-          {submitting ? <View style={styles.loadingRow}><ActivityIndicator color={colors.textOnPrimary} size="small" /><Text style={styles.primaryButtonText}>Đang tạo tài khoản...</Text></View> : <Text style={styles.primaryButtonText}>Tạo tài khoản PT</Text>}
+          {submitting ? <View style={styles.loadingRow}><ActivityIndicator color={colors.textOnPrimary} size="small" /><Text style={styles.primaryButtonText}>Đang tạo tài khoản...</Text></View> : <Text style={styles.primaryButtonText}>Tạo tài khoản</Text>}
         </Pressable>
         <Text style={styles.footerNote}>Đã có tài khoản? <Text accessibilityRole="link" onPress={() => router.replace('/(auth)/login')} style={styles.inlineLink}>Đăng nhập</Text></Text>
       </View>
@@ -147,9 +139,6 @@ function PasswordVisibilityButton({ visible, onPress, label }: { visible: boolea
 }
 
 const styles = StyleSheet.create({
-  introCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceIce, borderWidth: 1, borderColor: '#D5EAF7', marginBottom: spacing.md },
-  introIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  introCopy: { flex: 1 }, introTitle: { ...typography.bodyMedium, color: colors.text }, introDescription: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
   formCard: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft },
   sectionTitle: { ...typography.heading, color: colors.text, marginBottom: spacing.sm },
   field: { marginTop: spacing.sm }, fieldLabel: { ...typography.caption, color: colors.text, fontWeight: '600', marginBottom: spacing.xs },

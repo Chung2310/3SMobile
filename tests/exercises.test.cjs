@@ -69,7 +69,7 @@ test('rejects incomplete exercise records and unsafe video links', () => {
 test('API pagination keeps envelope meta while existing get continues unwrapping data', async () => {
   const originalFetch = global.fetch;
   const envelope = { success: true, data: [base], meta: { page: 2, limit: 12, total: 20, totalPages: 2 } };
-  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => ({ token: 'test-token' }) } });
+  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => ({ token: 'test-token' }) }, '@/services/aiConsent': { confirmAiSharing: async () => true } });
   global.fetch = async (url, options) => {
     assert.equal(options.headers.get('Authorization'), 'Bearer test-token');
     assert.ok(url.startsWith('https://test.invalid/api/exercises'));
@@ -80,7 +80,7 @@ test('API pagination keeps envelope meta while existing get continues unwrapping
 });
 test('API reports permission errors instead of rendering an empty successful page', async () => {
   const originalFetch = global.fetch;
-  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => null } });
+  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => null }, '@/services/aiConsent': { confirmAiSharing: async () => true } });
   global.fetch = async () => new Response(JSON.stringify({ message: 'Không có quyền' }), { status: 403 });
   try { await assert.rejects(() => api.getPage('/api/exercises'), (error) => error.status === 403 && error.message === 'Không có quyền'); }
   finally { global.fetch = originalFetch; }
@@ -88,7 +88,7 @@ test('API reports permission errors instead of rendering an empty successful pag
 
 test('multipart image upload preserves authorization and lets fetch set the boundary', async () => {
   const originalFetch = global.fetch;
-  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => ({ token: 'test-token' }) } });
+  const { api } = loadTs('src/services/api/client.ts', { '@/services/config': { API_BASE_URL: 'https://test.invalid' }, '@/services/sessionStore': { getStoredSession: async () => ({ token: 'test-token' }) }, '@/services/aiConsent': { confirmAiSharing: async () => true } });
   const form = new FormData(); form.append('image', new Blob(['image'], { type: 'image/png' }), 'progress.png');
   global.fetch = async (url, options) => {
     assert.equal(options.body, form);
