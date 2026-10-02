@@ -29,7 +29,6 @@ import {
   type PtProfileInfo,
   type UpdateProfilePayload,
 } from '@/services/ptProfileService';
-import { fetchCustomersList } from '@/services/customerService';
 import { resolveImageUrl } from '@/services/imageUtils';
 import { DatePickerModal } from '@/components/DatePickerModal';
 import { AppAlertModal, type AlertModalType } from '@/components/AppAlertModal';
@@ -485,36 +484,17 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccountPress = async () => {
-    let customerCount = profile?.totalCustomers ?? 0;
-    try {
-      const activeList = await fetchCustomersList({ limit: 5 });
-      if (Array.isArray(activeList) && activeList.length > 0) {
-        customerCount = Math.max(customerCount, activeList.length);
-      }
-    } catch {
-      // Fallback dùng giá trị profile.totalCustomers
-    }
-
-    // 1. Chỉ được xóa khi không có học viên/khách hàng nào
-    if (customerCount > 0) {
-      setAlertConfig({
-        visible: true,
-        type: 'warning',
-        title: 'Không thể xóa tài khoản',
-        message: `Tài khoản của bạn hiện đang phụ trách ${customerCount} học viên. Theo quy định bảo đảm quyền lợi hội viên của 3S Gym, bạn phải bàn giao hoặc chuyển giao toàn bộ học viên trước khi có thể xóa tài khoản.`,
-        confirmLabel: 'Đã hiểu',
-        onConfirm: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
-      });
+    if (session?.user.role === 'ADMIN') {
+      setShowEditSheet(false);
+      router.push('/(app)/delete-owner');
       return;
     }
-
-    // 2. Popup cảnh báo xác nhận xóa tài khoản (Nguy hiểm / Không thể hoàn tác)
     setAlertConfig({
       visible: true,
       type: 'error',
       title: 'Xác nhận xóa tài khoản?',
       message:
-        'CẢNH BÁO NGUY HIỂM:\n\nHành động này sẽ XÓA VĨNH VIỄN tài khoản HLV của bạn cùng toàn bộ giáo án, lịch sử tập luyện và dữ liệu cá nhân.\n\nDữ liệu sẽ KHÔNG THỂ KHÔI PHỤC sau khi xóa. Bạn có chắc chắn muốn tiếp tục?',
+        'Tài khoản, phiên đăng nhập và toàn bộ dữ liệu riêng của bạn sẽ bị xóa vĩnh viễn. Ảnh/file riêng được dọn nền. Hồ sơ học viên và dữ liệu chung sẽ được bàn giao cho chủ trung tâm để tiếp tục phục vụ học viên.\n\nKhông thể hoàn tác. Bạn có muốn tiếp tục?',
       confirmLabel: 'Xóa vĩnh viễn',
       cancelLabel: 'Hủy bỏ',
       onConfirm: async () => {
@@ -825,6 +805,13 @@ export default function ProfileScreen() {
             </View>
 
 
+            <Pressable accessibilityRole="button" onPress={() => router.push('/(app)/gym-invitations')} style={styles.securityBarBtn}>
+              <View style={styles.securityBarLeft}>
+                <View style={styles.securityIconCircle}><Feather name="users" size={16} color="#0284C7" /></View>
+                <Text style={styles.securityBarTitle}>Lời mời gym</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.textMuted} />
+            </Pressable>
             {/* 5. NÚT MỞ NHANH BẢO MẬT & ĐỔI MẬT KHẨU */}
             <Pressable
               style={({ pressed }) => [styles.securityBarBtn, pressed && styles.securityBarBtnPressed]}
@@ -1284,7 +1271,9 @@ export default function ProfileScreen() {
                         <Text style={styles.dangerZoneTitle}>QUẢN LÝ TÀI KHOẢN & DỮ LIỆU</Text>
                       </View>
                       <Text style={styles.dangerZoneDesc}>
-                        Yêu cầu xóa vĩnh viễn tài khoản và toàn bộ dữ liệu cá nhân theo chính sách quyền riêng tư. Bạn chỉ có thể thực hiện khi không còn quản lý bất kỳ học viên nào.
+                        {session?.user.role === 'ADMIN'
+                          ? 'Chuyển quyền chủ gym hoặc đóng trung tâm trước khi xóa tài khoản. Bạn sẽ xem phạm vi dữ liệu và xác nhận ở bước tiếp theo.'
+                          : 'Xóa vĩnh viễn tài khoản và dữ liệu riêng. Hồ sơ học viên và dữ liệu chung được bàn giao cho chủ trung tâm khi bạn xác nhận.'}
                       </Text>
                       <Pressable
                         style={({ pressed }) => [

@@ -10,7 +10,11 @@ function loadTs(filename, mocks = {}) {
   const mod = new Module(target, module);
   mod.filename = target;
   mod.paths = module.paths;
-  mod.require = id => id in mocks ? mocks[id] : require(id);
+  mod.require = id => id in mocks
+    ? mocks[id]
+    : id.startsWith('.')
+      ? loadTs(path.relative(path.resolve(__dirname, '..'), path.resolve(path.dirname(target), `${id}.ts`)), mocks)
+      : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(target, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, target);
   return mod.exports;
 }
@@ -55,7 +59,7 @@ test('food upload rejects unsupported formats, empty and oversized files', () =>
 });
 test('multipart image replacement uses PATCH with authorization and preserves file boundary', async () => {
   const originalFetch = global.fetch;
-  const {api} = loadTs('src/services/api/client.ts',{'@/services/config':{API_BASE_URL:'https://test.invalid'},'@/services/sessionStore':{getStoredSession:async () => ({token:'test-token'})}});
+  const {api} = loadTs('src/services/api/client.ts',{'@/services/config':{API_BASE_URL:'https://test.invalid'},'@/services/sessionStore':{getStoredSession:async () => ({token:'test-token'})},'@/services/aiConsent':{confirmAiSharing:async () => true}});
   const form = new FormData(); form.append('name','Món ăn'); form.append('image',new Blob(['image'],{type:'image/png'}),'food.png');
   global.fetch = async (url,options) => {
     assert.equal(url,'https://test.invalid/api/food-images/id');
@@ -68,7 +72,7 @@ test('multipart image replacement uses PATCH with authorization and preserves fi
 });
 test('food pagination retains server summary without deriving activity totals', async () => {
   const originalFetch = global.fetch;
-  const {api} = loadTs('src/services/api/client.ts',{'@/services/config':{API_BASE_URL:'https://test.invalid'},'@/services/sessionStore':{getStoredSession:async () => null}});
+  const {api} = loadTs('src/services/api/client.ts',{'@/services/config':{API_BASE_URL:'https://test.invalid'},'@/services/sessionStore':{getStoredSession:async () => null},'@/services/aiConsent':{confirmAiSharing:async () => true}});
   const result = {data:[],meta:{page:1,totalPages:0,total:0,limit:12},summary:{totalImages:42,totalUsage:120}};
   global.fetch = async () => new Response(JSON.stringify(result),{status:200});
   try {assert.deepEqual(await api.getPage('/api/food-images'),result);} finally {global.fetch = originalFetch;}

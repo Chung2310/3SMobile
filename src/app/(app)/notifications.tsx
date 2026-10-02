@@ -73,7 +73,8 @@ export default function NotificationsScreen() {
   function openResource(item: AppNotification) {
     void markAsRead(item);
     const resourceType = readText(item, ['resourceType']).toLowerCase();
-    if (resourceType.includes('calendar')) router.push('/(app)/(tabs)/schedule');
+    if (resourceType === 'gym-invitation') router.push('/(app)/gym-invitations');
+    else if (resourceType.includes('calendar')) router.push('/(app)/(tabs)/schedule');
     else if (resourceType.includes('report') || resourceType.includes('progress'))
       router.push('/(app)/(tabs)/progress');
     else if (resourceType.includes('care') || resourceType.includes('package'))

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { Platform } from 'react-native';
 
 import { api } from '@/services/api/client';
-import { clearStoredSession, getStoredSession, saveSession } from '@/services/sessionStore';
+import { clearStoredSession, getStoredSession, saveSession, subscribeSession, updateSessionIfCurrent } from '@/services/sessionStore';
 import type { LoginResponse, Session, User } from '@/types/domain';
 
 interface AuthContextValue {
@@ -24,20 +24,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const stored = await getStoredSession();
       if (!stored?.token) return;
       const me = await api.get<User>('/api/auth/me');
-      if (me && me.id) {
+      const latest = await getStoredSession();
+      if (me && me.id === latest?.user.id && latest) {
         const resolvedAvatar = (typeof me.avatarUrl === 'string' && me.avatarUrl.trim())
           ? me.avatarUrl.trim()
-          : (stored.user.avatarUrl || '');
+          : (latest.user.avatarUrl || '');
         const updatedSession: Session = {
-          token: stored.token,
+          ...latest,
           user: {
-            ...stored.user,
+            ...latest.user,
             ...me,
             avatarUrl: resolvedAvatar,
           },
         };
-        await saveSession(updatedSession);
-        setSession(updatedSession);
+        await updateSessionIfCurrent(latest.token, current => ({ ...current, user: updatedSession.user }));
       }
     } catch {
       // Bo qua neu mat mang
@@ -46,6 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let active = true;
+    const unsubscribe = subscribeSession(value => { if (active) setSession(value); });
     void (async () => {
       const stored = await getStoredSession();
       if (!active) return;
@@ -55,20 +56,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Tu dong dong bo profile moi nhat tu backend
         try {
           const me = await api.get<User>('/api/auth/me');
-          if (active && me && me.id) {
+          const latest = await getStoredSession();
+          if (active && me && me.id === latest?.user.id && latest) {
             const resolvedAvatar = (typeof me.avatarUrl === 'string' && me.avatarUrl.trim())
               ? me.avatarUrl.trim()
-              : (stored.user.avatarUrl || '');
+              : (latest.user.avatarUrl || '');
             const updatedSession: Session = {
-              token: stored.token,
+              ...latest,
               user: {
-                ...stored.user,
+                ...latest.user,
                 ...me,
                 avatarUrl: resolvedAvatar,
               },
             };
-            await saveSession(updatedSession);
-            setSession(updatedSession);
+            await updateSessionIfCurrent(latest.token, current => ({ ...current, user: updatedSession.user }));
           }
         } catch {
           // Giu session da luu neu offline
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -109,16 +111,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (session?.refreshToken) {
+    const stored = await getStoredSession();
+    // Clear locally before the network request so an in-flight refresh cannot restore it.
+    await clearStoredSession();
+    if (stored?.refreshToken) {
       try {
-        await api.post('/api/auth/logout', { refreshToken: session.refreshToken }).catch(() => {});
+        await api.post('/api/auth/logout', { refreshToken: stored.refreshToken }).catch(() => {});
       } catch {
         // Ignore
       }
     }
-    await clearStoredSession();
-    setSession(null);
-  }, [session]);
+  }, []);
 
   const value = useMemo(() => ({ session, loading, signIn, signOut, refreshProfile }), [loading, refreshProfile, session, signIn, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

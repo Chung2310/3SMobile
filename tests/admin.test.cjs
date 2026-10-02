@@ -48,13 +48,11 @@ test('customer edits never mutate PT assignment through the profile endpoint', (
   assert.equal(formPayload(resources.customers.fields,input,false).assignedPtId,'pt1');
   assert.equal('assignedPtId' in formPayload(resources.customers.fields,input,true),false);
 });
-test('reject invalid quantities and credit package price; retain zero and false', () => {
+test('reject invalid package quantities and keep credit package controls out of mobile', () => {
   const input = {name:'Gói tập',totalSessions:'12',durationDays:'30',price:'0'};
   assert.equal(formPayload(resources.packages.fields,input,false).price,0);
   for (const invalid of ['0','-1','1.5','NaN','Infinity']) assert.throws(() => formPayload(resources.packages.fields,{...input,totalSessions:invalid},false));
-  const credit = {name:'Credit',amountVnd:'10000',active:'false',bonusCredits:'0'};
-  assert.equal(formPayload(resources.creditPackages.fields,credit,false).active,false);
-  assert.throws(() => formPayload(resources.creditPackages.fields,{...credit,amountVnd:'10500'},false));
+  assert.equal(resources.creditPackages, undefined);
 });
 
 test('passwords support Unicode and symbols without trimming or bcrypt truncation', () => {

@@ -188,17 +188,7 @@ export function AdminAccountsManagement() {
 
       {/* 2. ACTION TOOLBAR */}
       <View style={styles.actionToolbar}>
-        <Pressable
-          onPress={() => setForm(null)}
-          style={({ pressed }) => [
-            styles.addAdminBtn,
-            pressed && { opacity: 0.85 },
-          ]}
-          accessibilityLabel="Thêm tài khoản quản trị mới"
-        >
-          <Feather name="plus" size={16} color="#FFFFFF" />
-          <Text style={styles.addAdminText}>Thêm tài khoản admin</Text>
-        </Pressable>
+        <Text style={styles.registrationHint}>Chủ gym mới đăng ký trung tâm từ màn đăng nhập.</Text>
 
         <Pressable
           onPress={() => void load()}
@@ -546,7 +536,7 @@ export function AdminAccountsManagement() {
               if (!editable(form)) throw new Error('Bạn không có quyền chỉnh sửa tài khoản này.');
               await api.patch(`${resource.path}/${recordId(form)}`, payload);
             } else {
-              await api.post(resource.path, { ...payload, ...resource.query });
+              throw new Error('Chủ gym mới cần đăng ký trung tâm riêng từ màn đăng nhập.');
             }
             afterSave();
           }}
@@ -1097,6 +1087,7 @@ function AdminAccountFormModal({
 }
 
 const styles = StyleSheet.create({
+  registrationHint: { flex: 1, color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

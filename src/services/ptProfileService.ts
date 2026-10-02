@@ -1,5 +1,5 @@
 import { api } from '@/services/api/client';
-import { getStoredSession, saveSession } from '@/services/sessionStore';
+import { getStoredSession, updateSessionIfCurrent } from '@/services/sessionStore';
 import type { User } from '@/types/domain';
 
 export interface PtProfileInfo {
@@ -115,7 +115,7 @@ export async function fetchPtProfile(user?: User | null): Promise<PtProfileInfo>
             ...me,
             avatarUrl: resolvedAvatar,
           };
-          await saveSession(stored);
+          await updateSessionIfCurrent(stored.token, current => current.user.id === me.id ? { ...current, user: stored.user } : current);
         }
       } catch {
         // Bỏ qua nếu lỗi lưu session
@@ -146,7 +146,7 @@ export async function updatePtProfile(payload: UpdateProfilePayload): Promise<Us
         ...stored.user,
         ...updatedUser,
       };
-      await saveSession(stored);
+      await updateSessionIfCurrent(stored.token, current => current.user.id === updatedUser.id ? { ...current, user: stored.user } : current);
     }
   } catch {
     // Bỏ qua lỗi session storage

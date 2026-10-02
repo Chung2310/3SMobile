@@ -38,6 +38,8 @@ export function Screen({ title, subtitle, children, refreshing = false, onRefres
 
   const content = scroll ? (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
         styles.scrollContent,
         noPadding && { padding: 0, paddingHorizontal: 0, paddingTop: 0 },

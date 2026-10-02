@@ -43,7 +43,7 @@ export function computeBmrAndMacros({
   if (goal === 'FAT_LOSS') {
     deficitOrSurplus = -450;
     targetCalories = Math.max(1200, tdee - 450);
-    goalLabel = 'Giảm mỡ thâm hụt an toàn (-450 kcal)';
+    goalLabel = 'Giảm mỡ, thâm hụt 450 kcal';
   } else if (goal === 'MUSCLE_GAIN') {
     deficitOrSurplus = 350;
     targetCalories = tdee + 350;

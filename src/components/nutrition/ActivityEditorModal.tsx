@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -11,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal as Modal } from '@/components/SafeAreaModal';
-import { Activity, Flame, Sparkles, X } from 'lucide-react-native';
+import { Activity, ExternalLink, Flame, Sparkles, X } from 'lucide-react-native';
 import { colors } from '@/theme';
 import { AppAlertModal, useAppAlert } from '@/components/AppAlertModal';
 import {
@@ -37,6 +39,8 @@ const CATEGORIES: { id: ActivityCategory; label: string }[] = [
   { id: 'SPORTS', label: 'Thể thao đối kháng' },
   { id: 'RECOVERY', label: 'Phục hồi / Giãn cơ' },
 ];
+
+const MET_SOURCE_URL = 'https://www.nationalacademies.org/read/4756/chapter/13';
 
 export function ActivityEditorModal({
   visible,
@@ -336,8 +340,24 @@ export function ActivityEditorModal({
               </View>
 
               <Text style={styles.previewFormulaNote}>
-                Công thức ACSM: Calo = (MET x 3.5 x Cân nặng / 200) x Thời gian (phút)
+                Ước tính calo theo MET = (MET × 3,5 × cân nặng (kg) ÷ 200) × thời gian (phút).
+                Kết quả có thể khác mức tiêu hao thực tế.
               </Text>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Mở nguồn về MET và ước tính năng lượng của National Academies"
+                style={({ pressed }) => [styles.previewSourceLink, pressed && styles.previewSourceLinkPressed]}
+                onPress={() => {
+                  Linking.openURL(MET_SOURCE_URL).catch(() => {
+                    Alert.alert('Không mở được liên kết', 'Vui lòng kiểm tra kết nối và thử lại.');
+                  });
+                }}
+              >
+                <Text style={styles.previewSourceText}>
+                  Nguồn: National Academies — MET và ước tính năng lượng
+                </Text>
+                <ExternalLink size={15} color="#0284C7" />
+              </Pressable>
             </View>
           </ScrollView>
 
@@ -564,6 +584,26 @@ const styles = StyleSheet.create({
     color: '#9a3412',
     fontStyle: 'italic',
     textAlign: 'center',
+    lineHeight: 16,
+  },
+  previewSourceLink: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#fed7aa',
+  },
+  previewSourceLinkPressed: {
+    opacity: 0.7,
+  },
+  previewSourceText: {
+    flex: 1,
+    color: '#0284C7',
+    fontSize: 11,
+    lineHeight: 16,
   },
   footerRow: {
     flexDirection: 'row',
