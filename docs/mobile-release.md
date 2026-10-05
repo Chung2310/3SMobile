@@ -22,4 +22,21 @@ The Android job checks package name and versionCode in the signed APK. The iOS E
 
 Validation on real devices is still required: install a previous signed build, update without uninstalling, and confirm login/local data remain on each platform.
 
+## App Store review corrections (October 3, 2026)
+
+Submission `97d9f91b-89a6-4467-bfce-f82a670cd213`, version 1.0 (9), requires these two corrections before resubmission:
+
+1. **Guideline 2.3.8 — App name:** `expo.name` in `app.json` is now `3S Wellness`. Expo uses this name for the installed app, including iOS `CFBundleDisplayName`, matching the App Store name `3s wellness`. Keep the existing iOS bundle identifier `com.igen.3s`, Android package `vn.gym3s.mobile`, EAS project ID, slug, and URL scheme. This name change requires a new native build; an over-the-air JavaScript update cannot change the installed app's display name. Build with the existing production iOS workflow, confirm the build number is greater than 9, and install the resulting build to verify the Home screen name before selecting it for review.
+2. **Guideline 2.3.6 — Age rating:** In App Store Connect, open **Apps > 3s wellness > General > App Information > Age Ratings > Edit**. Set **Health or Wellness Topics** to **Yes**, complete the questionnaire, and save. This is App Store Connect metadata and cannot be corrected through Expo configuration. Review the remaining answers against the content available in the app.
+
+After both corrections are complete, select the replacement build, reply to App Review, and resubmit. The existing production workflow uploads to App Store Connect/TestFlight; selecting the build and resubmitting for App Review are separate steps.
+
+Reply to use only after the replacement build and age-rating update are verified:
+
+> Hello App Review Team,
+>
+> We have addressed both issues. For Guideline 2.3.8, the updated build displays “3S Wellness” on the device, matching our App Store name “3s wellness”. The bundle identifier remains unchanged. For Guideline 2.3.6, we have selected “Yes” for “Health or Wellness Topics” in the age-rating questionnaire. Thank you.
+
+References: [Apple: Update the display name](https://developer.apple.com/library/archive/qa/qa1823/), [Apple: Set an app age rating](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating), [Expo: App configuration](https://docs.expo.dev/versions/latest/config/app/).
+
 Reference: https://docs.expo.dev/build-reference/app-versions/
